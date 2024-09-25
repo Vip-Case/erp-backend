@@ -1,7 +1,10 @@
 import { defineConfig } from "drizzle-kit";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 export default defineConfig({
-  schema: "./src/db/schema.ts",
+  schema: "./src/data/schema/*",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
@@ -11,4 +14,6 @@ export default defineConfig({
     password: process.env.DB_PASSWORD || "password",
     database: process.env.DB_NAME || "drizzle",
   },
+  verbose: true,
+  strict: true,
 });

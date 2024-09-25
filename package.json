@@ -17,6 +17,7 @@
     "@elysiajs/static": "^1.1.1",
     "@elysiajs/swagger": "^1.1.1",
     "@neondatabase/serverless": "^0.9.5",
+    "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "elysia": "latest",
     "pg": "^8.13.0"
