@@ -15,6 +15,10 @@
 # production
 /build
 
+# temp
+/.tmp
+/temp
+
 # misc
 .DS_Store
 *.pem
