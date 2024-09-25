@@ -2,14 +2,15 @@ name: backend
 
 services:
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     volumes:
       - ./node_modules:/app/node_modules
     environment:
       - NODE_ENV=development
-      - BUN_RUNTIME_EXTRA_CLI_ARGS=--hot
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
@@ -35,7 +36,7 @@ services:
     environment:
       POSTGRES_DB: erp_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Lastuchiha@#25
+      POSTGRES_PASSWORD: Lastuchiha@25
     ports:
       - "5432:5432"
     volumes:
