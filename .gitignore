@@ -44,3 +44,7 @@ yarn-error.log*
 **/*.log
 package-lock.json
 **/*.bun
+
+# Ignore ide files
+.idea
+.vscode
