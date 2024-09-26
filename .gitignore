@@ -49,3 +49,7 @@ package-lock.json
 # Ignore ide files
 .idea
 .vscode
+
+# ggshield
+.ggshield
+.cache_ggshield
