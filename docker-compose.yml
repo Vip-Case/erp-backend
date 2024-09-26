@@ -14,7 +14,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=Lastuchiha@25
+      - DB_PASSWORD=915307dedd66bANEA
       - DB_NAME=erp_db
     depends_on:
       - postgres
@@ -36,7 +36,7 @@ services:
     environment:
       POSTGRES_DB: erp_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Lastuchiha@25
+      POSTGRES_PASSWORD: 915307dedd66bANEA
     ports:
       - "5432:5432"
     volumes:
