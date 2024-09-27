@@ -8,7 +8,8 @@
     "drizzle-studio": "bunx drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "migrate": "bun run src/data/migrations/migrate.ts"
+    "migrate": "bun run src/data/migrations/migrate.ts",
+    "db:mongo": "bun run src/scripts/setupMongoDB.ts"
   },
   "dependencies": {
     "@elysiajs/bearer": "^1.1.2",
@@ -21,7 +22,7 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "elysia": "latest",
-    "mongoose": "^8.6.3",
+    "mongoose": "^8.6.4",
     "pg": "^8.13.0"
   },
   "devDependencies": {

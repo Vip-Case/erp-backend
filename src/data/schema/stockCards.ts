@@ -1,7 +1,6 @@
 // src/data/schema/stockCardSchema.ts
 
 import { pgTable, uuid, varchar, text, decimal, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core';
-import mongoose, { Schema, Document } from 'mongoose';
 import { ProductType, Currency } from '../../types';
 
 export const stockCards = pgTable('stock_cards', {
@@ -77,38 +76,6 @@ export const stockCardTaxRates = pgTable('stock_card_tax_rates', {
   taxName: varchar('tax_name', { length: 100 }).notNull(), // Vergi adı
   taxRate: decimal('tax_rate', { precision: 5, scale: 2 }).notNull(), // Vergi oranı
 });
-
-// MongoDB'de saklanacak veri şemaları (referans için)
-
-// StockCardImage için interface
-export interface IStockCardImage extends Document {
-  stockCardId: string; // Stok kartı ID'si
-  imageUrl: string; // Resim URL'si
-  isDefault: boolean; // Varsayılan resim mi?
-}
-
-// StockCardVideo için interface
-export interface IStockCardVideo extends Document {
-  stockCardId: string; // Stok kartı ID'si
-  videoUrl: string; // Video URL'si
-}
-
-// StockCardImage için schema
-const StockCardImageSchema: Schema = new Schema({
-  stockCardId: { type: String, required: true }, // Stok kartı ID'si
-  imageUrl: { type: String, required: true }, // Resim URL'si
-  isDefault: { type: Boolean, default: false } // Varsayılan resim mi?
-});
-
-// StockCardVideo için schema
-const StockCardVideoSchema: Schema = new Schema({
-  stockCardId: { type: String, required: true }, // Stok kartı ID'si
-  videoUrl: { type: String, required: true } // Video URL'si
-});
-
-// Model oluşturma
-export const StockCardImage = mongoose.model<IStockCardImage>('StockCardImage', StockCardImageSchema); // StockCardImage modeli
-export const StockCardVideo = mongoose.model<IStockCardVideo>('StockCardVideo', StockCardVideoSchema); // StockCardVideo modeli
 
 // İleride kullanıcı tablosu eklendiğinde referans olarak kullanılacak
 export const users = pgTable('users', {
