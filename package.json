@@ -20,6 +20,7 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "elysia": "latest",
+    "mongoose": "^8.6.3",
     "pg": "^8.13.0"
   },
   "devDependencies": {
