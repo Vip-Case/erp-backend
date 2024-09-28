@@ -1,3 +1,4 @@
+import { IBaseRepository } from "../../interfaces/repositories/IBaseRepository";
 import {
   StockCard,
   StockCardAttribute,
@@ -11,7 +12,7 @@ import {
 import { IStockCardImage, IStockCardVideo } from "../../models/stockCardMedia"; 
 
 // StockCardRepository interface
-export interface IStockCardRepository {
+export interface IStockCardRepository extends IBaseRepository<StockCard>{
     // StockCard operations
     createStockCard(stockCard: StockCard): Promise<StockCard>;
     deleteStockCard(stockCardId: string): Promise<boolean>;

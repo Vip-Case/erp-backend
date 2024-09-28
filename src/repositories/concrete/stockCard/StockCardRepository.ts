@@ -10,7 +10,7 @@ import {
     stockCardTaxRates,
 } from "../../../data/schema/stockCards";
 import { StockCardImage, StockCardVideo } from "../../../models/stockCardMedia";
-import { IStockCardRepository } from "../../../interfaces/repositories/IStockCardRepository";
+import { IStockCardRepository } from "../../abstracts/IStockCardRepository";
 import {
     StockCard,
     StockCardAttribute,
