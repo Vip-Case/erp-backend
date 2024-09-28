@@ -1,12 +1,11 @@
 name: erp-backend
 
-version: '3'
-
 services:
   app:
     build: 
       context: .
       dockerfile: Dockerfile
+    container_name: erp-backend
     ports:
       - "3000:3000"
     environment:
@@ -48,60 +47,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-  
-  # Elasticsearch service
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
-    environment:
-      - node.name=elasticsearch
-      - cluster.name=docker-cluster
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    networks:
-      - elk
-
-  # Logstash service
-  logstash:
-    image: docker.elastic.co/logstash/logstash:7.17.9
-    volumes:
-      - ./logstash/pipeline:/usr/share/logstash/pipeline
-    environment:
-      - LS_JAVA_OPTS=-Xms256m -Xmx256m
-    ports:
-      - "5000:5000"
-    networks:
-      - elk
-    depends_on:
-      - elasticsearch
-  
-  # Kibana service
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.9
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-    networks:
-      - elk
-    depends_on:
-      - elasticsearch
 
 volumes:
   postgres_data:
   redis_data:
-  esdata:
-    driver: local
-
-networks:
-  elk:
-    driver: bridge
