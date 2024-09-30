@@ -2,9 +2,11 @@ import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import {
     stockCards,
     stockCardPriceLists,
+    stockCardPriceListItems,
     stockCardAttributes,
     stockCardBarcodes,
     stockCardCategories,
+    stockCardCategoriesItems,
     stockCardVariants,
     stockCardTaxRates,
 } from "../data/schema/stockCards";
@@ -18,6 +20,13 @@ export type NewStockCardPriceList = InferInsertModel<
     typeof stockCardPriceLists
 >;
 
+export type StockCardPriceListItem = InferSelectModel<
+    typeof stockCardPriceListItems // Fiyat listesi kalemleri tablosu eklendi
+>;
+export type NewStockCardPriceListItem = InferInsertModel<
+    typeof stockCardPriceListItems // Fiyat listesi kalemleri için insert modeli
+>;
+
 export type StockCardAttribute = InferSelectModel<typeof stockCardAttributes>;
 export type NewStockCardAttribute = InferInsertModel<
     typeof stockCardAttributes
@@ -28,6 +37,9 @@ export type NewStockCardBarcode = InferInsertModel<typeof stockCardBarcodes>;
 
 export type StockCardCategory = InferSelectModel<typeof stockCardCategories>;
 export type NewStockCardCategory = InferInsertModel<typeof stockCardCategories>;
+
+export type StockCardCategoriesItems = InferSelectModel<typeof stockCardCategoriesItems>; // Kategori kalemleri tablosu eklendi
+export type NewStockCardCategoriesItems = InferInsertModel<typeof stockCardCategoriesItems>; // Kategori kalemleri için insert modeli
 
 export type StockCardVariant = InferSelectModel<typeof stockCardVariants>;
 export type NewStockCardVariant = InferInsertModel<typeof stockCardVariants>;

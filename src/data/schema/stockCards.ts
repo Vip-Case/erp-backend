@@ -28,14 +28,19 @@ export const stockCards = pgTable('stock_cards', {
   updatedBy: uuid('updated_by'), // Güncelleyen kullanıcı
 });
 
-// Fiyat listesi tablosu
+// Fiyat listeleri tablosu
 export const stockCardPriceLists = pgTable('stock_card_price_lists', {
   id: uuid('id').defaultRandom().primaryKey(), // Birincil anahtar
-  stockCardId: uuid('stock_card_id').references(() => stockCards.id), // Stok kartı ID'si
-  priceListId: uuid('price_list_id'), // Fiyat listesi ID'si
-  price: decimal('price', { precision: 10, scale: 2 }), // Fiyat
   currency: varchar('currency', { length: 50 }).$type<Currency>(), // Para birimi
   taxIncluded: boolean('tax_included').default(false), // Vergi dahil mi?
+});
+
+// Fiyat listesi kalemleri tablosu
+export const stockCardPriceListItems = pgTable('stock_card_price_list_items', {
+  id: uuid('id').defaultRandom().primaryKey(), // Birincil anahtar
+  priceListId: uuid('price_list_id').references(() => stockCardPriceLists.id), // Fiyat listesi ID'si
+  stockCardId: uuid('stock_card_id').references(() => stockCards.id), // Stok kartı ID'si
+  price: decimal('price', { precision: 10, scale: 2 }), // Fiyat
 });
 
 // Özellikler tablosu
@@ -53,8 +58,13 @@ export const stockCardBarcodes = pgTable('stock_card_barcodes', {
   barcode: varchar('barcode', { length: 100 }).unique(), // Barkod
 });
 
-// Kategoriler tablosu
 export const stockCardCategories = pgTable('stock_card_categories', {
+  id: uuid('id').defaultRandom().primaryKey(), // Birincil anahtar
+  category: varchar('category'), // Kategori
+});
+
+// Kategoriler 
+export const stockCardCategoriesItems = pgTable('stock_card_categories', {
   id: uuid('id').defaultRandom().primaryKey(), // Birincil anahtar
   stockCardId: uuid('stock_card_id').references(() => stockCards.id), // Stok kartı ID'si
   categoryId: uuid('category_id'), // Kategori ID'si

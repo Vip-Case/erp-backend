@@ -5,7 +5,7 @@ import {
     stockCardPriceLists,
     stockCardAttributes,
     stockCardBarcodes,
-    stockCardCategories,
+    stockCardCategoriesItems,
     stockCardVariants,
     stockCardTaxRates,
 } from "../../../data/schema/stockCards";
@@ -15,8 +15,8 @@ import {
     StockCard,
     StockCardAttribute,
     StockCardBarcode,
-    StockCardCategory,
-    StockCardPriceList,
+    StockCardCategoriesItems,
+    StockCardPriceListItem,
     StockCardTaxRate,
     StockCardVariant,
     StockCardWithRelations,
@@ -25,13 +25,13 @@ import {
     IStockCardImage,
     IStockCardVideo,
 } from "../../../models/stockCardMedia";
+import { ProductType } from "../../../types";
 
 // StockCardRepository class
 export class StockCardRepository implements IStockCardRepository {
-
-    async createStockCard(stockCard: StockCard): Promise<StockCard> {
+    async create(item: StockCard): Promise<StockCard> {
         try {
-            const [createdStockCard] = await db.insert(stockCards).values(stockCard).returning();
+            const [createdStockCard] = await db.insert(stockCards).values(item).returning();
             return createdStockCard;
         } catch (error) {
             console.error("Error creating stock card:", error);
@@ -39,53 +39,9 @@ export class StockCardRepository implements IStockCardRepository {
         }
     }
 
-    async deleteStockCard(stockCardId: string): Promise<boolean> {
+    async update(id: string, item: StockCard): Promise<StockCard> {
         try {
-            const result = await db.delete(stockCards).where(eq(stockCards.id, stockCardId));
-            return result.rowCount ? result.rowCount > 0 : false;
-        } catch (error) {
-            console.error("Error deleting stock card:", error);
-            throw new Error("Failed to delete stock card");
-        }
-    }
-
-    async findStockCardById(stockCardId: string): Promise<StockCardWithRelations | null> {
-        try {
-            const stockCard = await db.select().from(stockCards).where(eq(stockCards.id, stockCardId)).execute();
-            if (stockCard.length === 0) return null;
-
-            const [attributes, barcodes, categories, priceLists, taxRates, variants] = await Promise.all([
-                db.select().from(stockCardAttributes).where(eq(stockCardAttributes.stockCardId, stockCardId)).execute(),
-                db.select().from(stockCardBarcodes).where(eq(stockCardBarcodes.stockCardId, stockCardId)).execute(),
-                db.select().from(stockCardCategories).where(eq(stockCardCategories.stockCardId, stockCardId)).execute(),
-                db.select().from(stockCardPriceLists).where(eq(stockCardPriceLists.stockCardId, stockCardId)).execute(),
-                db.select().from(stockCardTaxRates).where(eq(stockCardTaxRates.stockCardId, stockCardId)).execute(),
-                db.select().from(stockCardVariants).where(eq(stockCardVariants.stockCardId, stockCardId)).execute(),
-            ]);
-
-            const images = await StockCardImage.find({ stockCardId }).exec();
-            const videos = await StockCardVideo.find({ stockCardId }).exec();
-
-            return { 
-                ...stockCard[0], 
-                attributes, 
-                barcodes, 
-                categories, 
-                priceLists, 
-                taxRates, 
-                variants,
-                images,
-                videos
-            };
-        } catch (error) {
-            console.error("Error finding stock card by ID:", error);
-            throw new Error("Failed to find stock card by ID");
-        }
-    }
-
-    async updateStockCard(stockCard: StockCard): Promise<StockCard> {
-        try {
-            const [updatedStockCard] = await db.update(stockCards).set(stockCard).where(eq(stockCards.id, stockCard.id)).returning();
+            const [updatedStockCard] = await db.update(stockCards).set(item).where(eq(stockCards.id, id)).returning();
             return updatedStockCard;
         } catch (error) {
             console.error("Error updating stock card:", error);
@@ -93,13 +49,30 @@ export class StockCardRepository implements IStockCardRepository {
         }
     }
 
-    async findAllStockCards(): Promise<StockCardWithRelations[]> {
+    async delete(id: string): Promise<boolean> {
         try {
-            const stockCardsList = await db.select().from(stockCards).execute();
-            const stockCardsWithRelations = await Promise.all(
-                stockCardsList.map(stockCard => this.findStockCardById(stockCard.id))
-            );
-            return stockCardsWithRelations.filter((card): card is StockCardWithRelations => card !== null);
+            const result = await db.delete(stockCards).where(eq(stockCards.id, id));
+            return result.rowCount ? result.rowCount > 0 : false;
+        } catch (error) {
+            console.error("Error deleting stock card:", error);
+            throw new Error("Failed to delete stock card");
+        }
+    }
+
+    async findById(id: string): Promise<StockCard | null> {
+        try {
+            const result = await db.select().from(stockCards).where(eq(stockCards.id, id)).execute();
+            return result.length > 0 ? result[0] : null;
+        } catch (error) {
+            console.error("Error finding stock card by ID:", error);
+            throw new Error("Failed to find stock card by ID");
+        }
+    }
+
+    async findAll(): Promise<StockCard[]> {
+        try {
+            const result = await db.select().from(stockCards).execute();
+            return result;
         } catch (error) {
             console.error("Error finding all stock cards:", error);
             throw new Error("Failed to find all stock cards");
@@ -108,7 +81,7 @@ export class StockCardRepository implements IStockCardRepository {
 
     async createStockCardsWithRelations(stockCard: StockCardWithRelations): Promise<StockCardWithRelations> {
         try {
-            const createdStockCard = await this.createStockCard(stockCard);
+            const createdStockCard = await this.create(stockCard);
             const stockCardId = createdStockCard.id;
 
             const { attributes, barcodes, categories, priceLists, taxRates, variants } = stockCard;
@@ -141,7 +114,7 @@ export class StockCardRepository implements IStockCardRepository {
             await Promise.all([
                 db.delete(stockCardAttributes).where(eq(stockCardAttributes.stockCardId, stockCardId)),
                 db.delete(stockCardBarcodes).where(eq(stockCardBarcodes.stockCardId, stockCardId)),
-                db.delete(stockCardCategories).where(eq(stockCardCategories.stockCardId, stockCardId)),
+                db.delete(stockCardCategoriesItems).where(eq(stockCardCategoriesItems.stockCardId, stockCardId)),
                 db.delete(stockCardPriceLists).where(eq(stockCardPriceLists.stockCardId, stockCardId)),
                 db.delete(stockCardTaxRates).where(eq(stockCardTaxRates.stockCardId, stockCardId)),
                 db.delete(stockCardVariants).where(eq(stockCardVariants.stockCardId, stockCardId)),
@@ -165,7 +138,7 @@ export class StockCardRepository implements IStockCardRepository {
             const [attributes, barcodes, categories, priceLists, taxRates, variants] = await Promise.all([
                 db.select().from(stockCardAttributes).where(eq(stockCardAttributes.stockCardId, stockCardId)).execute(),
                 db.select().from(stockCardBarcodes).where(eq(stockCardBarcodes.stockCardId, stockCardId)).execute(),
-                db.select().from(stockCardCategories).where(eq(stockCardCategories.stockCardId, stockCardId)).execute(),
+                db.select().from(stockCardCategoriesItems).where(eq(stockCardCategoriesItems.stockCardId, stockCardId)).execute(),
                 db.select().from(stockCardPriceLists).where(eq(stockCardPriceLists.stockCardId, stockCardId)).execute(),
                 db.select().from(stockCardTaxRates).where(eq(stockCardTaxRates.stockCardId, stockCardId)).execute(),
                 db.select().from(stockCardVariants).where(eq(stockCardVariants.stockCardId, stockCardId)).execute(),
@@ -204,9 +177,9 @@ export class StockCardRepository implements IStockCardRepository {
         }
     }
 
-    async updateStockCardsWithRelations(stockCard: StockCardWithRelations): Promise<StockCardWithRelations> {
+    async updateStockCardsWithRelations(id:  string, stockCard: StockCardWithRelations): Promise<StockCardWithRelations> {
         try {
-            const updatedStockCard = await this.updateStockCard(stockCard);
+            const updatedStockCard = await this.update(id, stockCard);
             const stockCardId = updatedStockCard.id;
 
             const { attributes, barcodes, categories, priceLists, taxRates, variants, images, videos } = stockCard;
@@ -340,7 +313,7 @@ export class StockCardRepository implements IStockCardRepository {
 
     async createStockCardCategory(stockCardCategory: StockCardCategory): Promise<StockCardCategory> {
         try {
-            const [createdCategory] = await db.insert(stockCardCategories).values(stockCardCategory).returning();
+            const [createdCategory] = await db.insert(stockCardCategoriesItems).values(stockCardCategory).returning();
             return createdCategory;
         } catch (error) {
             console.error("Error creating stock card category:", error);
@@ -350,7 +323,7 @@ export class StockCardRepository implements IStockCardRepository {
 
     async deleteStockCardCategory(stockCardCategoryId: string): Promise<boolean> {
         try {
-            const result = await db.delete(stockCardCategories).where(eq(stockCardCategories.id, stockCardCategoryId));
+            const result = await db.delete(stockCardCategoriesItems).where(eq(stockCardCategoriesItems.id, stockCardCategoryId));
             return result.rowCount ? result.rowCount > 0 : false;
         } catch (error) {
             console.error("Error deleting stock card category:", error);
@@ -360,7 +333,7 @@ export class StockCardRepository implements IStockCardRepository {
 
     async findStockCardCategoryById(stockCardCategoryId: string): Promise<StockCardCategory | null> {
         try {
-            const result = await db.select().from(stockCardCategories).where(eq(stockCardCategories.id, stockCardCategoryId)).execute();
+            const result = await db.select().from(stockCardCategoriesItems).where(eq(stockCardCategoriesItems.id, stockCardCategoryId)).execute();
             return result.length > 0 ? result[0] : null;
         } catch (error) {
             console.error("Error finding stock card category by ID:", error);
@@ -370,7 +343,7 @@ export class StockCardRepository implements IStockCardRepository {
 
     async findAllStockCardCategories(): Promise<StockCardCategory[]> {
         try {
-            const result = await db.select().from(stockCardCategories).execute();
+            const result = await db.select().from(stockCardCategoriesItems).execute();
             return result;
         } catch (error) {
             console.error("Error finding all stock card categories:", error);
@@ -380,7 +353,7 @@ export class StockCardRepository implements IStockCardRepository {
 
     async updateStockCardCategory(stockCardCategory: StockCardCategory): Promise<StockCardCategory> {
         try {
-            const [updatedCategory] = await db.update(stockCardCategories).set(stockCardCategory).where(eq(stockCardCategories.id, stockCardCategory.id)).returning();
+            const [updatedCategory] = await db.update(stockCardCategoriesItems).set(stockCardCategory).where(eq(stockCardCategoriesItems.id, stockCardCategory.id)).returning();
             return updatedCategory;
         } catch (error) {
             console.error("Error updating stock card category:", error);

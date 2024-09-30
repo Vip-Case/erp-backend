@@ -13,19 +13,13 @@ import { IStockCardImage, IStockCardVideo } from "../../models/stockCardMedia";
 
 // StockCardRepository interface
 export interface IStockCardRepository extends IBaseRepository<StockCard>{
-    // StockCard operations
-    createStockCard(stockCard: StockCard): Promise<StockCard>;
-    deleteStockCard(stockCardId: string): Promise<boolean>;
-    findStockCardById(stockCardId: string): Promise<StockCardWithRelations | null>;
-    updateStockCard(stockCard: StockCard): Promise<StockCard>;
-    findAllStockCards(): Promise<StockCardWithRelations[]>;
 
     // StockCard With Relations operations
     createStockCardsWithRelations(stockCard: StockCardWithRelations): Promise<StockCardWithRelations>;
     deleteStockCardsWithRelations(stockCardId: string): Promise<boolean>;
     findStockCardWithRelationsById(stockCardId: string): Promise<StockCardWithRelations | null>
     findAllStockCardsWithRelations(): Promise<StockCardWithRelations[]>
-    updateStockCardsWithRelations(stockCard: StockCardWithRelations): Promise<StockCardWithRelations>;
+    updateStockCardsWithRelations(id: string, stockCard: StockCardWithRelations): Promise<StockCardWithRelations>;
 
     // StockCardAttribute operations
     createStockCardAttribute(stockCardAttribute: StockCardAttribute): Promise<StockCardAttribute>;
