@@ -36,23 +36,28 @@ model StockCard {
   createdBy          String? // Oluşturan kullanıcı
   updatedBy          String? // Güncelleyen kullanıcı
 
-  PriceLists StockCardPriceList[]
   Barcodes   StockCardBarcode[]
   Categories StockCardCategoryItem[]
   TaxRates   StockCardTaxRate[]
   Attributes StockCardAttribute[]
   Variations StockCardVariation[]
+  StockCardPriceListItems StockCardPriceListItems[]
 }
 
 model StockCardPriceList {
   id            String    @id @default(cuid())
   priceListName String    @db.VarChar(100)
-  stockCardId   String
-  price         Decimal   @db.Decimal(15, 4)
   currency      String    @db.VarChar(3)
-  validFrom     DateTime
-  validTo       DateTime?
   isActive      Boolean   @default(true)
+
+  
+}
+
+model StockCardPriceListItems {
+  id            String @id @default(cuid())
+  priceListId   String
+  stockCardId   String
+  price         Decimal @db.Decimal(15, 4)
 
   stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 
@@ -123,8 +128,9 @@ model StockCardVariation {
   attributes         StockCardAttribute[]
 
   stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  PriceLists StockCardPriceList[] // Varyasyona özel fiyat listeleri
+
   Barcodes   StockCardBarcode[] // Varyasyona özel barkodlar
+  StockCardPriceListItems StockCardPriceListItems[] // Varyasyona özel fiyat listesi
 }
 
 model User {

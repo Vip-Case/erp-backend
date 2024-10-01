@@ -53,3 +53,15 @@ package-lock.json
 # ggshield
 .ggshield
 .cache_ggshield
+
+# Ignore migrations
+migrations
+
+# Ignore build files
+build
+
+# Ignore coverage files
+coverage
+
+# Ignore sql files
+*.sql
