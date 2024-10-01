@@ -19,7 +19,7 @@ services:
       - setup
     build:
       context: setup/
-      args:
+      args: 
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     init: true
     volumes:
