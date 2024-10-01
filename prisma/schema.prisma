@@ -36,28 +36,26 @@ model StockCard {
   createdBy          String? // Oluşturan kullanıcı
   updatedBy          String? // Güncelleyen kullanıcı
 
-  Barcodes   StockCardBarcode[]
-  Categories StockCardCategoryItem[]
-  TaxRates   StockCardTaxRate[]
-  Attributes StockCardAttribute[]
-  Variations StockCardVariation[]
+  Barcodes                StockCardBarcode[]
+  Categories              StockCardCategoryItem[]
+  TaxRates                StockCardTaxRate[]
+  Attributes              StockCardAttribute[]
+  Variations              StockCardVariation[]
   StockCardPriceListItems StockCardPriceListItems[]
 }
 
 model StockCardPriceList {
-  id            String    @id @default(cuid())
-  priceListName String    @db.VarChar(100)
-  currency      String    @db.VarChar(3)
-  isActive      Boolean   @default(true)
-
-  
+  id            String  @id @default(cuid())
+  priceListName String  @db.VarChar(100)
+  currency      String  @db.VarChar(3)
+  isActive      Boolean @default(true)
 }
 
 model StockCardPriceListItems {
-  id            String @id @default(cuid())
-  priceListId   String
-  stockCardId   String
-  price         Decimal @db.Decimal(15, 4)
+  id          String  @id @default(cuid())
+  priceListId String
+  stockCardId String
+  price       Decimal @db.Decimal(15, 4)
 
   stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 
@@ -95,20 +93,20 @@ model StockCardCategoryItem {
 
 model StockCardTaxRate {
   id          String  @id @default(cuid())
-  stockCardId String
+  stockCardId String?
   taxName     String  @db.VarChar(100)
   taxRate     Decimal @db.Decimal(5, 2)
 
-  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  stockCard StockCard? @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 }
 
 model StockCardAttribute {
   id            String   @id @default(cuid())
   attributeName String   @db.VarChar(100)
   values        String[] // An array of possible values (like ['Small', 'Medium', 'Large'])
-  stockCardId   String
+  stockCardId   String?
 
-  stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  stockCard  StockCard?           @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   variations StockCardVariation[] // One attribute can be used in multiple variations
 }
 
@@ -127,9 +125,9 @@ model StockCardVariation {
   stockCode          String               @unique @db.VarChar(100) // Varyasyona özel stok kodu
   attributes         StockCardAttribute[]
 
-  stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 
-  Barcodes   StockCardBarcode[] // Varyasyona özel barkodlar
+  Barcodes                StockCardBarcode[] // Varyasyona özel barkodlar
   StockCardPriceListItems StockCardPriceListItems[] // Varyasyona özel fiyat listesi
 }
 

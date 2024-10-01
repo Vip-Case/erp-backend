@@ -1,5 +1,5 @@
 import { StockCard } from "@prisma/client";
-import { IStockCardRepository } from "../../abstracts/IStockCardRepository";
+import { IStockCardRepository } from "../../abstracts/stockCard/IStockCardRepository";
 import prisma from "../../../config/prisma";
 
 export class StockCardRepository implements IStockCardRepository {
