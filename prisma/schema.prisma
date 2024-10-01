@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model StockCard {
+  id                 String   @id @default(cuid()) // UUID v4
+  productCode        String   @unique @db.VarChar(100) // Ürün kodu
+  productName        String   @db.VarChar(150) // Ürün adı
+  invoiceName        String?  @db.VarChar(150) // Fatura adı
+  shortDescription   String?  @db.VarChar(150) // Kısa açıklama
+  description        String? // Açıklama
+  warehouseCode      String   @db.VarChar(50) // Depo kodu
+  manufacturerCode   String?  @db.VarChar(50) // Üretici kodu
+  companyCode        String   @db.VarChar(50) // Şirket kodu
+  branchCode         String   @db.VarChar(50) // Şube kodu
+  brand              String?  @db.VarChar(100) // Marka
+  unitOfMeasure      String?  @db.VarChar(50) // Ölçü birimi
+  productType        String   @db.VarChar(50) // Ürün tipi
+  riskQuantities     Decimal  @db.Decimal(15, 4) // Riskli miktarlar
+  stockStatus        Boolean  @default(true) // Stok durumu
+  hasExpirationDate  Boolean  @default(false) // Son kullanma tarihi var mı?
+  allowNegativeStock Boolean  @default(false) // Negatif stok izni
+  createdAt          DateTime @default(now()) // Oluşturulma tarihi
+  updatedAt          DateTime @updatedAt // Güncellenme tarihi
+  createdBy          String? // Oluşturan kullanıcı
+  updatedBy          String? // Güncelleyen kullanıcı
+
+  PriceLists StockCardPriceList[]
+  Barcodes   StockCardBarcode[]
+  Categories StockCardCategoryItem[]
+  TaxRates   StockCardTaxRate[]
+  Attributes StockCardAttribute[]
+  Variations StockCardVariation[]
+}
+
+model StockCardPriceList {
+  id            String    @id @default(cuid())
+  priceListName String    @db.VarChar(100)
+  stockCardId   String
+  price         Decimal   @db.Decimal(15, 4)
+  currency      String    @db.VarChar(3)
+  validFrom     DateTime
+  validTo       DateTime?
+  isActive      Boolean   @default(true)
+
+  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+
+  StockCardVariation StockCardVariation[]
+}
+
+model StockCardBarcode {
+  id          String @id @default(cuid())
+  stockCardId String
+  barcode     String @unique @db.VarChar(100)
+
+  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+
+  StockCardVariation StockCardVariation[]
+}
+
+model StockCardCategory {
+  id               String  @id @default(cuid())
+  categoryName     String  @db.VarChar(100)
+  parentCategoryId String? // Null olursa ana kategori
+
+  parentCategory  StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  childCategories StockCardCategory[]     @relation("CategoryHierarchy")
+  CategoryItems   StockCardCategoryItem[]
+}
+
+model StockCardCategoryItem {
+  id          String @id @default(cuid())
+  stockCardId String
+  categoryId  String
+
+  stockCard StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  category  StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model StockCardTaxRate {
+  id          String  @id @default(cuid())
+  stockCardId String
+  taxName     String  @db.VarChar(100)
+  taxRate     Decimal @db.Decimal(5, 2)
+
+  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+}
+
+model StockCardAttribute {
+  id            String   @id @default(cuid())
+  attributeName String   @db.VarChar(100)
+  values        String[] // An array of possible values (like ['Small', 'Medium', 'Large'])
+  stockCardId   String
+
+  stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  variations StockCardVariation[] // One attribute can be used in multiple variations
+}
+
+model StockCardVariation {
+  id                 String               @id @default(cuid())
+  stockCardId        String
+  productCode        String               @db.VarChar(100) // Varyasyona özel ürün kodu
+  productName        String               @db.VarChar(150) // Varyasyona özel ürün adı
+  invoiceName        String?              @db.VarChar(150) // Varyasyona özel fatura adı
+  shortDescription   String?              @db.VarChar(150) // Varyasyona özel kısa açıklama
+  description        String? // Varyasyona özel açıklama
+  riskQuantities     Decimal              @db.Decimal(15, 4) // Varyasyona özel riskli miktarlar
+  hasExpirationDate  Boolean              @default(false) // Varyasyona özel son kullanma tarihi
+  allowNegativeStock Boolean              @default(false) // Varyasyona özel negatif stok izni
+  price              Decimal              @db.Decimal(15, 4) // Varyasyona özel fiyat
+  stockCode          String               @unique @db.VarChar(100) // Varyasyona özel stok kodu
+  attributes         StockCardAttribute[]
+
+  stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  PriceLists StockCardPriceList[] // Varyasyona özel fiyat listeleri
+  Barcodes   StockCardBarcode[] // Varyasyona özel barkodlar
+}
+
+model User {
+  id       String @id @default(cuid())
+  username String @unique @db.VarChar(50)
+  password String @db.VarChar(100)
+}
