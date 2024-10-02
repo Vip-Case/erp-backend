@@ -18,13 +18,18 @@
     "@elysiajs/swagger": "^1.1.1",
     "@prisma/client": "^5.20.0",
     "@types/node": "^22.7.4",
+    "@types/pino-multi-stream": "^5.1.6",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "elysia": "latest",
     "mongoose": "^8.6.4",
     "pg": "^8.13.0",
+    "pino": "^9.4.0",
+    "pino-multi-stream": "^6.0.0",
+    "pino-pretty": "^11.2.2",
     "prisma": "^5.20.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

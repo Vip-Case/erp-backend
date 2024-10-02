@@ -122,7 +122,6 @@ model StockCardVariation {
   hasExpirationDate  Boolean              @default(false) // Varyasyona özel son kullanma tarihi
   allowNegativeStock Boolean              @default(false) // Varyasyona özel negatif stok izni
   price              Decimal              @db.Decimal(15, 4) // Varyasyona özel fiyat
-  stockCode          String               @unique @db.VarChar(100) // Varyasyona özel stok kodu
   attributes         StockCardAttribute[]
 
   stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)

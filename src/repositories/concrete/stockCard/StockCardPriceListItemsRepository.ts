@@ -12,6 +12,16 @@ export class StockCardPriceListItemsRepository implements IStockCardPriceListIte
         }
     }
 
+    async createMany(stockCardPriceListItems: StockCardPriceListItems[]): Promise<StockCardPriceListItems[]> {
+        try {
+            await prisma.stockCardPriceListItems.createMany({ data: stockCardPriceListItems });
+            return stockCardPriceListItems;
+        } catch (error) {
+            console.error("Error creating StockCardPriceListItems:", error);
+            throw new Error(`Could not create StockCardPriceListItems`);
+        }
+    }
+
     async update(id: string, item: Partial<StockCardPriceListItems>): Promise<StockCardPriceListItems> {
         try {
             return await prisma.stockCardPriceListItems.update({

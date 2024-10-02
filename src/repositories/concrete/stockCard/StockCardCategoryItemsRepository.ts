@@ -12,6 +12,16 @@ export class StockCardCategoryItemsRepository implements IStockCardCategoryItems
         }
     }
 
+    async createMany(stockCardCategoryItems: StockCardCategoryItem[]): Promise<StockCardCategoryItem[]> {
+        try {
+            await prisma.stockCardCategoryItem.createMany({ data: stockCardCategoryItems });
+            return stockCardCategoryItems;
+        } catch (error) {
+            console.error("Error creating StockCardCategoryItems:", error);
+            throw new Error(`Could not create StockCardCategoryItems`);
+        }
+    }
+
     async update(id: string, item: Partial<StockCardCategoryItem>): Promise<StockCardCategoryItem> {
         try {
             return await prisma.stockCardCategoryItem.update({
