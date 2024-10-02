@@ -1,19 +1,28 @@
-import { Elysia } from "elysia";
-import { swagger } from "@elysiajs/swagger";
-import { appConfig } from "./config/app";
-/* import mongoose from "mongoose";
-import { mongoConfig } from "./config/database";
+import { Elysia } from 'elysia';
+import { swagger } from '@elysiajs/swagger';
+import { appConfig } from './config/app';
+import { StockCardRoutes } from './api/routes/v1/stockCardRoutes'; // Rotayı dahil ediyoruz
 
-mongoose
-  .connect(mongoConfig.url)
-  .then(() => console.log("MongoDB'ye başarıyla bağlandı."))
-  .catch((err) => console.error("MongoDB'ye bağlanırken hata oluştu:", err)); */
-
+// Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
-  .use(swagger())
-  .get("/", () => "Elysia is running!")
-  .listen(appConfig.port);
+  .use(swagger({
+    path: "/docs", // Swagger UI'nin erişim yolu
+    theme: "flattop", // Swagger UI teması
+    autoDarkMode: true, // Otomatik karanlık mod
+    documentation: {
+      info: {
+        title: "Elysia API", // API başlığı
+        version: "1.0.0", // API versiyonu
+        description: "Elysia API Documentation", // API açıklaması
+      },
+    },
+  })) // Swagger middleware'i ekleniyor
+  .get("/", () => "Elysia is running!"); // Ana route tanımlanıyor
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+// API rotalarını dahil ediyoruz
+StockCardRoutes(app);
+
+// Uygulama belirtilen portta dinlemeye başlıyor
+app.listen(appConfig.port, () => {
+  console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
+});

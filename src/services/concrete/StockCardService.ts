@@ -17,7 +17,6 @@ import { IStockCardTaxRateRepository } from "../../repositories/abstracts/stockC
 
 export class StockCardService {
 
-
     constructor(
         private stockCardRepository: IStockCardRepository,
         private stockCardAttributeRepository: IStockCardAttributeRepository,

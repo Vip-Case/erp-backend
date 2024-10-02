@@ -7,6 +7,11 @@ import { multistream } from 'pino-multi-stream';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Log formatı ve dosya rotasyonu için güncellenmiş dosya adı
+// Log klasörünü oluştur (eğer yoksa)
+if (!fs.existsSync('./logs')) {
+    fs.mkdirSync('./logs');
+}
+
 const logFilePath = `./logs/app-log-${new Date().toISOString().split('T')[0]}.log`;
 
 // Gelişmiş log formatı
