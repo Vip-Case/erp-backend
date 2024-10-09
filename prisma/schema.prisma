@@ -261,7 +261,6 @@ model Company {
   phone       String   @db.VarChar(50)
   email       String   @db.VarChar(100)
   website     String   @db.VarChar(100)
-  stockCardId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdBy   String?
@@ -301,11 +300,8 @@ model Branch {
   User      User[]
   Current   Current[]
   StockCard StockCard[]
-
   StockMovement StockMovement[]
-
   CurrentMovement CurrentMovement[]
-
   Invoice Invoice[]
 }
 

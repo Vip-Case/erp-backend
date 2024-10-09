@@ -16,3 +16,5 @@ export const InvoiceRoutes = (app: Elysia) => {
             .get("/invoicesWithRelations/:id", InvoiceController.getInvoiceWithRelationsById, { tags: ["Invoices"] })
     );
 };
+
+export default InvoiceRoutes;

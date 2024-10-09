@@ -31,28 +31,6 @@ export const StockCardPlain = t.Object(
 
 export const StockCardRelations = t.Object(
   {
-    Warehouse: t.Array(
-      t.Object(
-        {
-          id: t.String({ additionalProperties: true }),
-          warehouseName: t.String({ additionalProperties: true }),
-          warehouseCode: t.String({ additionalProperties: true }),
-          stockCardId: __nullable__(t.String({ additionalProperties: true })),
-          address: t.String({ additionalProperties: true }),
-          countryCode: t.String({ additionalProperties: true }),
-          city: t.String({ additionalProperties: true }),
-          district: t.String({ additionalProperties: true }),
-          phone: t.String({ additionalProperties: true }),
-          email: t.String({ additionalProperties: true }),
-          companyCode: t.String({ additionalProperties: true }),
-          createdAt: t.Date({ additionalProperties: true }),
-          updatedAt: t.Date({ additionalProperties: true }),
-          createdBy: __nullable__(t.String({ additionalProperties: true })),
-          updatedBy: __nullable__(t.String({ additionalProperties: true })),
-        },
-        { additionalProperties: true },
-      ),
-    ),
     Company: __nullable__(
       t.Object(
         {
@@ -68,7 +46,6 @@ export const StockCardRelations = t.Object(
           phone: t.String({ additionalProperties: true }),
           email: t.String({ additionalProperties: true }),
           website: t.String({ additionalProperties: true }),
-          stockCardId: __nullable__(t.String({ additionalProperties: true })),
           createdAt: t.Date({ additionalProperties: true }),
           updatedAt: t.Date({ additionalProperties: true }),
           createdBy: __nullable__(t.String({ additionalProperties: true })),
@@ -363,21 +340,6 @@ export const StockCardPlainInputUpdate = t.Object(
 
 export const StockCardRelationsInputCreate = t.Object(
   {
-    Warehouse: t.Optional(
-      t.Object(
-        {
-          connect: t.Array(
-            t.Object(
-              {
-                id: t.String({ additionalProperties: true }),
-              },
-              { additionalProperties: true },
-            ),
-          ),
-        },
-        { additionalProperties: true },
-      ),
-    ),
     Company: t.Optional(
       t.Object(
         {
@@ -544,30 +506,6 @@ export const StockCardRelationsInputCreate = t.Object(
 export const StockCardRelationsInputUpdate = t.Partial(
   t.Object(
     {
-      Warehouse: t.Partial(
-        t.Object(
-          {
-            connect: t.Array(
-              t.Object(
-                {
-                  id: t.String({ additionalProperties: true }),
-                },
-                { additionalProperties: true },
-              ),
-            ),
-            disconnect: t.Array(
-              t.Object(
-                {
-                  id: t.String({ additionalProperties: true }),
-                },
-                { additionalProperties: true },
-              ),
-            ),
-          },
-          { additionalProperties: true },
-        ),
-        { additionalProperties: true },
-      ),
       Company: t.Partial(
         t.Object(
           {
@@ -926,7 +864,6 @@ export const StockCardSelect = t.Partial(
       updatedAt: t.Boolean(),
       createdBy: t.Boolean(),
       updatedBy: t.Boolean(),
-      Warehouse: t.Boolean(),
       Company: t.Boolean(),
       Branch: t.Boolean(),
       Current: t.Boolean(),
@@ -948,7 +885,6 @@ export const StockCardSelect = t.Partial(
 export const StockCardInclude = t.Partial(
   t.Object(
     {
-      Warehouse: t.Boolean(),
       Company: t.Boolean(),
       Branch: t.Boolean(),
       Current: t.Boolean(),

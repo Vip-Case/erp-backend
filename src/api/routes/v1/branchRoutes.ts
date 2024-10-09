@@ -1,6 +1,7 @@
 
 import { Elysia } from 'elysia';
 import BranchController from '../../controllers/branchController';
+import { BranchPlain } from '../../../../prisma/prismabox/Branch';
 
 export const BranchRoutes = (app: Elysia) => {
     app.group("/branches", (app) =>

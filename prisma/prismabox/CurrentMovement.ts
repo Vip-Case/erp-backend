@@ -56,7 +56,6 @@ export const CurrentMovementRelations = t.Object(
         phone: t.String({ additionalProperties: true }),
         email: t.String({ additionalProperties: true }),
         website: t.String({ additionalProperties: true }),
-        stockCardId: __nullable__(t.String({ additionalProperties: true })),
         createdAt: t.Date({ additionalProperties: true }),
         updatedAt: t.Date({ additionalProperties: true }),
         createdBy: __nullable__(t.String({ additionalProperties: true })),

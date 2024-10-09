@@ -13,8 +13,8 @@ import CurrentMovementRoutes from './api/routes/v1/currentMovementRoutes';
 import CurrentGroupRoutes from './api/routes/v1/currentGroupRoutes';
 import UserRoutes from './api/routes/v1/userRoutes';
 import RoleRoutes from './api/routes/v1/roleRoutes';
-import { Invoice } from '../prisma/prismabox/Invoice';
-import { InvoiceRoutes } from './api/routes/v1/invoiceRoutes';
+import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
+import CategoryRoutes from './api/routes/v1/categoryRoutes';
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -35,6 +35,7 @@ const app = new Elysia()
         { name: "Companies", description: "Company operations" }, // Company'ler için tag
         { name: "Branches", description: "Branch operations" }, // Branch'ler için tag
         { name: "Warehouses", description: "Warehouse operations" }, // Warehouse'lar için tag
+        { name: "Categories", description: "Category operations" }, // Category'ler için tag
         { name: "Currents", description: "Current operations" }, // Current'lar için tag
         { name: "Current Movements", description: "Current Movement operations" }, // Current Movement'lar için tag
         { name: "Current Groups", description: "Current Group operations" }, // Current Group'lar için tag
@@ -55,6 +56,7 @@ StockMovementRoutes(app);
 CompanyRoutes(app);
 BranchRoutes(app);
 WarehouseRoutes(app);
+CategoryRoutes(app);
 CurrentRoutes(app);
 CurrentMovementRoutes(app);
 CurrentGroupRoutes(app);

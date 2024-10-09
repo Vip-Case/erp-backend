@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import CategoryController from '../../controllers/categoryController';
+import { StockCardCategoryPlain } from '../../../../prisma/prismabox/StockCardCategory';
 
 export const CategoryRoutes = (app: Elysia) => {
     app.group("/categories", (app) =>

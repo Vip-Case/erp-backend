@@ -7,7 +7,6 @@ export const WarehousePlain = t.Object(
     id: t.String({ additionalProperties: true }),
     warehouseName: t.String({ additionalProperties: true }),
     warehouseCode: t.String({ additionalProperties: true }),
-    stockCardId: __nullable__(t.String({ additionalProperties: true })),
     address: t.String({ additionalProperties: true }),
     countryCode: t.String({ additionalProperties: true }),
     city: t.String({ additionalProperties: true }),
@@ -39,47 +38,12 @@ export const WarehouseRelations = t.Object(
         phone: t.String({ additionalProperties: true }),
         email: t.String({ additionalProperties: true }),
         website: t.String({ additionalProperties: true }),
-        stockCardId: __nullable__(t.String({ additionalProperties: true })),
         createdAt: t.Date({ additionalProperties: true }),
         updatedAt: t.Date({ additionalProperties: true }),
         createdBy: __nullable__(t.String({ additionalProperties: true })),
         updatedBy: __nullable__(t.String({ additionalProperties: true })),
       },
       { additionalProperties: true },
-    ),
-    StockCard: __nullable__(
-      t.Object(
-        {
-          id: t.String({ additionalProperties: true }),
-          productCode: t.String({ additionalProperties: true }),
-          productName: t.String({ additionalProperties: true }),
-          invoiceName: __nullable__(t.String({ additionalProperties: true })),
-          shortDescription: __nullable__(
-            t.String({ additionalProperties: true }),
-          ),
-          description: __nullable__(t.String({ additionalProperties: true })),
-          warehouseCode: __nullable__(t.String({ additionalProperties: true })),
-          manufacturerCode: __nullable__(
-            t.String({ additionalProperties: true }),
-          ),
-          companyCode: __nullable__(t.String({ additionalProperties: true })),
-          branchCode: __nullable__(t.String({ additionalProperties: true })),
-          brand: __nullable__(t.String({ additionalProperties: true })),
-          unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
-          productType: t.String({ additionalProperties: true }),
-          riskQuantities: __nullable__(
-            t.Number({ additionalProperties: true }),
-          ),
-          stockStatus: t.Boolean({ additionalProperties: true }),
-          hasExpirationDate: t.Boolean({ additionalProperties: true }),
-          allowNegativeStock: t.Boolean({ additionalProperties: true }),
-          createdAt: t.Date({ additionalProperties: true }),
-          updatedAt: t.Date({ additionalProperties: true }),
-          createdBy: __nullable__(t.String({ additionalProperties: true })),
-          updatedBy: __nullable__(t.String({ additionalProperties: true })),
-        },
-        { additionalProperties: true },
-      ),
     ),
     Branch: t.Array(
       t.Object(
@@ -393,19 +357,6 @@ export const WarehouseRelationsInputCreate = t.Object(
       },
       { additionalProperties: true },
     ),
-    StockCard: t.Optional(
-      t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
-        { additionalProperties: true },
-      ),
-    ),
     Branch: t.Optional(
       t.Object(
         {
@@ -512,21 +463,6 @@ export const WarehouseRelationsInputUpdate = t.Partial(
             { additionalProperties: true },
           ),
         },
-        { additionalProperties: true },
-      ),
-      StockCard: t.Partial(
-        t.Object(
-          {
-            connect: t.Object(
-              {
-                id: t.String({ additionalProperties: true }),
-              },
-              { additionalProperties: true },
-            ),
-            disconnect: t.Boolean(),
-          },
-          { additionalProperties: true },
-        ),
         { additionalProperties: true },
       ),
       Branch: t.Partial(
@@ -689,7 +625,6 @@ export const WarehouseWhere = t.Partial(
         id: t.String(),
         warehouseName: t.String(),
         warehouseCode: t.String(),
-        stockCardId: t.String(),
         address: t.String(),
         countryCode: t.String(),
         city: t.String(),
@@ -735,7 +670,6 @@ export const WarehouseWhereUnique = t.Recursive(
             id: t.String(),
             warehouseName: t.String(),
             warehouseCode: t.String(),
-            stockCardId: t.String(),
             address: t.String(),
             countryCode: t.String(),
             city: t.String(),
@@ -762,7 +696,6 @@ export const WarehouseSelect = t.Partial(
       id: t.Boolean(),
       warehouseName: t.Boolean(),
       warehouseCode: t.Boolean(),
-      stockCardId: t.Boolean(),
       address: t.Boolean(),
       countryCode: t.Boolean(),
       city: t.Boolean(),
@@ -775,7 +708,6 @@ export const WarehouseSelect = t.Partial(
       createdBy: t.Boolean(),
       updatedBy: t.Boolean(),
       company: t.Boolean(),
-      StockCard: t.Boolean(),
       Branch: t.Boolean(),
       User: t.Boolean(),
       Current: t.Boolean(),
@@ -793,7 +725,6 @@ export const WarehouseInclude = t.Partial(
   t.Object(
     {
       company: t.Boolean(),
-      StockCard: t.Boolean(),
       Branch: t.Boolean(),
       User: t.Boolean(),
       Current: t.Boolean(),
@@ -813,7 +744,6 @@ export const WarehouseOrderBy = t.Partial(
       id: t.Union([t.Literal("asc"), t.Literal("desc")]),
       warehouseName: t.Union([t.Literal("asc"), t.Literal("desc")]),
       warehouseCode: t.Union([t.Literal("asc"), t.Literal("desc")]),
-      stockCardId: t.Union([t.Literal("asc"), t.Literal("desc")]),
       address: t.Union([t.Literal("asc"), t.Literal("desc")]),
       countryCode: t.Union([t.Literal("asc"), t.Literal("desc")]),
       city: t.Union([t.Literal("asc"), t.Literal("desc")]),
