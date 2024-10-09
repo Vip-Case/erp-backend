@@ -18,7 +18,6 @@ services:
       - DATABASE_URL="postgresql://postgres:915307dedd66bANEA@postgres:5432/erp_db?schema=public"
     depends_on:
       - postgres
-      - redis
     develop:
       watch:
         - action: sync

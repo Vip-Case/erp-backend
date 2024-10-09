@@ -1,40 +1,49 @@
-import { StockCardService } from '../../services/concrete/StockCardService';
+import StockCardService from '../../services/concrete/stockCardService';
 import { Context } from 'elysia';
-import { StockCard } from '@prisma/client';
-import { StockCardRepository } from '../../repositories/concrete/stockCard/StockCardRepository';
-import { StockCardAttributeRepository } from '../../repositories/concrete/stockCard/StockCardAttributeRepository';
-import { StockCardBarcodeRepository } from '../../repositories/concrete/stockCard/StockCardBarcodeRepository';
-import { StockCardCategoryItemsRepository } from '../../repositories/concrete/stockCard/StockCardCategoryItemsRepository';
-import { StockCardPriceListItemsRepository } from '../../repositories/concrete/stockCard/StockCardPriceListItemsRepository';
-import { StockCardTaxRateRepository } from '../../repositories/concrete/stockCard/StockCardTaxRateRepository';
+import { StockCard, StockCardAttribute, StockCardBarcode, StockCardCategoryItem, StockCardPriceListItems, StockCardTaxRate } from '@prisma/client';
 
-// Repositories Initialization
-const stockCardRepository = new StockCardRepository();
-const stockCardAttributeRepository = new StockCardAttributeRepository();
-const stockCardBarcodeRepository = new StockCardBarcodeRepository();
-const stockCardCategoryItemsRepository = new StockCardCategoryItemsRepository();
-const stockCardPriceListItemsRepository = new StockCardPriceListItemsRepository();
-const stockCardTaxRateRepository = new StockCardTaxRateRepository();
+// Service Initialization
+const stockCardService = new StockCardService();
 
-const stockCardService = new StockCardService(
-    stockCardRepository,
-    stockCardAttributeRepository,
-    stockCardBarcodeRepository,
-    stockCardCategoryItemsRepository,
-    stockCardPriceListItemsRepository,
-    stockCardTaxRateRepository
-);
 
 const StockCardController = {
-    // Tüm StockCard'ları getiren API
-    getAllStockCards: async (ctx: Context) => {
+    // StockCard'ı oluşturan API
+    createStockCard: async (ctx: Context) => {
+        const stockCardData: StockCard = ctx.body as StockCard;
         try {
-            const stockCards = await stockCardService.getAllStockCards();
+            const stockCard = await stockCardService.createStockCard(stockCardData);
             ctx.set.status = 200;
-            return stockCards;
+            return stockCard;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Error fetching stock cards", details: error.message };
+            return { error: "Error creating stock card", details: error.message };
+        }
+    },
+
+    // StockCard'ı güncelleyen API
+    updateStockCard: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const stockCardData: Partial<StockCard> = ctx.body as Partial<StockCard>;;
+        try {
+            const stockCard = await stockCardService.updateStockCard(id, stockCardData);
+            ctx.set.status = 200;
+            return stockCard;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error updating stock card", details: error.message };
+        }
+    },
+
+    // StockCard'ı silen API
+    deleteStockCard: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const stockCard = await stockCardService.deleteStockCard(id);
+            ctx.set.status = 200;
+            return stockCard;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting stock card", details: error.message };
         }
     },
 
@@ -53,22 +62,21 @@ const StockCardController = {
         }
     },
 
-    // Yeni bir StockCard oluşturan API
-    createStockCard: async (ctx: Context) => {
-        const stockCardData: StockCard = ctx.body as StockCard;
+    // Tüm StockCard'ları getiren API
+    getAllStockCards: async (ctx: Context) => {
         try {
-            const newStockCard = await stockCardService.createStockCard(stockCardData);
-            ctx.set.status = 201;
-            return newStockCard;
-        } catch (err) {
-            return ctx.error(500, 'Error creating stock card');
+            const stockCards = await stockCardService.getAllStockCards();
+            ctx.set.status = 200;
+            return stockCards;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
         }
     },
 
-    // İlişkili StockCard oluşturan API
-    async createStockCardWithRelations(ctx: Context) {
+    // Tüm StockCard'ları ilişkili tabloları ile oluşturan API
+    createStockCardsWithRelations: async (ctx: Context) => {
         try {
-            // Body'den verileri alıyoruz
             const {
                 stockCard,       // Ana StockCard verisi
                 attributes,      // İsteğe bağlı Attributes
@@ -78,15 +86,15 @@ const StockCardController = {
                 taxRates         // İsteğe bağlı TaxRates
             } = ctx.body as {
                 stockCard: StockCard,
-                attributes?: any[],
-                barcodes?: any[],
-                categoryItems?: any[],
-                priceListItems?: any[],
-                taxRates?: any[]
+                attributes?: StockCardAttribute[],
+                barcodes?: StockCardBarcode[],
+                categoryItems?: StockCardCategoryItem[],
+                priceListItems?: StockCardPriceListItems[],
+                taxRates?: StockCardTaxRate[]
             };
 
             // Servisi çağırarak StockCard ve ilişkilerini oluşturuyoruz
-            const createdStockCard = await stockCardService.createStockCardWithRelations({
+            const createdStockCard = await stockCardService.createStockCardsWithRelations({
                 stockCard,
                 attributes,
                 barcodes,
@@ -94,47 +102,88 @@ const StockCardController = {
                 priceListItems,
                 taxRates
             });
-
-            // Başarılı sonuç durumunda 201 (Created) döndürüyoruz
-            ctx.set.status = 201;
+            ctx.set.status = 200;
             return createdStockCard;
-
-        } catch (error) {
-            console.error('Error creating StockCard with relations:', error);
-
-            // Hata durumunda 500 (Internal Server Error) döndürüyoruz
+        } catch (error: any) {
             ctx.set.status = 500;
-            return { message: 'Error creating StockCard with relations', error: (error as Error).message };
+            return { error: "Error fetching stock cards", details: error.message };
         }
     },
 
-    // Belirli bir ID ile StockCard'ı güncelleyen API
-    updateStockCard: async (ctx: Context) => {
+    // Belirli bir ID ile StockCard'ı ilişkili tabloları ile güncelleyen API
+    updateStockCardsWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
-        const stockCardData: Partial<StockCard> = ctx.body as Partial<StockCard>;
         try {
-            const updatedStockCard = await stockCardService.updateStockCard(id, stockCardData);
+            const {
+                stockCard,       // Ana StockCard verisi
+                attributes,      // İsteğe bağlı Attributes
+                barcodes,        // İsteğe bağlı Barcodes
+                categoryItems,   // İsteğe bağlı CategoryItems
+                priceListItems,  // İsteğe bağlı PriceListItems
+                taxRates         // İsteğe bağlı TaxRates
+            } = ctx.body as {
+                stockCard: StockCard,
+                attributes?: StockCardAttribute[],
+                barcodes?: StockCardBarcode[],
+                categoryItems?: StockCardCategoryItem[],
+                priceListItems?: StockCardPriceListItems[],
+                taxRates?: StockCardTaxRate[]
+            };
+
+            // Servisi çağırarak StockCard ve ilişkilerini güncelliyoruz
+            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, {
+                stockCard,
+                attributes,
+                barcodes,
+                categoryItems,
+                priceListItems,
+                taxRates
+            });
             ctx.set.status = 200;
             return updatedStockCard;
-        } catch (err) {
-            return ctx.error(500, `Error updating stock card with ID ${id}`);
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
         }
     },
 
-    // Belirli bir ID ile StockCard'ı silen API
-    deleteStockCard: async (ctx: Context) => {
+    // Belirli bir ID ile StockCard'ı ilişkili tabloları ile silen API
+    deleteStockCardsWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
         try {
-            const result = await stockCardService.deleteStockCard(id);
-            if (!result.success) {
-                return ctx.error(404, 'StockCard not found');
-            }
+            const deletedStockCard = await stockCardService.deleteStockCardsWithRelations(id);
             ctx.set.status = 200;
-            return { message: 'StockCard successfully deleted' };
-        } catch (err) {
-            return ctx.error(500, `Error deleting stock card with ID ${id}`);
+            return deletedStockCard;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    // Belirli bir ID ile StockCard'ı ilişkili tabloları ile getiren API
+    getStockCardsWithRelationsById: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const stockCard = await stockCardService.getStockCardsWithRelationsById(id);
+            ctx.set.status = 200;
+            return stockCard;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock card", details: error.message };
+        }
+    },
+
+    // Tüm StockCard'ları ilişkili tabloları ile getiren API
+    getAllStockCardsWithRelations: async (ctx: Context) => {
+        try {
+            const stockCards = await stockCardService.getAllStockCardsWithRelations();
+            ctx.set.status = 200;
+            return stockCards;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
         }
     }
-};
+}
 
 export default StockCardController;
