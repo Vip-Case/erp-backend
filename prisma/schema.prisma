@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,122 +7,483 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model StockCard {
-  id                 String   @id @default(cuid()) // UUID v4
-  productCode        String   @unique @db.VarChar(100) // Ürün kodu
-  productName        String   @db.VarChar(150) // Ürün adı
-  invoiceName        String?  @db.VarChar(150) // Fatura adı
-  shortDescription   String?  @db.VarChar(150) // Kısa açıklama
-  description        String? // Açıklama
-  warehouseCode      String   @db.VarChar(50) // Depo kodu
-  manufacturerCode   String?  @db.VarChar(50) // Üretici kodu
-  companyCode        String   @db.VarChar(50) // Şirket kodu
-  branchCode         String   @db.VarChar(50) // Şube kodu
-  brand              String?  @db.VarChar(100) // Marka
-  unitOfMeasure      String?  @db.VarChar(50) // Ölçü birimi
-  productType        String   @db.VarChar(50) // Ürün tipi
-  riskQuantities     Decimal  @db.Decimal(15, 4) // Riskli miktarlar
-  stockStatus        Boolean  @default(true) // Stok durumu
-  hasExpirationDate  Boolean  @default(false) // Son kullanma tarihi var mı?
-  allowNegativeStock Boolean  @default(false) // Negatif stok izni
-  createdAt          DateTime @default(now()) // Oluşturulma tarihi
-  updatedAt          DateTime @updatedAt // Güncellenme tarihi
-  createdBy          String? // Oluşturan kullanıcı
-  updatedBy          String? // Güncelleyen kullanıcı
+generator docs {
+  provider = "node node_modules/prisma-docs-generator"
+}
 
-  PriceLists StockCardPriceList[]
-  Barcodes   StockCardBarcode[]
-  Categories StockCardCategoryItem[]
-  TaxRates   StockCardTaxRate[]
-  Attributes StockCardAttribute[]
-  Variations StockCardVariation[]
+generator prismabox {
+  provider = "prismabox"
+  typeboxImportVariableName = "t"
+  typeboxImportDependencyName = "elysia"
+  inputModel = true
+  additionalProperties = true
+}
+
+enum CurrentType {
+  Customer
+  Supplier
+  Manufacturer
+  Buyer
+  Seller
+  Other
+}
+
+enum InvoiceType {
+  Purchase
+  Sales
+  Return
+  Cancel
+  Other
+}
+
+enum DocumentType {
+  Invoice
+  Order
+  Waybill
+  Other
+}
+
+enum StokManagementType {
+  Devir
+  DepolarArasiTransfer
+  Uretim
+  Muhtelif
+  Maliyet
+  Konsinye
+  Teshir
+}
+
+enum CurrentMovementType {
+  Borc
+  Alacak
+}
+
+enum CurrentMovementDocumentType {
+  Devir
+  Fatura
+  IadeFatura
+  Kasa
+  MusteriSeneti
+  BorcSeneti
+  MusteriCeki
+  BorcCeki
+  KarsiliksizCek
+  Muhtelif
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  roleName    String   @unique @db.VarChar(50)
+  description String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  User User[]
+}
+
+model StockCard {
+  id                 String   @id @default(cuid()) // Id
+  productCode        String   @unique @db.VarChar(100) // Ürün Kodu
+  productName        String   @db.VarChar(150) // Ürün Adı
+  invoiceName        String?  @db.VarChar(150) // Fatura Adı
+  shortDescription   String?  @db.VarChar(150) // Kısa Açıklama
+  description        String?  @unique @db.VarChar(250) // Açıklama
+  warehouseCode      String?  @unique
+  manufacturerCode   String?  @db.VarChar(50) // Üretici Kodu (Ayrı tabloya alınacak)
+  companyCode        String?  @db.VarChar(50) // Şirket Kodu
+  branchCode         String?  @db.VarChar(50) // Şube Kodu
+  brand              String?  @db.VarChar(100) // Marka
+  unitOfMeasure      String?  @db.VarChar(50) // Ölçü Birimi
+  productType        String   @db.VarChar(50) // Ürün Tipi
+  riskQuantities     Decimal? @db.Decimal(15, 4) // Risk Miktarı
+  stockStatus        Boolean  @default(true) // Stok Durumu
+  hasExpirationDate  Boolean  @default(false) // Son Kullanma Tarihi Var mı?
+  allowNegativeStock Boolean  @default(false) // Negatif Stok İzinli mi?
+  createdAt          DateTime @default(now()) // Oluşturulma Tarihi 
+  updatedAt          DateTime @updatedAt // Güncellenme Tarihi
+  createdBy          String? // Oluşturan
+  updatedBy          String? // Güncelleyen
+
+  Company   Company?    @relation(fields: [companyCode], references: [companyCode])
+  Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
+  Current   Current?    @relation(fields: [manufacturerCode], references: [currentCode])
+
+  Attributes          StockCardAttribute[] // Özellikler
+  Barcodes            StockCardBarcode[] // Barkodlar
+  Categories          StockCardCategoryItem[] // Kategoriler 
+  StockCardPriceLists StockCardPriceListItems[] // Fiyat Listeleri
+  TaxRates            StockCardTaxRate[] // Vergi Oranları
+  Variations          StockCardVariation[] // Varyasyonlar
+
+  StockMovement StockMovement[]
+
+  InvoiceDetail InvoiceDetail[]
 }
 
 model StockCardPriceList {
-  id            String    @id @default(cuid())
-  priceListName String    @db.VarChar(100)
-  stockCardId   String
-  price         Decimal   @db.Decimal(15, 4)
-  currency      String    @db.VarChar(3)
-  validFrom     DateTime
-  validTo       DateTime?
-  isActive      Boolean   @default(true)
+  id            String  @id @default(cuid())
+  priceListName String  @db.VarChar(100)
+  currency      String  @db.VarChar(3)
+  isActive      Boolean @default(true)
 
-  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  Current Current[]
 
-  StockCardVariation StockCardVariation[]
+  StockMovement StockMovement[]
+
+  CurrentMovement CurrentMovement[]
+
+  Invoice Invoice[]
+}
+
+model StockCardPriceListItems {
+  id                 String               @id @default(cuid())
+  priceListId        String
+  stockCardId        String
+  price              Decimal              @db.Decimal(15, 4)
+  stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  StockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
 
 model StockCardBarcode {
-  id          String @id @default(cuid())
-  stockCardId String
-  barcode     String @unique @db.VarChar(100)
-
-  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-
-  StockCardVariation StockCardVariation[]
+  id                 String               @id @default(cuid())
+  stockCardId        String
+  barcode            String               @unique @db.VarChar(100)
+  stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  StockCardVariation StockCardVariation[] @relation("StockCardBarcodeToStockCardVariation")
 }
 
 model StockCardCategory {
-  id               String  @id @default(cuid())
-  categoryName     String  @db.VarChar(100)
-  parentCategoryId String? // Null olursa ana kategori
-
-  parentCategory  StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
-  childCategories StockCardCategory[]     @relation("CategoryHierarchy")
-  CategoryItems   StockCardCategoryItem[]
+  id               String                  @id @default(cuid())
+  categoryName     String                  @db.VarChar(100)
+  parentCategoryId String?
+  parentCategory   StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  childCategories  StockCardCategory[]     @relation("CategoryHierarchy")
+  CategoryItems    StockCardCategoryItem[]
 }
 
 model StockCardCategoryItem {
-  id          String @id @default(cuid())
+  id          String            @id @default(cuid())
   stockCardId String
   categoryId  String
-
-  stockCard StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  category  StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category    StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  stockCard   StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 }
 
 model StockCardTaxRate {
-  id          String  @id @default(cuid())
-  stockCardId String
-  taxName     String  @db.VarChar(100)
-  taxRate     Decimal @db.Decimal(5, 2)
-
-  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  stockCardId String?
+  taxName     String     @db.VarChar(100)
+  taxRate     Decimal    @db.Decimal(5, 2)
+  stockCard   StockCard? @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 }
 
 model StockCardAttribute {
-  id            String   @id @default(cuid())
-  attributeName String   @db.VarChar(100)
-  values        String[] // An array of possible values (like ['Small', 'Medium', 'Large'])
-  stockCardId   String
-
-  stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  variations StockCardVariation[] // One attribute can be used in multiple variations
+  id            String               @id @default(cuid())
+  attributeName String               @db.VarChar(100)
+  values        String[]
+  stockCardId   String?
+  stockCard     StockCard?           @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  variations    StockCardVariation[] @relation("StockCardAttributeToStockCardVariation")
 }
 
-model StockCardVariation {
-  id                 String               @id @default(cuid())
+model StockCardVariation                  {
+  id                 String  @id @default(cuid())
   stockCardId        String
-  productCode        String               @db.VarChar(100) // Varyasyona özel ürün kodu
-  productName        String               @db.VarChar(150) // Varyasyona özel ürün adı
-  invoiceName        String?              @db.VarChar(150) // Varyasyona özel fatura adı
-  shortDescription   String?              @db.VarChar(150) // Varyasyona özel kısa açıklama
-  description        String? // Varyasyona özel açıklama
-  riskQuantities     Decimal              @db.Decimal(15, 4) // Varyasyona özel riskli miktarlar
-  hasExpirationDate  Boolean              @default(false) // Varyasyona özel son kullanma tarihi
-  allowNegativeStock Boolean              @default(false) // Varyasyona özel negatif stok izni
-  price              Decimal              @db.Decimal(15, 4) // Varyasyona özel fiyat
-  stockCode          String               @unique @db.VarChar(100) // Varyasyona özel stok kodu
-  attributes         StockCardAttribute[]
+  productCode        String  @db.VarChar(100)
+  productName        String  @db.VarChar(150)
+  invoiceName        String? @db.VarChar(150)
+  shortDescription   String? @db.VarChar(150)
+  description        String?
+  riskQuantities     Decimal @db.Decimal(15, 4)
+  hasExpirationDate  Boolean @default(false)
+  allowNegativeStock Boolean @default(false)
+  price              Decimal @db.Decimal(15, 4)
 
-  stockCard  StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  PriceLists StockCardPriceList[] // Varyasyona özel fiyat listeleri
-  Barcodes   StockCardBarcode[] // Varyasyona özel barkodlar
+  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+
+  attributes              StockCardAttribute[]      @relation("StockCardAttributeToStockCardVariation")
+  Barcodes                StockCardBarcode[]        @relation("StockCardBarcodeToStockCardVariation")
+  StockCardPriceListItems StockCardPriceListItems[] @relation("StockCardPriceListItemsToStockCardVariation")
+}
+
+model StockMovement {
+  id               String             @id @default(cuid())
+  productCode      String
+  warehouseCode    String
+  branchCode       String
+  currentCode      String
+  documentType     DocumentType
+  invoiceType      InvoiceType
+  movementType     StokManagementType
+  invoiceNo        String
+  invoiceDate      DateTime
+  waybillNo        String?
+  waybillDate      DateTime?
+  gcCode           String
+  type             String
+  description      String
+  quantity         Decimal            @db.Decimal(15, 4)
+  unitPrice        Decimal            @db.Decimal(15, 4)
+  totalPrice       Decimal            @db.Decimal(15, 4)
+  unitOfMeasure    String?            @db.VarChar(50)
+  outWarehouseCode String?
+  priceListId      String?
+  discount1        Decimal?           @db.Decimal(15, 4)
+  discount2        Decimal?           @db.Decimal(15, 4)
+  discount3        Decimal?           @db.Decimal(15, 4)
+  discount4        Decimal?           @db.Decimal(15, 4)
+  createdAt        DateTime           @default(now())
+  createdBy        String?
+  updatedAt        DateTime           @updatedAt
+  updatedBy        String?
+
+  stockCard    StockCard           @relation(fields: [productCode], references: [productCode])
+  warehouse    Warehouse           @relation("StockMovementWarehouse", fields: [warehouseCode], references: [warehouseCode])
+  branch       Branch              @relation(fields: [branchCode], references: [branchCode])
+  outWarehouse Warehouse?          @relation("StockMovementOutWarehouse", fields: [outWarehouseCode], references: [warehouseCode])
+  priceList    StockCardPriceList? @relation(fields: [priceListId], references: [id])
+
+  Current Current[]
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  companyName String   @unique @db.VarChar(100)
+  companyCode String   @unique @db.VarChar(50)
+  taxNumber   String   @unique @db.VarChar(50)
+  taxOffice   String   @db.VarChar(50)
+  address     String   @db.VarChar(250)
+  countryCode String   @db.VarChar(3)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  phone       String   @db.VarChar(50)
+  email       String   @db.VarChar(100)
+  website     String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  Branch    Branch[]
+  Warehouse Warehouse[]
+  User      User[]
+  Current   Current[]
+  StockCard StockCard[]
+
+  CurrentMovement CurrentMovement[]
+
+  Invoice Invoice[]
+}
+
+model Branch {
+  id          String   @id @default(cuid())
+  branchName  String   @unique @db.VarChar(100)
+  branchCode  String   @unique @db.VarChar(50)
+  address     String   @db.VarChar(250)
+  countryCode String   @db.VarChar(3)
+  city        String   @db.VarChar(50)
+  district    String   @db.VarChar(50)
+  phone       String   @db.VarChar(50)
+  email       String   @db.VarChar(100)
+  website     String   @db.VarChar(100)
+  companyCode String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  company Company @relation(fields: [companyCode], references: [companyCode])
+
+  Warehouse Warehouse[]
+  User      User[]
+  Current   Current[]
+  StockCard StockCard[]
+  StockMovement StockMovement[]
+  CurrentMovement CurrentMovement[]
+  Invoice Invoice[]
+}
+
+model Warehouse {
+  id            String   @id @default(cuid())
+  warehouseName String   @unique @db.VarChar(100)
+  warehouseCode String   @unique @db.VarChar(50)
+  address       String   @db.VarChar(250)
+  countryCode   String   @db.VarChar(3)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  phone         String   @db.VarChar(50)
+  email         String   @db.VarChar(100)
+  companyCode   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+  updatedBy     String?
+
+  company   Company    @relation(fields: [companyCode], references: [companyCode])
+
+  Branch         Branch[]
+  User           User[]
+  Current        Current[]
+  stockMovements StockMovement[] @relation("StockMovementWarehouse") // Ana depo ilişkisi
+  outMovements   StockMovement[] @relation("StockMovementOutWarehouse") // Çıkış deposu ilişkisi
+
+  Invoice Invoice[]
+}
+
+model Current {
+  id            String   @id @default(cuid())
+  currentCode   String   @unique @db.VarChar(50)
+  currentName   String   @db.VarChar(100)
+  currentType   String   @db.VarChar(50)
+  identityNo    String   @db.VarChar(50)
+  taxNumber     String   @db.VarChar(50)
+  taxOffice     String   @db.VarChar(50)
+  address       String   @db.VarChar(250)
+  countryCode   String   @db.VarChar(3)
+  city          String   @db.VarChar(50)
+  district      String   @db.VarChar(50)
+  phone         String   @db.VarChar(50)
+  email         String   @db.VarChar(100)
+  website       String   @db.VarChar(100)
+  companyCode   String   @db.VarChar(50)
+  branchCode    String   @db.VarChar(50)
+  warehouseCode String   @db.VarChar(50)
+  priceListId   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String?
+  updatedBy     String?
+
+  company            Company              @relation(fields: [companyCode], references: [companyCode])
+  branch             Branch               @relation(fields: [branchCode], references: [branchCode])
+  warehouse          Warehouse            @relation(fields: [warehouseCode], references: [warehouseCode])
+  priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id])
+  StockCard          StockCard[]
+  CurrentReportGroup CurrentReportGroup[]
+
+  StockMovement StockMovement[]
+
+  Invoice Invoice[]
+}
+
+model CurrentMovement {
+  id            String                      @id @default(cuid())
+  currentCode   String                      @db.VarChar(50)
+  dueDate       DateTime
+  description   String                      @db.VarChar(250)
+  debtAmount    Decimal                     @db.Decimal(15, 4)
+  creditAmount  Decimal                     @db.Decimal(15, 4)
+  balanceAmount Decimal                     @db.Decimal(15, 4)
+  priceListId   String
+  movementType  CurrentMovementType
+  documentType  CurrentMovementDocumentType
+  companyCode   String
+  branchCode    String
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+  createdBy     String?
+  updatedBy     String?
+
+  company            Company            @relation(fields: [companyCode], references: [companyCode])
+  branch             Branch             @relation(fields: [branchCode], references: [branchCode])
+  StockCardPriceList StockCardPriceList @relation(fields: [priceListId], references: [id])
+}
+
+model CurrentReportGroup {
+  id            String               @id @default(cuid())
+  groupCode     String               @unique @db.VarChar(100)
+  description   String               @db.VarChar(100)
+  parentGroupId String?
+  parentGroup   CurrentReportGroup?  @relation("GroupHierarchy", fields: [parentGroupId], references: [id])
+  childGroups   CurrentReportGroup[] @relation("GroupHierarchy")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  createdBy     String?
+  updatedBy     String?
+
+  Current Current[]
 }
 
 model User {
-  id       String @id @default(cuid())
-  username String @unique @db.VarChar(50)
-  password String @db.VarChar(100)
+  id          String   @id @default(cuid())
+  username    String   @unique @db.VarChar(50)
+  password    String   @db.VarChar(100)
+  email       String   @unique @db.VarChar(100)
+  firstName   String   @db.VarChar(50)
+  lastName    String   @db.VarChar(50)
+  phone       String   @db.VarChar(50)
+  address     String   @db.VarChar(250)
+  isActive    Boolean  @default(true)
+  companyCode String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  company Company @relation(fields: [companyCode], references: [companyCode])
+
+  Branch    Branch[]
+  Warehouse Warehouse[]
+  Role      Role[]
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNo     String    @unique @db.VarChar(50)
+  gibInvoiceNo  String?
+  invoiceDate   DateTime
+  invoiceType   InvoiceType
+  documentType  DocumentType
+  currentCode   String
+  companyCode   String
+  branchCode    String
+  outBranchCode String?
+  warehouseCode String
+  description   String
+  genelIskontoTutar Decimal @db.Decimal(15, 4)
+  genelIskontoOran Decimal @db.Decimal(5, 2)
+  paymentDate   DateTime  
+  paymentDay    Int
+  priceListId   String
+  totalAmount   Decimal   @db.Decimal(15, 4)
+  totalVat      Decimal   @db.Decimal(15, 4)
+  totalDiscount Decimal   @db.Decimal(15, 4)
+  totalNet      Decimal   @db.Decimal(15, 4)
+  totalPaid     Decimal   @db.Decimal(15, 4)
+  totalDebt     Decimal   @db.Decimal(15, 4)
+  totalBalance  Decimal   @db.Decimal(15, 4)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  canceledAt   DateTime
+  createdBy     String?
+  updatedBy     String?
+
+  Current Current @relation(fields: [currentCode], references: [currentCode])
+  company Company @relation(fields: [companyCode], references: [companyCode])
+  branch  Branch  @relation(fields: [branchCode], references: [branchCode])
+  warehouse Warehouse @relation(fields: [warehouseCode], references: [warehouseCode])
+  priceList StockCardPriceList @relation(fields: [priceListId], references: [id])
+
+  InvoiceDetail InvoiceDetail[]
+}
+
+model InvoiceDetail{
+  id          String   @id @default(cuid())
+  invoiceId   String
+  productCode String
+  quantity    Decimal  @db.Decimal(15, 4)
+  unitPrice   Decimal  @db.Decimal(15, 4)
+  totalPrice  Decimal  @db.Decimal(15, 4)
+  vatRate     Decimal  @db.Decimal(5, 2)
+  discount    Decimal  @db.Decimal(15, 4)
+  netPrice    Decimal  @db.Decimal(15, 4)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  Invoice Invoice @relation(fields: [invoiceId], references: [id])
+  StockCard StockCard @relation(fields: [productCode], references: [productCode])
 }
