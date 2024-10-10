@@ -8,43 +8,47 @@ export const InvoicePlain = t.Object(
     invoiceNo: t.String({ additionalProperties: true }),
     gibInvoiceNo: __nullable__(t.String({ additionalProperties: true })),
     invoiceDate: t.Date({ additionalProperties: true }),
-    invoiceType: t.Union(
-      [
-        t.Literal("Purchase"),
-        t.Literal("Sales"),
-        t.Literal("Return"),
-        t.Literal("Cancel"),
-        t.Literal("Other"),
-      ],
-      { additionalProperties: true },
+    invoiceType: __nullable__(
+      t.Union(
+        [
+          t.Literal("Purchase"),
+          t.Literal("Sales"),
+          t.Literal("Return"),
+          t.Literal("Cancel"),
+          t.Literal("Other"),
+        ],
+        { additionalProperties: true },
+      ),
     ),
-    documentType: t.Union(
-      [
-        t.Literal("Invoice"),
-        t.Literal("Order"),
-        t.Literal("Waybill"),
-        t.Literal("Other"),
-      ],
-      { additionalProperties: true },
+    documentType: __nullable__(
+      t.Union(
+        [
+          t.Literal("Invoice"),
+          t.Literal("Order"),
+          t.Literal("Waybill"),
+          t.Literal("Other"),
+        ],
+        { additionalProperties: true },
+      ),
     ),
-    currentCode: t.String({ additionalProperties: true }),
-    companyCode: t.String({ additionalProperties: true }),
-    branchCode: t.String({ additionalProperties: true }),
+    currentCode: __nullable__(t.String({ additionalProperties: true })),
+    companyCode: __nullable__(t.String({ additionalProperties: true })),
+    branchCode: __nullable__(t.String({ additionalProperties: true })),
     outBranchCode: __nullable__(t.String({ additionalProperties: true })),
     warehouseCode: t.String({ additionalProperties: true }),
-    description: t.String({ additionalProperties: true }),
-    genelIskontoTutar: t.Number({ additionalProperties: true }),
-    genelIskontoOran: t.Number({ additionalProperties: true }),
-    paymentDate: t.Date({ additionalProperties: true }),
-    paymentDay: t.Integer({ additionalProperties: true }),
-    priceListId: t.String({ additionalProperties: true }),
-    totalAmount: t.Number({ additionalProperties: true }),
-    totalVat: t.Number({ additionalProperties: true }),
-    totalDiscount: t.Number({ additionalProperties: true }),
-    totalNet: t.Number({ additionalProperties: true }),
-    totalPaid: t.Number({ additionalProperties: true }),
-    totalDebt: t.Number({ additionalProperties: true }),
-    totalBalance: t.Number({ additionalProperties: true }),
+    description: __nullable__(t.String({ additionalProperties: true })),
+    genelIskontoTutar: __nullable__(t.Number({ additionalProperties: true })),
+    genelIskontoOran: __nullable__(t.Number({ additionalProperties: true })),
+    paymentDate: __nullable__(t.Date({ additionalProperties: true })),
+    paymentDay: __nullable__(t.Integer({ additionalProperties: true })),
+    priceListId: __nullable__(t.String({ additionalProperties: true })),
+    totalAmount: __nullable__(t.Number({ additionalProperties: true })),
+    totalVat: __nullable__(t.Number({ additionalProperties: true })),
+    totalDiscount: __nullable__(t.Number({ additionalProperties: true })),
+    totalNet: __nullable__(t.Number({ additionalProperties: true })),
+    totalPaid: __nullable__(t.Number({ additionalProperties: true })),
+    totalDebt: __nullable__(t.Number({ additionalProperties: true })),
+    totalBalance: __nullable__(t.Number({ additionalProperties: true })),
     createdAt: t.Date({ additionalProperties: true }),
     updatedAt: t.Date({ additionalProperties: true }),
     canceledAt: t.Date({ additionalProperties: true }),
@@ -56,101 +60,111 @@ export const InvoicePlain = t.Object(
 
 export const InvoiceRelations = t.Object(
   {
-    Current: t.Object(
-      {
-        id: t.String({ additionalProperties: true }),
-        currentCode: t.String({ additionalProperties: true }),
-        currentName: t.String({ additionalProperties: true }),
-        currentType: t.String({ additionalProperties: true }),
-        identityNo: t.String({ additionalProperties: true }),
-        taxNumber: t.String({ additionalProperties: true }),
-        taxOffice: t.String({ additionalProperties: true }),
-        address: t.String({ additionalProperties: true }),
-        countryCode: t.String({ additionalProperties: true }),
-        city: t.String({ additionalProperties: true }),
-        district: t.String({ additionalProperties: true }),
-        phone: t.String({ additionalProperties: true }),
-        email: t.String({ additionalProperties: true }),
-        website: t.String({ additionalProperties: true }),
-        companyCode: t.String({ additionalProperties: true }),
-        branchCode: t.String({ additionalProperties: true }),
-        warehouseCode: t.String({ additionalProperties: true }),
-        priceListId: t.String({ additionalProperties: true }),
-        createdAt: t.Date({ additionalProperties: true }),
-        updatedAt: t.Date({ additionalProperties: true }),
-        createdBy: __nullable__(t.String({ additionalProperties: true })),
-        updatedBy: __nullable__(t.String({ additionalProperties: true })),
-      },
-      { additionalProperties: true },
+    Current: __nullable__(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          currentCode: t.String({ additionalProperties: true }),
+          currentName: t.String({ additionalProperties: true }),
+          currentType: t.String({ additionalProperties: true }),
+          identityNo: __nullable__(t.String({ additionalProperties: true })),
+          taxNumber: __nullable__(t.String({ additionalProperties: true })),
+          taxOffice: __nullable__(t.String({ additionalProperties: true })),
+          address: __nullable__(t.String({ additionalProperties: true })),
+          countryCode: __nullable__(t.String({ additionalProperties: true })),
+          city: __nullable__(t.String({ additionalProperties: true })),
+          district: __nullable__(t.String({ additionalProperties: true })),
+          phone: __nullable__(t.String({ additionalProperties: true })),
+          email: __nullable__(t.String({ additionalProperties: true })),
+          website: __nullable__(t.String({ additionalProperties: true })),
+          companyCode: t.String({ additionalProperties: true }),
+          branchCode: t.String({ additionalProperties: true }),
+          warehouseCode: t.String({ additionalProperties: true }),
+          priceListId: t.String({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    company: t.Object(
-      {
-        id: t.String({ additionalProperties: true }),
-        companyName: t.String({ additionalProperties: true }),
-        companyCode: t.String({ additionalProperties: true }),
-        taxNumber: t.String({ additionalProperties: true }),
-        taxOffice: t.String({ additionalProperties: true }),
-        address: t.String({ additionalProperties: true }),
-        countryCode: t.String({ additionalProperties: true }),
-        city: t.String({ additionalProperties: true }),
-        district: t.String({ additionalProperties: true }),
-        phone: t.String({ additionalProperties: true }),
-        email: t.String({ additionalProperties: true }),
-        website: t.String({ additionalProperties: true }),
-        createdAt: t.Date({ additionalProperties: true }),
-        updatedAt: t.Date({ additionalProperties: true }),
-        createdBy: __nullable__(t.String({ additionalProperties: true })),
-        updatedBy: __nullable__(t.String({ additionalProperties: true })),
-      },
-      { additionalProperties: true },
+    company: __nullable__(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          companyName: t.String({ additionalProperties: true }),
+          companyCode: t.String({ additionalProperties: true }),
+          taxNumber: t.String({ additionalProperties: true }),
+          taxOffice: t.String({ additionalProperties: true }),
+          address: t.String({ additionalProperties: true }),
+          countryCode: t.String({ additionalProperties: true }),
+          city: t.String({ additionalProperties: true }),
+          district: t.String({ additionalProperties: true }),
+          phone: t.String({ additionalProperties: true }),
+          email: t.String({ additionalProperties: true }),
+          website: t.String({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    branch: t.Object(
-      {
-        id: t.String({ additionalProperties: true }),
-        branchName: t.String({ additionalProperties: true }),
-        branchCode: t.String({ additionalProperties: true }),
-        address: t.String({ additionalProperties: true }),
-        countryCode: t.String({ additionalProperties: true }),
-        city: t.String({ additionalProperties: true }),
-        district: t.String({ additionalProperties: true }),
-        phone: t.String({ additionalProperties: true }),
-        email: t.String({ additionalProperties: true }),
-        website: t.String({ additionalProperties: true }),
-        companyCode: t.String({ additionalProperties: true }),
-        createdAt: t.Date({ additionalProperties: true }),
-        updatedAt: t.Date({ additionalProperties: true }),
-        createdBy: __nullable__(t.String({ additionalProperties: true })),
-        updatedBy: __nullable__(t.String({ additionalProperties: true })),
-      },
-      { additionalProperties: true },
+    branch: __nullable__(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          branchName: t.String({ additionalProperties: true }),
+          branchCode: t.String({ additionalProperties: true }),
+          address: t.String({ additionalProperties: true }),
+          countryCode: t.String({ additionalProperties: true }),
+          city: t.String({ additionalProperties: true }),
+          district: t.String({ additionalProperties: true }),
+          phone: t.String({ additionalProperties: true }),
+          email: t.String({ additionalProperties: true }),
+          website: t.String({ additionalProperties: true }),
+          companyCode: t.String({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    warehouse: t.Object(
-      {
-        id: t.String({ additionalProperties: true }),
-        warehouseName: t.String({ additionalProperties: true }),
-        warehouseCode: t.String({ additionalProperties: true }),
-        address: t.String({ additionalProperties: true }),
-        countryCode: t.String({ additionalProperties: true }),
-        city: t.String({ additionalProperties: true }),
-        district: t.String({ additionalProperties: true }),
-        phone: t.String({ additionalProperties: true }),
-        email: t.String({ additionalProperties: true }),
-        companyCode: t.String({ additionalProperties: true }),
-        createdAt: t.Date({ additionalProperties: true }),
-        updatedAt: t.Date({ additionalProperties: true }),
-        createdBy: __nullable__(t.String({ additionalProperties: true })),
-        updatedBy: __nullable__(t.String({ additionalProperties: true })),
-      },
-      { additionalProperties: true },
+    warehouse: __nullable__(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          warehouseName: t.String({ additionalProperties: true }),
+          warehouseCode: t.String({ additionalProperties: true }),
+          address: t.String({ additionalProperties: true }),
+          countryCode: t.String({ additionalProperties: true }),
+          city: t.String({ additionalProperties: true }),
+          district: t.String({ additionalProperties: true }),
+          phone: t.String({ additionalProperties: true }),
+          email: t.String({ additionalProperties: true }),
+          companyCode: t.String({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    priceList: t.Object(
-      {
-        id: t.String({ additionalProperties: true }),
-        priceListName: t.String({ additionalProperties: true }),
-        currency: t.String({ additionalProperties: true }),
-        isActive: t.Boolean({ additionalProperties: true }),
-      },
-      { additionalProperties: true },
+    priceList: __nullable__(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          priceListName: t.String({ additionalProperties: true }),
+          currency: t.String({ additionalProperties: true }),
+          isActive: t.Boolean({ additionalProperties: true }),
+        },
+        { additionalProperties: true },
+      ),
     ),
     InvoiceDetail: t.Array(
       t.Object(
@@ -235,6 +249,46 @@ export const InvoiceRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    CurrentMovement: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          currentCode: __nullable__(t.String({ additionalProperties: true })),
+          dueDate: t.Date({ additionalProperties: true }),
+          description: t.String({ additionalProperties: true }),
+          debtAmount: t.Number({ additionalProperties: true }),
+          creditAmount: t.Number({ additionalProperties: true }),
+          balanceAmount: t.Number({ additionalProperties: true }),
+          priceListId: __nullable__(t.String({ additionalProperties: true })),
+          movementType: t.Union([t.Literal("Borc"), t.Literal("Alacak")], {
+            additionalProperties: true,
+          }),
+          documentType: t.Union(
+            [
+              t.Literal("Devir"),
+              t.Literal("Fatura"),
+              t.Literal("IadeFatura"),
+              t.Literal("Kasa"),
+              t.Literal("MusteriSeneti"),
+              t.Literal("BorcSeneti"),
+              t.Literal("MusteriCeki"),
+              t.Literal("BorcCeki"),
+              t.Literal("KarsiliksizCek"),
+              t.Literal("Muhtelif"),
+            ],
+            { additionalProperties: true },
+          ),
+          documentNo: __nullable__(t.String({ additionalProperties: true })),
+          companyCode: t.String({ additionalProperties: true }),
+          branchCode: t.String({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -246,43 +300,79 @@ export const InvoicePlainInputCreate = t.Object(
       __nullable__(t.String({ additionalProperties: true })),
     ),
     invoiceDate: t.Date({ additionalProperties: true }),
-    invoiceType: t.Union(
-      [
-        t.Literal("Purchase"),
-        t.Literal("Sales"),
-        t.Literal("Return"),
-        t.Literal("Cancel"),
-        t.Literal("Other"),
-      ],
-      { additionalProperties: true },
+    invoiceType: t.Optional(
+      __nullable__(
+        t.Union(
+          [
+            t.Literal("Purchase"),
+            t.Literal("Sales"),
+            t.Literal("Return"),
+            t.Literal("Cancel"),
+            t.Literal("Other"),
+          ],
+          { additionalProperties: true },
+        ),
+      ),
     ),
-    documentType: t.Union(
-      [
-        t.Literal("Invoice"),
-        t.Literal("Order"),
-        t.Literal("Waybill"),
-        t.Literal("Other"),
-      ],
-      { additionalProperties: true },
+    documentType: t.Optional(
+      __nullable__(
+        t.Union(
+          [
+            t.Literal("Invoice"),
+            t.Literal("Order"),
+            t.Literal("Waybill"),
+            t.Literal("Other"),
+          ],
+          { additionalProperties: true },
+        ),
+      ),
     ),
-    currentCode: t.String({ additionalProperties: true }),
-    companyCode: t.String({ additionalProperties: true }),
-    branchCode: t.String({ additionalProperties: true }),
+    currentCode: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
+    companyCode: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
+    branchCode: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
     outBranchCode: t.Optional(
       __nullable__(t.String({ additionalProperties: true })),
     ),
     warehouseCode: t.String({ additionalProperties: true }),
-    description: t.String({ additionalProperties: true }),
-    genelIskontoTutar: t.Number({ additionalProperties: true }),
-    genelIskontoOran: t.Number({ additionalProperties: true }),
-    paymentDate: t.Date({ additionalProperties: true }),
-    paymentDay: t.Integer({ additionalProperties: true }),
-    totalAmount: t.Number({ additionalProperties: true }),
-    totalVat: t.Number({ additionalProperties: true }),
-    totalDiscount: t.Number({ additionalProperties: true }),
-    totalNet: t.Number({ additionalProperties: true }),
-    totalDebt: t.Number({ additionalProperties: true }),
-    totalBalance: t.Number({ additionalProperties: true }),
+    description: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
+    genelIskontoTutar: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    genelIskontoOran: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    paymentDate: t.Optional(
+      __nullable__(t.Date({ additionalProperties: true })),
+    ),
+    paymentDay: t.Optional(
+      __nullable__(t.Integer({ additionalProperties: true })),
+    ),
+    totalAmount: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    totalVat: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    totalDiscount: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    totalNet: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    totalDebt: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
+    totalBalance: t.Optional(
+      __nullable__(t.Number({ additionalProperties: true })),
+    ),
     canceledAt: t.Date({ additionalProperties: true }),
     createdBy: t.Optional(
       __nullable__(t.String({ additionalProperties: true })),
@@ -299,41 +389,45 @@ export const InvoicePlainInputUpdate = t.Object(
     invoiceNo: t.String({ additionalProperties: true }),
     gibInvoiceNo: __nullable__(t.String({ additionalProperties: true })),
     invoiceDate: t.Date({ additionalProperties: true }),
-    invoiceType: t.Union(
-      [
-        t.Literal("Purchase"),
-        t.Literal("Sales"),
-        t.Literal("Return"),
-        t.Literal("Cancel"),
-        t.Literal("Other"),
-      ],
-      { additionalProperties: true },
+    invoiceType: __nullable__(
+      t.Union(
+        [
+          t.Literal("Purchase"),
+          t.Literal("Sales"),
+          t.Literal("Return"),
+          t.Literal("Cancel"),
+          t.Literal("Other"),
+        ],
+        { additionalProperties: true },
+      ),
     ),
-    documentType: t.Union(
-      [
-        t.Literal("Invoice"),
-        t.Literal("Order"),
-        t.Literal("Waybill"),
-        t.Literal("Other"),
-      ],
-      { additionalProperties: true },
+    documentType: __nullable__(
+      t.Union(
+        [
+          t.Literal("Invoice"),
+          t.Literal("Order"),
+          t.Literal("Waybill"),
+          t.Literal("Other"),
+        ],
+        { additionalProperties: true },
+      ),
     ),
-    currentCode: t.String({ additionalProperties: true }),
-    companyCode: t.String({ additionalProperties: true }),
-    branchCode: t.String({ additionalProperties: true }),
+    currentCode: __nullable__(t.String({ additionalProperties: true })),
+    companyCode: __nullable__(t.String({ additionalProperties: true })),
+    branchCode: __nullable__(t.String({ additionalProperties: true })),
     outBranchCode: __nullable__(t.String({ additionalProperties: true })),
     warehouseCode: t.String({ additionalProperties: true }),
-    description: t.String({ additionalProperties: true }),
-    genelIskontoTutar: t.Number({ additionalProperties: true }),
-    genelIskontoOran: t.Number({ additionalProperties: true }),
-    paymentDate: t.Date({ additionalProperties: true }),
-    paymentDay: t.Integer({ additionalProperties: true }),
-    totalAmount: t.Number({ additionalProperties: true }),
-    totalVat: t.Number({ additionalProperties: true }),
-    totalDiscount: t.Number({ additionalProperties: true }),
-    totalNet: t.Number({ additionalProperties: true }),
-    totalDebt: t.Number({ additionalProperties: true }),
-    totalBalance: t.Number({ additionalProperties: true }),
+    description: __nullable__(t.String({ additionalProperties: true })),
+    genelIskontoTutar: __nullable__(t.Number({ additionalProperties: true })),
+    genelIskontoOran: __nullable__(t.Number({ additionalProperties: true })),
+    paymentDate: __nullable__(t.Date({ additionalProperties: true })),
+    paymentDay: __nullable__(t.Integer({ additionalProperties: true })),
+    totalAmount: __nullable__(t.Number({ additionalProperties: true })),
+    totalVat: __nullable__(t.Number({ additionalProperties: true })),
+    totalDiscount: __nullable__(t.Number({ additionalProperties: true })),
+    totalNet: __nullable__(t.Number({ additionalProperties: true })),
+    totalDebt: __nullable__(t.Number({ additionalProperties: true })),
+    totalBalance: __nullable__(t.Number({ additionalProperties: true })),
     canceledAt: t.Date({ additionalProperties: true }),
     createdBy: __nullable__(t.String({ additionalProperties: true })),
     updatedBy: __nullable__(t.String({ additionalProperties: true })),
@@ -343,60 +437,70 @@ export const InvoicePlainInputUpdate = t.Object(
 
 export const InvoiceRelationsInputCreate = t.Object(
   {
-    Current: t.Object(
-      {
-        connect: t.Object(
-          {
-            id: t.String({ additionalProperties: true }),
-          },
-          { additionalProperties: true },
-        ),
-      },
-      { additionalProperties: true },
+    Current: t.Optional(
+      t.Object(
+        {
+          connect: t.Object(
+            {
+              id: t.String({ additionalProperties: true }),
+            },
+            { additionalProperties: true },
+          ),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    company: t.Object(
-      {
-        connect: t.Object(
-          {
-            id: t.String({ additionalProperties: true }),
-          },
-          { additionalProperties: true },
-        ),
-      },
-      { additionalProperties: true },
+    company: t.Optional(
+      t.Object(
+        {
+          connect: t.Object(
+            {
+              id: t.String({ additionalProperties: true }),
+            },
+            { additionalProperties: true },
+          ),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    branch: t.Object(
-      {
-        connect: t.Object(
-          {
-            id: t.String({ additionalProperties: true }),
-          },
-          { additionalProperties: true },
-        ),
-      },
-      { additionalProperties: true },
+    branch: t.Optional(
+      t.Object(
+        {
+          connect: t.Object(
+            {
+              id: t.String({ additionalProperties: true }),
+            },
+            { additionalProperties: true },
+          ),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    warehouse: t.Object(
-      {
-        connect: t.Object(
-          {
-            id: t.String({ additionalProperties: true }),
-          },
-          { additionalProperties: true },
-        ),
-      },
-      { additionalProperties: true },
+    warehouse: t.Optional(
+      t.Object(
+        {
+          connect: t.Object(
+            {
+              id: t.String({ additionalProperties: true }),
+            },
+            { additionalProperties: true },
+          ),
+        },
+        { additionalProperties: true },
+      ),
     ),
-    priceList: t.Object(
-      {
-        connect: t.Object(
-          {
-            id: t.String({ additionalProperties: true }),
-          },
-          { additionalProperties: true },
-        ),
-      },
-      { additionalProperties: true },
+    priceList: t.Optional(
+      t.Object(
+        {
+          connect: t.Object(
+            {
+              id: t.String({ additionalProperties: true }),
+            },
+            { additionalProperties: true },
+          ),
+        },
+        { additionalProperties: true },
+      ),
     ),
     InvoiceDetail: t.Optional(
       t.Object(
@@ -428,6 +532,21 @@ export const InvoiceRelationsInputCreate = t.Object(
         { additionalProperties: true },
       ),
     ),
+    CurrentMovement: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -435,59 +554,79 @@ export const InvoiceRelationsInputCreate = t.Object(
 export const InvoiceRelationsInputUpdate = t.Partial(
   t.Object(
     {
-      Current: t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
+      Current: t.Partial(
+        t.Object(
+          {
+            connect: t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+            disconnect: t.Boolean(),
+          },
+          { additionalProperties: true },
+        ),
         { additionalProperties: true },
       ),
-      company: t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
+      company: t.Partial(
+        t.Object(
+          {
+            connect: t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+            disconnect: t.Boolean(),
+          },
+          { additionalProperties: true },
+        ),
         { additionalProperties: true },
       ),
-      branch: t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
+      branch: t.Partial(
+        t.Object(
+          {
+            connect: t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+            disconnect: t.Boolean(),
+          },
+          { additionalProperties: true },
+        ),
         { additionalProperties: true },
       ),
-      warehouse: t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
+      warehouse: t.Partial(
+        t.Object(
+          {
+            connect: t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+            disconnect: t.Boolean(),
+          },
+          { additionalProperties: true },
+        ),
         { additionalProperties: true },
       ),
-      priceList: t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
+      priceList: t.Partial(
+        t.Object(
+          {
+            connect: t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+            disconnect: t.Boolean(),
+          },
+          { additionalProperties: true },
+        ),
         { additionalProperties: true },
       ),
       InvoiceDetail: t.Partial(
@@ -515,6 +654,30 @@ export const InvoiceRelationsInputUpdate = t.Partial(
         { additionalProperties: true },
       ),
       StockMovement: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
+      CurrentMovement: t.Partial(
         t.Object(
           {
             connect: t.Array(
@@ -715,6 +878,7 @@ export const InvoiceSelect = t.Partial(
       priceList: t.Boolean(),
       InvoiceDetail: t.Boolean(),
       StockMovement: t.Boolean(),
+      CurrentMovement: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -734,6 +898,7 @@ export const InvoiceInclude = t.Partial(
       priceList: t.Boolean(),
       InvoiceDetail: t.Boolean(),
       StockMovement: t.Boolean(),
+      CurrentMovement: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },

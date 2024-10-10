@@ -11,9 +11,45 @@ export class CurrentMovementService {
         this.currentMovementRepository = new BaseRepository<CurrentMovement>(prisma.currentMovement);
     }
 
-    async createCurrentMovement(currentMovement: CurrentMovement): Promise<CurrentMovement> {
+    async createCurrentMovement(currentMovement: any): Promise<CurrentMovement> {
         try {
-            return await this.currentMovementRepository.create(currentMovement);
+            const createdCurrentMovement = await prisma.currentMovement.create({
+                data: {
+                    dueDate: currentMovement.dueDate,
+                    description: currentMovement.description,
+                    debtAmount: currentMovement.debtAmount,
+                    creditAmount: currentMovement.creditAmount,
+                    balanceAmount: currentMovement.balanceAmount,
+                    movementType: currentMovement.movementType,
+                    documentType: currentMovement.documentType,
+                    current: currentMovement.currentCode ? {
+                        connect: {
+                            id: currentMovement.currentCode
+                        }
+                    } : undefined,
+                    company: currentMovement.companyCode ? {
+                        connect: {
+                            id: currentMovement.companyCode
+                        }
+                    } : {},
+                    branch: currentMovement.branchCode ? {
+                        connect: {
+                            id: currentMovement.branchCode
+                        }
+                    } : {},
+                    StockCardPriceList: currentMovement.priceListId ? {
+                        connect: {
+                            id: currentMovement.priceListId
+                        }
+                    } : undefined,
+                    invoice: currentMovement.documentNo ? {
+                        connect: {
+                            id: currentMovement.documentNo
+                        }
+                    } : undefined,
+                }
+            });
+            return createdCurrentMovement;
         } catch (error) {
             logger.error("Error creating current movement", error);
             throw error;

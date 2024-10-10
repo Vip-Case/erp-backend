@@ -326,26 +326,26 @@ model Warehouse {
 }
 
 model Current {
-  id            String   @id @default(cuid())
-  currentCode   String   @unique @db.VarChar(50)
-  currentName   String   @db.VarChar(100)
-  currentType   String   @db.VarChar(50)
-  identityNo    String   @db.VarChar(50)
-  taxNumber     String   @db.VarChar(50)
-  taxOffice     String   @db.VarChar(50)
-  address       String   @db.VarChar(250)
-  countryCode   String   @db.VarChar(3)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  phone         String   @db.VarChar(50)
-  email         String   @db.VarChar(100)
-  website       String   @db.VarChar(100)
-  companyCode   String   @db.VarChar(50)
-  branchCode    String   @db.VarChar(50)
-  warehouseCode String   @db.VarChar(50)
+  id            String    @id @default(cuid())
+  currentCode   String    @unique @db.VarChar(50)
+  currentName   String    @db.VarChar(100)
+  currentType   String    @db.VarChar(50)
+  identityNo    String?   @db.VarChar(50)
+  taxNumber     String?   @db.VarChar(50)
+  taxOffice     String?   @db.VarChar(50)
+  address       String?   @db.VarChar(250)
+  countryCode   String?   @db.VarChar(3)
+  city          String?   @db.VarChar(50)
+  district      String?   @db.VarChar(50)
+  phone         String?   @db.VarChar(50)
+  email         String?   @db.VarChar(100)
+  website       String?   @db.VarChar(100)
+  companyCode   String    @db.VarChar(50)
+  branchCode    String    @db.VarChar(50)
+  warehouseCode String    @db.VarChar(50)
   priceListId   String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   createdBy     String?
   updatedBy     String?
 
@@ -357,21 +357,22 @@ model Current {
   CurrentReportGroup CurrentReportGroup[]
 
   StockMovement StockMovement[]
-
+  CurrentMovement CurrentMovement[]
   Invoice Invoice[]
 }
 
 model CurrentMovement {
   id            String                      @id @default(cuid())
-  currentCode   String                      @db.VarChar(50)
+  currentCode   String?                      @db.VarChar(50)
   dueDate       DateTime
   description   String                      @db.VarChar(250)
   debtAmount    Decimal                     @db.Decimal(15, 4)
   creditAmount  Decimal                     @db.Decimal(15, 4)
   balanceAmount Decimal                     @db.Decimal(15, 4)
-  priceListId   String
+  priceListId   String?
   movementType  CurrentMovementType
   documentType  CurrentMovementDocumentType
+  documentNo    String?
   companyCode   String
   branchCode    String
   createdAt     DateTime                    @default(now())
@@ -379,9 +380,11 @@ model CurrentMovement {
   createdBy     String?
   updatedBy     String?
 
-  company            Company            @relation(fields: [companyCode], references: [companyCode])
-  branch             Branch             @relation(fields: [branchCode], references: [branchCode])
-  StockCardPriceList StockCardPriceList @relation(fields: [priceListId], references: [id])
+  company            Company             @relation(fields: [companyCode], references: [companyCode])
+  branch             Branch              @relation(fields: [branchCode], references: [branchCode])
+  StockCardPriceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
+  current            Current?             @relation(fields: [currentCode], references: [currentCode])
+  invoice            Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
 }
 
 model CurrentReportGroup {
@@ -427,40 +430,41 @@ model Invoice {
   invoiceNo     String    @unique @db.VarChar(50)
   gibInvoiceNo  String?
   invoiceDate   DateTime
-  invoiceType   InvoiceType
-  documentType  DocumentType
-  currentCode   String
-  companyCode   String
-  branchCode    String
+  invoiceType   InvoiceType?
+  documentType  DocumentType?
+  currentCode   String?
+  companyCode   String?
+  branchCode    String?
   outBranchCode String?
   warehouseCode String
-  description   String
-  genelIskontoTutar Decimal @db.Decimal(15, 4)
-  genelIskontoOran Decimal @db.Decimal(5, 2)
-  paymentDate   DateTime  
-  paymentDay    Int
-  priceListId   String
-  totalAmount   Decimal   @db.Decimal(15, 4)
-  totalVat      Decimal   @db.Decimal(15, 4)
-  totalDiscount Decimal   @db.Decimal(15, 4)
-  totalNet      Decimal   @db.Decimal(15, 4)
-  totalPaid     Decimal   @db.Decimal(15, 4)
-  totalDebt     Decimal   @db.Decimal(15, 4)
-  totalBalance  Decimal   @db.Decimal(15, 4)
+  description   String?
+  genelIskontoTutar Decimal? @db.Decimal(15, 4)
+  genelIskontoOran Decimal? @db.Decimal(5, 2)
+  paymentDate   DateTime?  
+  paymentDay    Int?
+  priceListId   String?
+  totalAmount   Decimal?   @db.Decimal(15, 4)
+  totalVat      Decimal?   @db.Decimal(15, 4)
+  totalDiscount Decimal?   @db.Decimal(15, 4)
+  totalNet      Decimal?   @db.Decimal(15, 4)
+  totalPaid     Decimal?   @db.Decimal(15, 4)
+  totalDebt     Decimal?   @db.Decimal(15, 4)
+  totalBalance  Decimal?   @db.Decimal(15, 4)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   canceledAt   DateTime
   createdBy     String?
   updatedBy     String?
 
-  Current Current @relation(fields: [currentCode], references: [currentCode])
-  company Company @relation(fields: [companyCode], references: [companyCode])
-  branch  Branch  @relation(fields: [branchCode], references: [branchCode])
-  warehouse Warehouse @relation(fields: [warehouseCode], references: [warehouseCode])
-  priceList StockCardPriceList @relation(fields: [priceListId], references: [id])
+  Current Current? @relation(fields: [currentCode], references: [currentCode])
+  company Company? @relation(fields: [companyCode], references: [companyCode])
+  branch  Branch?  @relation(fields: [branchCode], references: [branchCode])
+  warehouse Warehouse? @relation(fields: [warehouseCode], references: [warehouseCode])
+  priceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
 
   InvoiceDetail InvoiceDetail[]
   StockMovement StockMovement[]
+  CurrentMovement CurrentMovement[]
 }
 
 model InvoiceDetail{
