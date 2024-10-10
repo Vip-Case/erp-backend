@@ -159,24 +159,28 @@ export const BranchRelations = t.Object(
           warehouseCode: t.String({ additionalProperties: true }),
           branchCode: t.String({ additionalProperties: true }),
           currentCode: t.String({ additionalProperties: true }),
-          documentType: t.Union(
-            [
-              t.Literal("Invoice"),
-              t.Literal("Order"),
-              t.Literal("Waybill"),
-              t.Literal("Other"),
-            ],
-            { additionalProperties: true },
+          documentType: __nullable__(
+            t.Union(
+              [
+                t.Literal("Invoice"),
+                t.Literal("Order"),
+                t.Literal("Waybill"),
+                t.Literal("Other"),
+              ],
+              { additionalProperties: true },
+            ),
           ),
-          invoiceType: t.Union(
-            [
-              t.Literal("Purchase"),
-              t.Literal("Sales"),
-              t.Literal("Return"),
-              t.Literal("Cancel"),
-              t.Literal("Other"),
-            ],
-            { additionalProperties: true },
+          invoiceType: __nullable__(
+            t.Union(
+              [
+                t.Literal("Purchase"),
+                t.Literal("Sales"),
+                t.Literal("Return"),
+                t.Literal("Cancel"),
+                t.Literal("Other"),
+              ],
+              { additionalProperties: true },
+            ),
           ),
           movementType: t.Union(
             [
