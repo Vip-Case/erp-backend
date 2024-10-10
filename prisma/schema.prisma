@@ -214,8 +214,8 @@ model StockMovement {
   warehouseCode    String
   branchCode       String
   currentCode      String
-  documentType     DocumentType
-  invoiceType      InvoiceType
+  documentType     DocumentType?
+  invoiceType      InvoiceType?
   movementType     StokManagementType
   invoiceNo        String
   invoiceDate      DateTime
