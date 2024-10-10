@@ -15,19 +15,16 @@ export class StockMovementService {
         try {
             const stockMovement = await prisma.stockMovement.create({
                 data: {
-                    productCode: stockMovementData.productCode,
-                    warehouseCode: stockMovementData.warehouseCode,
-                    branchCode: stockMovementData.branchCode,
-                    currentCode: stockMovementData.currentCode,
                     movementType: stockMovementData.movementType,
-                    invoiceNo: stockMovementData.invoiceNo,
+                    documentType: stockMovementData.documentType,
+                    invoiceType: stockMovementData.invoiceType,
                     gcCode: stockMovementData.gcCode,
                     type: stockMovementData.type,
                     description: stockMovementData.description,
                     quantity: stockMovementData.quantity,
                     unitPrice: stockMovementData.unitPrice,
                     totalPrice: stockMovementData.totalPrice,
-                    invoiceDate: stockMovementData.invoiceDate,
+                    unitOfMeasure: stockMovementData.unitOfMeasure,
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
                             warehouseCode: stockMovementData.warehouseCode
@@ -53,6 +50,16 @@ export class StockMovementService {
                             id: stockMovementData.priceListId
                         }
                     } : undefined,
+                    current: stockMovementData.current ? {
+                        connect: {
+                            id: stockMovementData.current
+                        }
+                    } : undefined,
+                    invoice: stockMovementData.invoiceId ? {
+                        connect: {
+                            id: stockMovementData.documentNo
+                        }
+                    } : undefined,
                 }
             });
             return stockMovement;
@@ -60,7 +67,7 @@ export class StockMovementService {
             logger.error("Error creating stock movement", error);
             throw error;
         }
-    }
+    }    
 
 
     async updateStockMovement(id: string, stockMovement: Partial<StockMovement>): Promise<StockMovement> {

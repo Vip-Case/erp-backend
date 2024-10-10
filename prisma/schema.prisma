@@ -210,33 +210,26 @@ model StockCardVariation                  {
 
 model StockMovement {
   id               String             @id @default(cuid())
-  productCode      String
+  productCode      String 
   warehouseCode    String
   branchCode       String
-  currentCode      String
+  currentCode      String?
   documentType     DocumentType?
   invoiceType      InvoiceType?
   movementType     StokManagementType
-  invoiceNo        String
-  invoiceDate      DateTime
-  waybillNo        String?
-  waybillDate      DateTime?
-  gcCode           String
-  type             String
-  description      String
-  quantity         Decimal            @db.Decimal(15, 4)
-  unitPrice        Decimal            @db.Decimal(15, 4)
-  totalPrice       Decimal            @db.Decimal(15, 4)
+  documentNo       String?
+  gcCode           String?
+  type             String?
+  description      String?
+  quantity         Decimal?            @db.Decimal(15, 4)
+  unitPrice        Decimal?            @db.Decimal(15, 4)
+  totalPrice       Decimal?            @db.Decimal(15, 4)
   unitOfMeasure    String?            @db.VarChar(50)
   outWarehouseCode String?
   priceListId      String?
-  discount1        Decimal?           @db.Decimal(15, 4)
-  discount2        Decimal?           @db.Decimal(15, 4)
-  discount3        Decimal?           @db.Decimal(15, 4)
-  discount4        Decimal?           @db.Decimal(15, 4)
   createdAt        DateTime           @default(now())
   createdBy        String?
-  updatedAt        DateTime           @updatedAt
+  updatedAt        DateTime?           @updatedAt
   updatedBy        String?
 
   stockCard    StockCard           @relation(fields: [productCode], references: [productCode])
@@ -244,8 +237,8 @@ model StockMovement {
   branch       Branch              @relation(fields: [branchCode], references: [branchCode])
   outWarehouse Warehouse?          @relation("StockMovementOutWarehouse", fields: [outWarehouseCode], references: [warehouseCode])
   priceList    StockCardPriceList? @relation(fields: [priceListId], references: [id])
-
-  Current Current[]
+  current      Current?            @relation(fields: [currentCode], references: [currentCode])
+  invoice      Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
 }
 
 model Company {
@@ -467,6 +460,7 @@ model Invoice {
   priceList StockCardPriceList @relation(fields: [priceListId], references: [id])
 
   InvoiceDetail InvoiceDetail[]
+  StockMovement StockMovement[]
 }
 
 model InvoiceDetail{

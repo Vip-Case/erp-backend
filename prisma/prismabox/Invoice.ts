@@ -172,6 +172,69 @@ export const InvoiceRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    StockMovement: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          productCode: t.String({ additionalProperties: true }),
+          warehouseCode: t.String({ additionalProperties: true }),
+          branchCode: t.String({ additionalProperties: true }),
+          currentCode: __nullable__(t.String({ additionalProperties: true })),
+          documentType: __nullable__(
+            t.Union(
+              [
+                t.Literal("Invoice"),
+                t.Literal("Order"),
+                t.Literal("Waybill"),
+                t.Literal("Other"),
+              ],
+              { additionalProperties: true },
+            ),
+          ),
+          invoiceType: __nullable__(
+            t.Union(
+              [
+                t.Literal("Purchase"),
+                t.Literal("Sales"),
+                t.Literal("Return"),
+                t.Literal("Cancel"),
+                t.Literal("Other"),
+              ],
+              { additionalProperties: true },
+            ),
+          ),
+          movementType: t.Union(
+            [
+              t.Literal("Devir"),
+              t.Literal("DepolarArasiTransfer"),
+              t.Literal("Uretim"),
+              t.Literal("Muhtelif"),
+              t.Literal("Maliyet"),
+              t.Literal("Konsinye"),
+              t.Literal("Teshir"),
+            ],
+            { additionalProperties: true },
+          ),
+          documentNo: __nullable__(t.String({ additionalProperties: true })),
+          gcCode: __nullable__(t.String({ additionalProperties: true })),
+          type: __nullable__(t.String({ additionalProperties: true })),
+          description: __nullable__(t.String({ additionalProperties: true })),
+          quantity: __nullable__(t.Number({ additionalProperties: true })),
+          unitPrice: __nullable__(t.Number({ additionalProperties: true })),
+          totalPrice: __nullable__(t.Number({ additionalProperties: true })),
+          unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
+          outWarehouseCode: __nullable__(
+            t.String({ additionalProperties: true }),
+          ),
+          priceListId: __nullable__(t.String({ additionalProperties: true })),
+          createdAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedAt: __nullable__(t.Date({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -350,6 +413,21 @@ export const InvoiceRelationsInputCreate = t.Object(
         { additionalProperties: true },
       ),
     ),
+    StockMovement: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -413,6 +491,30 @@ export const InvoiceRelationsInputUpdate = t.Partial(
         { additionalProperties: true },
       ),
       InvoiceDetail: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
+      StockMovement: t.Partial(
         t.Object(
           {
             connect: t.Array(
@@ -612,6 +714,7 @@ export const InvoiceSelect = t.Partial(
       warehouse: t.Boolean(),
       priceList: t.Boolean(),
       InvoiceDetail: t.Boolean(),
+      StockMovement: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -630,6 +733,7 @@ export const InvoiceInclude = t.Partial(
       warehouse: t.Boolean(),
       priceList: t.Boolean(),
       InvoiceDetail: t.Boolean(),
+      StockMovement: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
