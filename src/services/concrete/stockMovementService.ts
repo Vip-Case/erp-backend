@@ -28,34 +28,40 @@ export class StockMovementService {
                     unitPrice: stockMovementData.unitPrice,
                     totalPrice: stockMovementData.totalPrice,
                     invoiceDate: stockMovementData.invoiceDate,
-                    warehouse: { 
-                        connect: { 
-                            warehouseCode: stockMovementData.warehouseCode } }, // Added warehouse
-                    outWarehouse: {
+                    warehouse: stockMovementData.warehouseCode ? {
                         connect: {
-                            warehouseCode: stockMovementData.outWarehouseCode } }, // Added outWarehouse
-                    branch: { 
-                        connect: { 
-                            branchCode: stockMovementData.branchCode } }, // Added branch
+                            warehouseCode: stockMovementData.warehouseCode
+                        }
+                    } : {},
+                    outWarehouse: stockMovementData.outWarehouseCode ? {
+                        connect: {
+                            warehouseCode: stockMovementData.outWarehouseCode
+                        }
+                    } : undefined,
+                    branch: stockMovementData.branchCode ? {
+                        connect: {
+                            branchCode: stockMovementData.branchCode
+                        }
+                    } : {},
                     stockCard: {
                         connect: {
-                            productCode: stockMovementData.productCode, // Mevcut stockCard ile ilişkilendirme
-                        },
+                            productCode: stockMovementData.productCode
+                        }
                     },
-                    priceList: {
+                    priceList: stockMovementData.priceListId ? {
                         connect: {
-                            id: stockMovementData.priceListId, // Mevcut priceList ile ilişkilendirme
-                        },
-                },
-            }
-        });
+                            id: stockMovementData.priceListId
+                        }
+                    } : undefined,
+                }
+            });
             return stockMovement;
         } catch (error) {
             logger.error("Error creating stock movement", error);
             throw error;
         }
     }
-    
+
 
     async updateStockMovement(id: string, stockMovement: Partial<StockMovement>): Promise<StockMovement> {
         try {
