@@ -21,7 +21,65 @@ export class InvoiceService {
     }
 
     async createInvoice(invoice: Invoice): Promise<Invoice> {
-        return this.invoiceRepository.create(invoice);
+        try {
+            const Invoice = await prisma.invoice.create({
+                data: {
+                    invoiceNo: invoice.invoiceNo,
+                    gibInvoiceNo: invoice.gibInvoiceNo,
+                    invoiceDate: invoice.invoiceDate,
+                    invoiceType: invoice.invoiceType,
+                    documentType: invoice.documentType,
+                    description: invoice.description,
+                    genelIskontoTutar: invoice.genelIskontoTutar,
+                    genelIskontoOran: invoice.genelIskontoOran,
+                    paymentDate: invoice.paymentDate,
+                    paymentDay: invoice.paymentDay,
+                    totalAmount: invoice.totalAmount,
+                    totalVat: invoice.totalVat,
+                    totalDiscount: invoice.totalDiscount,
+                    totalNet: invoice.totalNet,
+                    totalPaid: invoice.totalPaid,
+                    totalDebt: invoice.totalDebt,
+                    totalBalance: invoice.totalBalance,
+                    canceledAt: invoice.canceledAt,
+
+                    priceList: invoice.priceListId ? {
+                        connect: {
+                            id: invoice.priceListId
+                        }
+                    } : {},
+                    warehouse: invoice.warehouseCode ? {
+                        connect: {
+                            warehouseCode: invoice.warehouseCode
+                        }
+                    } : {},
+                    outBranch: invoice.outBranchCode ? {
+                        connect: {
+                            branchCode: invoice.outBranchCode
+                        }
+                    } : {},
+                    company: invoice.companyCode ? {
+                        connect: {
+                            companyCode: invoice.companyCode
+                        }
+                    } : {},
+                    Current: invoice.currentCode ? {
+                        connect: {
+                            currentCode: invoice.currentCode
+                        }
+                    } : {},
+                    branch: invoice.branchCode ? {
+                        connect: {
+                            branchCode: invoice.branchCode
+                        }
+                    } : {},
+                }
+            });
+            return Invoice;
+        } catch (error) {
+            logger.error(error);
+            throw error;
+        }
     }
 
     async updateInvoice(id: string, invoice: Partial<Invoice>): Promise<Invoice> {

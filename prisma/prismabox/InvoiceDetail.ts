@@ -28,7 +28,7 @@ export const InvoiceDetailRelations = t.Object(
         id: t.String({ additionalProperties: true }),
         invoiceNo: t.String({ additionalProperties: true }),
         gibInvoiceNo: __nullable__(t.String({ additionalProperties: true })),
-        invoiceDate: t.Date({ additionalProperties: true }),
+        invoiceDate: __nullable__(t.Date({ additionalProperties: true })),
         invoiceType: __nullable__(
           t.Union(
             [
@@ -54,7 +54,7 @@ export const InvoiceDetailRelations = t.Object(
         ),
         currentCode: __nullable__(t.String({ additionalProperties: true })),
         companyCode: __nullable__(t.String({ additionalProperties: true })),
-        branchCode: __nullable__(t.String({ additionalProperties: true })),
+        branchCode: t.String({ additionalProperties: true }),
         outBranchCode: __nullable__(t.String({ additionalProperties: true })),
         warehouseCode: t.String({ additionalProperties: true }),
         description: __nullable__(t.String({ additionalProperties: true })),
@@ -76,7 +76,7 @@ export const InvoiceDetailRelations = t.Object(
         totalBalance: __nullable__(t.Number({ additionalProperties: true })),
         createdAt: t.Date({ additionalProperties: true }),
         updatedAt: t.Date({ additionalProperties: true }),
-        canceledAt: t.Date({ additionalProperties: true }),
+        canceledAt: __nullable__(t.Date({ additionalProperties: true })),
         createdBy: __nullable__(t.String({ additionalProperties: true })),
         updatedBy: __nullable__(t.String({ additionalProperties: true })),
       },
