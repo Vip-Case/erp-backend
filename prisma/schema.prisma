@@ -109,7 +109,6 @@ model StockCard {
   Company   Company?    @relation(fields: [companyCode], references: [companyCode])
   Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
   Current   Current?    @relation(fields: [manufacturerCode], references: [currentCode])
-  Warehouse Warehouse?  @relation(fields: [warehouseCode], references: [warehouseCode])
 
   Attributes          StockCardAttribute[] // Özellikler
   Barcodes            StockCardBarcode[] // Barkodlar
@@ -117,10 +116,9 @@ model StockCard {
   StockCardPriceLists StockCardPriceListItems[] // Fiyat Listeleri
   TaxRates            StockCardTaxRate[] // Vergi Oranları
   Variations          StockCardVariation[] // Varyasyonlar
-
   StockMovement StockMovement[]
-
   InvoiceDetail InvoiceDetail[]
+  StockCardWarehouse StockCardWarehouse[]
 }
 
 model StockCardPriceList {
@@ -290,22 +288,22 @@ model Branch {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  User      User[]
-  Warehouse Warehouse[]
-  Current   Current[]
-  StockCard StockCard[]
-  StockMovement StockMovement[]
+  // Relationships
+  User            User[]
+  Warehouse       BranchWarehouse[]  // Many-to-many relation with Warehouse via BranchWarehouse
+  Current         Current[]
+  StockCard       StockCard[]
+  StockMovement   StockMovement[]
   CurrentMovement CurrentMovement[]
-
-  Invoice Invoice[] @relation("InvoiceOutBranch")
-  OutInvoice Invoice[] @relation("InvoiceBranch")
+  
+  Invoice         Invoice[] @relation("InvoiceOutBranch")
+  OutInvoice      Invoice[] @relation("InvoiceBranch")
 }
 
 model Warehouse {
   id            String   @id @default(cuid())
   warehouseName String   @unique @db.VarChar(100)
   warehouseCode String   @unique @db.VarChar(50)
-  branchCode    String[]   @db.VarChar(50)
   address       String   @db.VarChar(250)
   countryCode   String   @db.VarChar(3)
   city          String   @db.VarChar(50)
@@ -318,18 +316,43 @@ model Warehouse {
   createdBy     String?
   updatedBy     String?
 
-  company   Company    @relation(fields: [companyCode], references: [companyCode])
+  company Company @relation(fields: [companyCode], references: [companyCode])
 
-  Branch         Branch[]
+  // Relationships
+  Branch         BranchWarehouse[]  // Many-to-many relation with Branch via BranchWarehouse
   User           User[]
   Current        Current[]
-  stockMovements StockMovement[] @relation("StockMovementWarehouse") // Ana depo ilişkisi
-  outMovements   StockMovement[] @relation("StockMovementOutWarehouse") // Çıkış deposu ilişkisi
+  stockMovements StockMovement[] @relation("StockMovementWarehouse")  // Main warehouse relation
+  outMovements   StockMovement[] @relation("StockMovementOutWarehouse")  // Outgoing warehouse relation
 
-  Invoice Invoice[]
+  Invoice        Invoice[]
 
-  StockCard StockCard[]
+  StockCardWarehouse StockCardWarehouse[]
 }
+
+// Many-to-Many relation between Branch and Warehouse
+model BranchWarehouse {
+  id         String   @id @default(cuid())
+  branchId   String
+  warehouseId String
+
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  warehouse  Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, warehouseId]) // Prevent duplicate entries
+}
+
+model StockCardWarehouse {
+  id           String    @id @default(cuid())
+  stockCardId  String
+  warehouseId  String
+
+  stockCard    StockCard  @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  warehouse    Warehouse  @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([stockCardId, warehouseId]) // Duplicate ilişkileri önlemek için
+}
+
 
 model Current {
   id            String    @id @default(cuid())
