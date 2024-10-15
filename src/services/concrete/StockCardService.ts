@@ -1,7 +1,4 @@
 import {
-    Branch,
-    Company,
-    Current,
     Prisma,
     StockCard,
     StockCardAttribute,
@@ -10,10 +7,10 @@ import {
     StockCardPriceListItems,
     StockCardTaxRate,
     Warehouse,
+    Current,
 } from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
-import { BaseRepository } from "../../repositories/baseRepository";
 
 const stockCardRelations = {
     Attributes: true,
@@ -28,16 +25,6 @@ const stockCardRelations = {
 };
 
 export class StockCardService {
-    private stockCardRepository = new BaseRepository<StockCard>(prisma.stockCard);
-    private stockCardAttributeRepository = new BaseRepository<StockCardAttribute>(prisma.stockCardAttribute);
-    private stockCardBarcodeRepository = new BaseRepository<StockCardBarcode>(prisma.stockCardBarcode);
-    private stockCardCategoryItemsRepository = new BaseRepository<StockCardCategoryItem>(prisma.stockCardCategoryItem);
-    private stockCardPriceListItemsRepository = new BaseRepository<StockCardPriceListItems>(prisma.stockCardPriceListItems);
-    private stockCardTaxRateRepository = new BaseRepository<StockCardTaxRate>(prisma.stockCardTaxRate);
-    
-    private warehouseRepository = new BaseRepository<Warehouse>(prisma.warehouse); // Düzeltilmiş
-    private currentRepository = new BaseRepository<Current>(prisma.current); // Düzeltilmiş
-
     async createStockCard(stockCard: StockCard, warehouseIds: string[]): Promise<StockCard> {
         try {
             const result = await prisma.stockCard.create({
@@ -73,7 +60,7 @@ export class StockCardService {
                             warehouse: { connect: { id: warehouseId } },
                         })),
                     } : undefined,
-                } as Prisma.StockCardCreateInput, // Type assertion
+                } as Prisma.StockCardCreateInput,
             });
 
             return result;
@@ -85,7 +72,10 @@ export class StockCardService {
 
     async updateStockCard(id: string, stockCard: Partial<StockCard>): Promise<StockCard> {
         try {
-            return await this.stockCardRepository.update(id, stockCard);
+            return await prisma.stockCard.update({
+                where: { id },
+                data: stockCard,
+            });
         } catch (error) {
             logger.error("Error updating StockCard:", error);
             throw new Error("Could not update StockCard");
@@ -94,8 +84,10 @@ export class StockCardService {
 
     async deleteStockCard(id: string): Promise<{ success: boolean; message: string }> {
         try {
-            const result = await this.stockCardRepository.delete(id);
-            return { success: result, message: "StockCard successfully deleted" };
+            await prisma.stockCard.delete({
+                where: { id },
+            });
+            return { success: true, message: "StockCard successfully deleted" };
         } catch (error) {
             logger.error("Error deleting StockCard:", error);
             return { success: false, message: "Could not delete StockCard" };
@@ -104,7 +96,10 @@ export class StockCardService {
 
     async getStockCardById(id: string): Promise<StockCard | null> {
         try {
-            return await this.stockCardRepository.findById(id);
+            return await prisma.stockCard.findUnique({
+                where: { id },
+                include: stockCardRelations,
+            });
         } catch (error) {
             logger.error("Error finding StockCard by ID:", error);
             throw new Error("Could not find StockCard by ID");
@@ -113,7 +108,9 @@ export class StockCardService {
 
     async getAllStockCards(): Promise<StockCard[]> {
         try {
-            return await this.stockCardRepository.findAll();
+            return await prisma.stockCard.findMany({
+                include: stockCardRelations,
+            });
         } catch (error) {
             logger.error("Error finding all StockCards:", error);
             throw new Error("Could not find all StockCards");
@@ -122,7 +119,10 @@ export class StockCardService {
 
     async getStockCardsWithFilters(filters: Partial<StockCard>): Promise<StockCard[] | null> {
         try {
-            return await this.stockCardRepository.findWithFilters(filters);
+            return await prisma.stockCard.findMany({
+                where: filters,
+                include: stockCardRelations,
+            });
         } catch (error) {
             logger.error("Error finding StockCards with filters:", error);
             throw new Error("Could not find StockCards with filters");
@@ -137,69 +137,94 @@ export class StockCardService {
         priceListItems?: StockCardPriceListItems[];
         taxRates?: StockCardTaxRate[];
         current?: Current;
+        warehouseIds?: string[];
     }): Promise<StockCard | null> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
-                const getCurrent = await this.currentRepository.findWithFilters({
-                    currentCode: data.current?.currentCode,
+                const getCurrent = await prisma.current.findMany({
+                    where: { currentCode: data.current?.currentCode },
                 });
 
                 if (getCurrent && (getCurrent[0].currentType === "Manufacturer" || !getCurrent[0].currentType)) {
-                    const stockCard = await this.stockCardRepository.create(data.stockCard);
+                    const stockCard = await prisma.stockCard.create({
+                        data: {
+                            productCode: data.stockCard.productCode,
+                            productName: data.stockCard.productName,
+                            invoiceName: data.stockCard.invoiceName,
+                            shortDescription: data.stockCard.shortDescription,
+                            description: data.stockCard.description,
+                            brand: data.stockCard.brand,
+                            unitOfMeasure: data.stockCard.unitOfMeasure,
+                            productType: data.stockCard.productType,
+                            riskQuantities: data.stockCard.riskQuantities,
+                            stockStatus: data.stockCard.stockStatus,
+                            hasExpirationDate: data.stockCard.hasExpirationDate,
+                            allowNegativeStock: data.stockCard.allowNegativeStock,
+        
+                            company: data.stockCard.companyCode ? {
+                                connect: { companyCode: data.stockCard.companyCode },
+                            } : undefined,
+        
+                            branch: data.stockCard.branchCode ? {
+                                connect: { branchCode: data.stockCard.branchCode },
+                            } : undefined,
+        
+                            Current: data.stockCard.manufacturerCode ? {
+                                connect: { currentCode: data.stockCard.manufacturerCode },
+                            } : undefined,
+        
+                            // StockCardWarehouse Many-to-Many relation
+                            StockCardWarehouse: (data.warehouseIds ?? []).length > 0 ? {
+                                create: (data.warehouseIds ?? []).map(warehouseId => ({
+                                    warehouse: { connect: { id: warehouseId } },
+                                })),
+                            } : undefined,
+                        } as Prisma.StockCardCreateInput,
+                    });
 
                     if (data.barcodes) {
-                        await Promise.all(
-                            data.barcodes.map((barcode) =>
-                                this.stockCardBarcodeRepository.create({
-                                    ...barcode,
-                                    stockCardId: stockCard.id,
-                                })
-                            )
-                        );
+                        await prisma.stockCardBarcode.createMany({
+                            data: data.barcodes.map((barcode) => ({
+                                ...barcode,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
                     }
 
                     if (data.attributes) {
-                        await Promise.all(
-                            data.attributes.map((attribute) =>
-                                this.stockCardAttributeRepository.create({
-                                    ...attribute,
-                                    stockCardId: stockCard.id,
-                                })
-                            )
-                        );
+                        await prisma.stockCardAttribute.createMany({
+                            data: data.attributes.map((attribute) => ({
+                                ...attribute,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
                     }
 
                     if (data.categoryItems) {
-                        await Promise.all(
-                            data.categoryItems.map((categoryItem) =>
-                                this.stockCardCategoryItemsRepository.create({
-                                    ...categoryItem,
-                                    stockCardId: stockCard.id,
-                                })
-                            )
-                        );
+                        await prisma.stockCardCategoryItem.createMany({
+                            data: data.categoryItems.map((categoryItem) => ({
+                                ...categoryItem,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
                     }
 
                     if (data.priceListItems) {
-                        await Promise.all(
-                            data.priceListItems.map((priceListItem) =>
-                                this.stockCardPriceListItemsRepository.create({
-                                    ...priceListItem,
-                                    stockCardId: stockCard.id,
-                                })
-                            )
-                        );
+                        await prisma.stockCardPriceListItems.createMany({
+                            data: data.priceListItems.map((priceListItem) => ({
+                                ...priceListItem,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
                     }
 
                     if (data.taxRates) {
-                        await Promise.all(
-                            data.taxRates.map((taxRate) =>
-                                this.stockCardTaxRateRepository.create({
-                                    ...taxRate,
-                                    stockCardId: stockCard.id,
-                                })
-                            )
-                        );
+                        await prisma.stockCardTaxRate.createMany({
+                            data: data.taxRates.map((taxRate) => ({
+                                ...taxRate,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
                     }
 
                     return stockCard;
@@ -211,17 +236,7 @@ export class StockCardService {
 
             return result;
         } catch (error) {
-            if (error instanceof Error) {
-                logger.error({
-                    msg: "Error creating StockCard with relations",
-                    error: error.message,
-                    stack: error.stack,
-                    requestData: data,
-                });
-            } else {
-                logger.error("Unknown error occurred", { error });
-            }
-
+            logger.error("Error creating StockCard with relations:", error);
             throw new Error("Could not create StockCard with relations");
         }
     }
@@ -234,20 +249,59 @@ export class StockCardService {
         priceListItems?: StockCardPriceListItems[];
         taxRates?: StockCardTaxRate[];
         current?: Current;
+        warehouseIds?: string[];
     }): Promise<StockCard | null> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
-                const getCurrent = await this.currentRepository.findWithFilters({
-                    currentCode: data.current?.currentCode,
+                const getCurrent = await prisma.current.findMany({
+                    where: { currentCode: data.current?.currentCode },
                 });
 
                 if (getCurrent && (getCurrent[0].currentType === "Manufacturer" || !getCurrent[0].currentType)) {
-                    const stockCard = await this.stockCardRepository.update(id, data.stockCard);
+                    const stockCard = await prisma.stockCard.update({
+                        where: { id },
+                        data: {
+                            productCode: data.stockCard.productCode,
+                            productName: data.stockCard.productName,
+                            invoiceName: data.stockCard.invoiceName,
+                            shortDescription: data.stockCard.shortDescription,
+                            description: data.stockCard.description,
+                            brand: data.stockCard.brand,
+                            unitOfMeasure: data.stockCard.unitOfMeasure,
+                            productType: data.stockCard.productType,
+                            riskQuantities: data.stockCard.riskQuantities,
+                            stockStatus: data.stockCard.stockStatus,
+                            hasExpirationDate: data.stockCard.hasExpirationDate,
+                            allowNegativeStock: data.stockCard.allowNegativeStock,
+        
+                            Company: data.stockCard.companyCode ? {
+                                connect: { companyCode: data.stockCard.companyCode },
+                            } : undefined,
+        
+                            Branch: data.stockCard.branchCode ? {
+                                connect: { branchCode: data.stockCard.branchCode },
+                            } : undefined,
+        
+                            Current: data.stockCard.manufacturerCode ? {
+                                connect: { currentCode: data.stockCard.manufacturerCode },
+                            } : undefined,
+        
+                            // StockCardWarehouse Many-to-Many relation
+                            StockCardWarehouse: (data.warehouseIds ?? []).length > 0 ? {
+                                create: (data.warehouseIds ?? []).map(warehouseId => ({
+                                    warehouse: { connect: { id: warehouseId } },
+                                })),
+                            } : undefined,
+                        } as Prisma.StockCardUpdateInput,
+                    });
 
                     if (data.barcodes) {
                         await Promise.all(
                             data.barcodes.map((barcode) =>
-                                this.stockCardBarcodeRepository.update(barcode.id, barcode)
+                                prisma.stockCardBarcode.update({
+                                    where: { id: barcode.id },
+                                    data: barcode,
+                                })
                             )
                         );
                     }
@@ -255,7 +309,10 @@ export class StockCardService {
                     if (data.attributes) {
                         await Promise.all(
                             data.attributes.map((attribute) =>
-                                this.stockCardAttributeRepository.update(attribute.id, attribute)
+                                prisma.stockCardAttribute.update({
+                                    where: { id: attribute.id },
+                                    data: attribute,
+                                })
                             )
                         );
                     }
@@ -263,7 +320,10 @@ export class StockCardService {
                     if (data.categoryItems) {
                         await Promise.all(
                             data.categoryItems.map((categoryItem) =>
-                                this.stockCardCategoryItemsRepository.update(categoryItem.id, categoryItem)
+                                prisma.stockCardCategoryItem.update({
+                                    where: { id: categoryItem.id },
+                                    data: categoryItem,
+                                })
                             )
                         );
                     }
@@ -271,7 +331,10 @@ export class StockCardService {
                     if (data.priceListItems) {
                         await Promise.all(
                             data.priceListItems.map((priceListItem) =>
-                                this.stockCardPriceListItemsRepository.update(priceListItem.id, priceListItem)
+                                prisma.stockCardPriceListItems.update({
+                                    where: { id: priceListItem.id },
+                                    data: priceListItem,
+                                })
                             )
                         );
                     }
@@ -279,7 +342,10 @@ export class StockCardService {
                     if (data.taxRates) {
                         await Promise.all(
                             data.taxRates.map((taxRate) =>
-                                this.stockCardTaxRateRepository.update(taxRate.id, taxRate)
+                                prisma.stockCardTaxRate.update({
+                                    where: { id: taxRate.id },
+                                    data: taxRate,
+                                })
                             )
                         );
                     }
@@ -293,17 +359,7 @@ export class StockCardService {
 
             return result;
         } catch (error) {
-            if (error instanceof Error) {
-                logger.error({
-                    msg: "Error updating StockCard with relations",
-                    error: error.message,
-                    stack: error.stack,
-                    requestData: data,
-                });
-            } else {
-                logger.error("Unknown error occurred", { error });
-            }
-
+            logger.error("Error updating StockCard with relations:", error);
             throw new Error("Could not update StockCard with relations");
         }
     }
@@ -311,26 +367,28 @@ export class StockCardService {
     async deleteStockCardsWithRelations(id: string): Promise<boolean> {
         try {
             return await prisma.$transaction(async (prisma) => {
-                await this.stockCardRepository.delete(id);
-
-                await this.stockCardBarcodeRepository.deleteWithFilters({
-                    stockCardId: id,
+                await prisma.stockCard.delete({
+                    where: { id },
                 });
 
-                await this.stockCardAttributeRepository.deleteWithFilters({
-                    stockCardId: id,
+                await prisma.stockCardBarcode.deleteMany({
+                    where: { stockCardId: id },
                 });
 
-                await this.stockCardCategoryItemsRepository.deleteWithFilters({
-                    stockCardId: id,
+                await prisma.stockCardAttribute.deleteMany({
+                    where: { stockCardId: id },
                 });
 
-                await this.stockCardPriceListItemsRepository.deleteWithFilters({
-                    stockCardId: id,
+                await prisma.stockCardCategoryItem.deleteMany({
+                    where: { stockCardId: id },
                 });
 
-                await this.stockCardTaxRateRepository.deleteWithFilters({
-                    stockCardId: id,
+                await prisma.stockCardPriceListItems.deleteMany({
+                    where: { stockCardId: id },
+                });
+
+                await prisma.stockCardTaxRate.deleteMany({
+                    where: { stockCardId: id },
                 });
 
                 return true;
