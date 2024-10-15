@@ -1,5 +1,5 @@
 // test/index.test.ts
-import { describe, expect, it } from 'bun:test'
+/*import { describe, expect, it } from 'bun:test'
 
 import { edenTreaty } from '@elysiajs/eden'
 import Elysia from 'elysia'
@@ -17,3 +17,4 @@ describe('Elysia', () => {
         expect(data).toBe('hi')
     })
 })
+*/

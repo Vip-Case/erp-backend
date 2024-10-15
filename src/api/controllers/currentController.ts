@@ -11,9 +11,9 @@ export const CurrentController = {
     createCurrent: async (ctx: Context) => {
         const currentData: Current = ctx.body as Current;
         try {
-            const current = await currentService.createCurrent(currentData);
+            const newCurrent = await currentService.createCurrent(currentData);
             ctx.set.status = 200;
-            return current;
+            return newCurrent;
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error creating current", details: error.message };

@@ -69,3 +69,5 @@ InvoiceRoutes(app);
 app.listen(appConfig.port, () => {
   console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
 });
+
+export default app;
