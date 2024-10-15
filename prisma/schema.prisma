@@ -109,6 +109,7 @@ model StockCard {
   Company   Company?    @relation(fields: [companyCode], references: [companyCode])
   Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
   Current   Current?    @relation(fields: [manufacturerCode], references: [currentCode])
+  Warehouse Warehouse?  @relation(fields: [warehouseCode], references: [warehouseCode])
 
   Attributes          StockCardAttribute[] // Özellikler
   Barcodes            StockCardBarcode[] // Barkodlar
@@ -295,7 +296,9 @@ model Branch {
   StockCard StockCard[]
   StockMovement StockMovement[]
   CurrentMovement CurrentMovement[]
-  Invoice Invoice[]
+
+  Invoice Invoice[] @relation("InvoiceOutBranch")
+  OutInvoice Invoice[] @relation("InvoiceBranch")
 }
 
 model Warehouse {
@@ -323,6 +326,8 @@ model Warehouse {
   outMovements   StockMovement[] @relation("StockMovementOutWarehouse") // Çıkış deposu ilişkisi
 
   Invoice Invoice[]
+
+  StockCard StockCard[]
 }
 
 model Current {
@@ -364,14 +369,14 @@ model Current {
 model CurrentMovement {
   id            String                      @id @default(cuid())
   currentCode   String?                      @db.VarChar(50)
-  dueDate       DateTime
-  description   String                      @db.VarChar(250)
-  debtAmount    Decimal                     @db.Decimal(15, 4)
-  creditAmount  Decimal                     @db.Decimal(15, 4)
-  balanceAmount Decimal                     @db.Decimal(15, 4)
+  dueDate       DateTime?
+  description   String?                      @db.VarChar(250)
+  debtAmount    Decimal?                     @db.Decimal(15, 4)
+  creditAmount  Decimal?                     @db.Decimal(15, 4)
+  balanceAmount Decimal?                     @db.Decimal(15, 4)
   priceListId   String?
   movementType  CurrentMovementType
-  documentType  CurrentMovementDocumentType
+  documentType  CurrentMovementDocumentType?
   documentNo    String?
   companyCode   String
   branchCode    String
@@ -429,12 +434,12 @@ model Invoice {
   id            String    @id @default(cuid())
   invoiceNo     String    @unique @db.VarChar(50)
   gibInvoiceNo  String?
-  invoiceDate   DateTime
+  invoiceDate   DateTime?
   invoiceType   InvoiceType?
   documentType  DocumentType?
   currentCode   String?
   companyCode   String?
-  branchCode    String?
+  branchCode    String
   outBranchCode String?
   warehouseCode String
   description   String?
@@ -452,15 +457,16 @@ model Invoice {
   totalBalance  Decimal?   @db.Decimal(15, 4)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  canceledAt   DateTime
+  canceledAt   DateTime?
   createdBy     String?
   updatedBy     String?
 
   Current Current? @relation(fields: [currentCode], references: [currentCode])
   company Company? @relation(fields: [companyCode], references: [companyCode])
-  branch  Branch?  @relation(fields: [branchCode], references: [branchCode])
+  branch  Branch  @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
   warehouse Warehouse? @relation(fields: [warehouseCode], references: [warehouseCode])
   priceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
+  outBranch Branch? @relation("InvoiceOutBranch", fields: [outBranchCode], references: [branchCode])
 
   InvoiceDetail InvoiceDetail[]
   StockMovement StockMovement[]

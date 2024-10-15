@@ -10,7 +10,7 @@ export class CurrentMovementService {
     constructor() {
         this.currentMovementRepository = new BaseRepository<CurrentMovement>(prisma.currentMovement);
     }
-
+        
     async createCurrentMovement(currentMovement: any): Promise<CurrentMovement> {
         try {
             const createdCurrentMovement = await prisma.currentMovement.create({
