@@ -109,6 +109,7 @@ model StockCard {
   Company   Company?    @relation(fields: [companyCode], references: [companyCode])
   Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
   Current   Current?    @relation(fields: [manufacturerCode], references: [currentCode])
+  Warehouse Warehouse?  @relation(fields: [warehouseCode], references: [warehouseCode])
 
   Attributes          StockCardAttribute[] // Özellikler
   Barcodes            StockCardBarcode[] // Barkodlar
@@ -325,6 +326,8 @@ model Warehouse {
   outMovements   StockMovement[] @relation("StockMovementOutWarehouse") // Çıkış deposu ilişkisi
 
   Invoice Invoice[]
+
+  StockCard StockCard[]
 }
 
 model Current {
