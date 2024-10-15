@@ -62,7 +62,6 @@ export class StockCardService {
                     } : undefined,
                 } as Prisma.StockCardCreateInput,
             });
-
             return result;
         } catch (error) {
             logger.error("Error creating StockCard:", error);
@@ -70,11 +69,43 @@ export class StockCardService {
         }
     }
 
-    async updateStockCard(id: string, stockCard: Partial<StockCard>): Promise<StockCard> {
+    async updateStockCard(id: string, stockCard: Partial<StockCard>, warehouseIds?: string[]): Promise<StockCard> {
         try {
             return await prisma.stockCard.update({
                 where: { id },
-                data: stockCard,
+                data: {
+                    productCode: stockCard.productCode,
+                    productName: stockCard.productName,
+                    invoiceName: stockCard.invoiceName,
+                    shortDescription: stockCard.shortDescription,
+                    description: stockCard.description,
+                    brand: stockCard.brand,
+                    unitOfMeasure: stockCard.unitOfMeasure,
+                    productType: stockCard.productType,
+                    riskQuantities: stockCard.riskQuantities,
+                    stockStatus: stockCard.stockStatus,
+                    hasExpirationDate: stockCard.hasExpirationDate,
+                    allowNegativeStock: stockCard.allowNegativeStock,
+
+                    company: stockCard.companyCode ? {
+                        connect: { companyCode: stockCard.companyCode },
+                    } : undefined,
+
+                    branch: stockCard.branchCode ? {
+                        connect: { branchCode: stockCard.branchCode },
+                    } : undefined,
+
+                    Current: stockCard.manufacturerCode ? {
+                        connect: { currentCode: stockCard.manufacturerCode },
+                    } : undefined,
+
+                    // StockCardWarehouse Many-to-Many relation
+                    StockCardWarehouse: (warehouseIds ?? []).length > 0 ? {
+                        create: (warehouseIds ?? []).map(warehouseId => ({
+                            warehouse: { connect: { id: warehouseId } },
+                        })),
+                    } : undefined,
+                } as Prisma.StockCardUpdateInput,
             });
         } catch (error) {
             logger.error("Error updating StockCard:", error);

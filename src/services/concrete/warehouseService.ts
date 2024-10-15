@@ -1,6 +1,6 @@
 
 import prisma from "../../config/prisma";
-import { Warehouse } from "@prisma/client";
+import { Prisma, Warehouse } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
@@ -13,7 +13,23 @@ export class WarehouseService {
 
     async createWarehouse(warehouse: Warehouse): Promise<Warehouse> {
         try {
-            return await this.warehouseRepository.create(warehouse);
+            const createdWarehouse = await prisma.warehouse.create({
+                data: {
+                    warehouseName: warehouse.warehouseName,
+                    warehouseCode: warehouse.warehouseCode,
+                    address: warehouse.address,
+                    countryCode: warehouse.countryCode,
+                    city: warehouse.city,
+                    district: warehouse.district,
+                    phone: warehouse.phone,
+                    email: warehouse.email,
+
+                    company: warehouse.companyCode ? {
+                        connect: { companyCode: warehouse.companyCode },
+                    } : {},
+                } as Prisma.WarehouseCreateInput,
+            });
+            return createdWarehouse;
         } catch (error) {
             logger.error("Error creating warehouse", error);
             throw error;
@@ -22,7 +38,23 @@ export class WarehouseService {
 
     async updateWarehouse(id: string, warehouse: Partial<Warehouse>): Promise<Warehouse> {
         try {
-            return await this.warehouseRepository.update(id, warehouse);
+            return await prisma.warehouse.update({
+                where: {id},
+                data: {
+                    warehouseName: warehouse.warehouseName,
+                    warehouseCode: warehouse.warehouseCode,
+                    address: warehouse.address,
+                    countryCode: warehouse.countryCode,
+                    city: warehouse.city,
+                    district: warehouse.district,
+                    phone: warehouse.phone,
+                    email: warehouse.email,
+
+                    company: warehouse.companyCode ? {
+                        connect: { companyCode: warehouse.companyCode },
+                    } : {},
+                } as Prisma.WarehouseUpdateInput,
+            });
         } catch (error) {
             logger.error(`Error updating warehouse with id ${id}`, error);
             throw error;

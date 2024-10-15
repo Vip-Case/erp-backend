@@ -1,6 +1,6 @@
 
 import prisma from "../../config/prisma";
-import { StockMovement } from "@prisma/client";
+import { Prisma, StockMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
@@ -50,9 +50,9 @@ export class StockMovementService {
                             id: stockMovementData.priceListId
                         }
                     } : undefined,
-                    current: stockMovementData.current ? {
+                    current: stockMovementData.currentCode ? {
                         connect: {
-                            id: stockMovementData.current
+                            id: stockMovementData.currentCode
                         }
                     } : undefined,
                     invoice: stockMovementData.invoiceId ? {
@@ -60,7 +60,7 @@ export class StockMovementService {
                             id: stockMovementData.documentNo
                         }
                     } : undefined,
-                }
+                } as Prisma.StockMovementCreateInput,
             });
             return stockMovement;
         } catch (error) {
@@ -70,9 +70,58 @@ export class StockMovementService {
     }    
 
 
-    async updateStockMovement(id: string, stockMovement: Partial<StockMovement>): Promise<StockMovement> {
+    async updateStockMovement(id: string, stockMovementData: Partial<StockMovement>): Promise<StockMovement> {
         try {
-            return await this.stockMovementRepository.update(id, stockMovement);
+            return await prisma.stockMovement.update({
+                where: { id },
+                data: {
+                    movementType: stockMovementData.movementType,
+                    documentType: stockMovementData.documentType,
+                    invoiceType: stockMovementData.invoiceType,
+                    gcCode: stockMovementData.gcCode,
+                    type: stockMovementData.type,
+                    description: stockMovementData.description,
+                    quantity: stockMovementData.quantity,
+                    unitPrice: stockMovementData.unitPrice,
+                    totalPrice: stockMovementData.totalPrice,
+                    unitOfMeasure: stockMovementData.unitOfMeasure,
+                    warehouse: stockMovementData.warehouseCode ? {
+                        connect: {
+                            warehouseCode: stockMovementData.warehouseCode
+                        }
+                    } : {},
+                    outWarehouse: stockMovementData.outWarehouseCode ? {
+                        connect: {
+                            warehouseCode: stockMovementData.outWarehouseCode
+                        }
+                    } : undefined,
+                    branch: stockMovementData.branchCode ? {
+                        connect: {
+                            branchCode: stockMovementData.branchCode
+                        }
+                    } : {},
+                    stockCard: {
+                        connect: {
+                            productCode: stockMovementData.productCode
+                        }
+                    },
+                    priceList: stockMovementData.priceListId ? {
+                        connect: {
+                            id: stockMovementData.priceListId
+                        }
+                    } : undefined,
+                    current: stockMovementData.currentCode ? {
+                        connect: {
+                            id: stockMovementData.currentCode
+                        }
+                    } : undefined,
+                    invoice: stockMovementData.documentNo ? {
+                        connect: {
+                            id: stockMovementData.documentNo
+                        }
+                    } : undefined
+                } as Prisma.StockMovementUpdateInput,
+            });
         } catch (error) {
             logger.error(`Error updating stock movement with id ${id}`, error);
             throw error;

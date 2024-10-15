@@ -1,6 +1,6 @@
 
 import prisma from "../../config/prisma";
-import { Branch } from "@prisma/client";
+import { Branch, Prisma } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
@@ -13,7 +13,24 @@ export class BranchService {
 
     async createBranch(branch: Branch): Promise<Branch> {
         try {
-            return await this.branchRepository.create(branch);
+            const createdBranch = await prisma.branch.create({
+                data: {
+                    branchName: branch.branchName,
+                    branchCode: branch.branchCode,
+                    address: branch.address,
+                    countryCode: branch.countryCode,
+                    city: branch.city,
+                    district: branch.district,
+                    phone: branch.phone,
+                    email: branch.email,
+                    website: branch.website,
+
+                    company: branch.companyCode ? {
+                        connect: { companyCode: branch.companyCode },
+                    } : {}
+                } as Prisma.BranchCreateInput
+            });
+            return createdBranch;
         } catch (error) {
             logger.error("Error creating branch", error);
             throw error;
@@ -22,7 +39,24 @@ export class BranchService {
 
     async updateBranch(id: string, branch: Partial<Branch>): Promise<Branch> {
         try {
-            return await this.branchRepository.update(id, branch);
+            return await prisma.branch.update({
+                where: {id}, 
+                data: {
+                    branchName: branch.branchName,
+                    branchCode: branch.branchCode,
+                    address: branch.address,
+                    countryCode: branch.countryCode,
+                    city: branch.city,
+                    district: branch.district,
+                    phone: branch.phone,
+                    email: branch.email,
+                    website: branch.website,
+
+                    company: branch.companyCode ? {
+                        connect: { companyCode: branch.companyCode },
+                    } : {}
+                } as Prisma.BranchUpdateInput
+            });
         } catch (error) {
             logger.error(`Error updating branch with id ${id}`, error);
             throw error;
