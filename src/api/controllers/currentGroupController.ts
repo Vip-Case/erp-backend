@@ -2,6 +2,7 @@
 import CurrentGroupService from '../../services/concrete/currentGroupService';
 import { Context } from 'elysia';
 import { CurrentReportGroup } from '@prisma/client';
+import prisma from '../../config/prisma';
 
 // Service Initialization
 const currentGroupService = new CurrentGroupService();
@@ -11,9 +12,14 @@ export const CurrentGroupController = {
     createCurrentGroup: async (ctx: Context) => {
         const currentGroupData: CurrentReportGroup = ctx.body as CurrentReportGroup;
         try {
-            const currentGroup = await currentGroupService.createCurrentGroup(currentGroupData);
-            ctx.set.status = 200;
-            return currentGroup;
+            const newGroup = await prisma.currentReportGroup.create({
+                data: {
+                  groupCode: currentGroupData.groupCode,
+                  description: currentGroupData.description
+                }
+              });
+            ctx.set.status = 201;
+            return newGroup;
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error creating currentGroup", details: error.message };

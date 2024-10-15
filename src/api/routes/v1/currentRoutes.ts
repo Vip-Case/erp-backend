@@ -1,6 +1,7 @@
 
 import { Elysia } from 'elysia';
 import CurrentController from '../../controllers/currentController';
+import { CurrentPlain } from '../../../../prisma/prismabox/Current';
 
 export const CurrentRoutes = (app: Elysia) => {
     app.group("/currents", (app) =>
