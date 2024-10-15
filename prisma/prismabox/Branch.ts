@@ -46,27 +46,6 @@ export const BranchRelations = t.Object(
       },
       { additionalProperties: true },
     ),
-    Warehouse: t.Array(
-      t.Object(
-        {
-          id: t.String({ additionalProperties: true }),
-          warehouseName: t.String({ additionalProperties: true }),
-          warehouseCode: t.String({ additionalProperties: true }),
-          address: t.String({ additionalProperties: true }),
-          countryCode: t.String({ additionalProperties: true }),
-          city: t.String({ additionalProperties: true }),
-          district: t.String({ additionalProperties: true }),
-          phone: t.String({ additionalProperties: true }),
-          email: t.String({ additionalProperties: true }),
-          companyCode: t.String({ additionalProperties: true }),
-          createdAt: t.Date({ additionalProperties: true }),
-          updatedAt: t.Date({ additionalProperties: true }),
-          createdBy: __nullable__(t.String({ additionalProperties: true })),
-          updatedBy: __nullable__(t.String({ additionalProperties: true })),
-        },
-        { additionalProperties: true },
-      ),
-    ),
     User: t.Array(
       t.Object(
         {
@@ -84,6 +63,16 @@ export const BranchRelations = t.Object(
           updatedAt: t.Date({ additionalProperties: true }),
           createdBy: __nullable__(t.String({ additionalProperties: true })),
           updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    Warehouse: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          branchId: t.String({ additionalProperties: true }),
+          warehouseId: t.String({ additionalProperties: true }),
         },
         { additionalProperties: true },
       ),
@@ -128,7 +117,6 @@ export const BranchRelations = t.Object(
             t.String({ additionalProperties: true }),
           ),
           description: __nullable__(t.String({ additionalProperties: true })),
-          warehouseCode: __nullable__(t.String({ additionalProperties: true })),
           manufacturerCode: __nullable__(
             t.String({ additionalProperties: true }),
           ),
@@ -435,7 +423,7 @@ export const BranchRelationsInputCreate = t.Object(
       },
       { additionalProperties: true },
     ),
-    Warehouse: t.Optional(
+    User: t.Optional(
       t.Object(
         {
           connect: t.Array(
@@ -450,7 +438,7 @@ export const BranchRelationsInputCreate = t.Object(
         { additionalProperties: true },
       ),
     ),
-    User: t.Optional(
+    Warehouse: t.Optional(
       t.Object(
         {
           connect: t.Array(
@@ -573,7 +561,7 @@ export const BranchRelationsInputUpdate = t.Partial(
         },
         { additionalProperties: true },
       ),
-      Warehouse: t.Partial(
+      User: t.Partial(
         t.Object(
           {
             connect: t.Array(
@@ -597,7 +585,7 @@ export const BranchRelationsInputUpdate = t.Partial(
         ),
         { additionalProperties: true },
       ),
-      User: t.Partial(
+      Warehouse: t.Partial(
         t.Object(
           {
             connect: t.Array(
@@ -867,8 +855,8 @@ export const BranchSelect = t.Partial(
       createdBy: t.Boolean(),
       updatedBy: t.Boolean(),
       company: t.Boolean(),
-      Warehouse: t.Boolean(),
       User: t.Boolean(),
+      Warehouse: t.Boolean(),
       Current: t.Boolean(),
       StockCard: t.Boolean(),
       StockMovement: t.Boolean(),
@@ -886,8 +874,8 @@ export const BranchInclude = t.Partial(
   t.Object(
     {
       company: t.Boolean(),
-      Warehouse: t.Boolean(),
       User: t.Boolean(),
+      Warehouse: t.Boolean(),
       Current: t.Boolean(),
       StockCard: t.Boolean(),
       StockMovement: t.Boolean(),

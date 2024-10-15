@@ -18,6 +18,8 @@ export * from "./StockMovement";
 export * from "./Company";
 export * from "./Branch";
 export * from "./Warehouse";
+export * from "./BranchWarehouse";
+export * from "./StockCardWarehouse";
 export * from "./Current";
 export * from "./CurrentMovement";
 export * from "./CurrentReportGroup";

@@ -33,7 +33,6 @@ export const StockCardCategoryItemRelations = t.Object(
           t.String({ additionalProperties: true }),
         ),
         description: __nullable__(t.String({ additionalProperties: true })),
-        warehouseCode: __nullable__(t.String({ additionalProperties: true })),
         manufacturerCode: __nullable__(
           t.String({ additionalProperties: true }),
         ),

@@ -2,6 +2,7 @@ import {
     Branch,
     Company,
     Current,
+    Prisma,
     StockCard,
     StockCardAttribute,
     StockCardBarcode,
@@ -13,6 +14,7 @@ import {
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { BaseRepository } from "../../repositories/baseRepository";
+import { ProductType } from "../../types";
 
 const stockCardRelations = {
     Attributes: true,
@@ -47,14 +49,59 @@ export class StockCardService {
     private warehouseRepository = new BaseRepository<Warehouse>(prisma.branch);
     private currentRepository = new BaseRepository<Current>(prisma.stockCard);
 
-    async createStockCard(stockCard: StockCard): Promise<StockCard> {
+    async createStockCard(stockCard: StockCard, warehouseIds: string[]): Promise<StockCard> {
         try {
-            return await this.stockCardRepository.create(stockCard);
+            const result = await prisma.stockCard.create({
+                data: {
+                    productCode: stockCard.productCode,
+                    productName: stockCard.productName,
+                    invoiceName: stockCard.invoiceName,
+                    shortDescription: stockCard.shortDescription,
+                    description: stockCard.description,
+                    brand: stockCard.brand,
+                    unitOfMeasure: stockCard.unitOfMeasure,
+                    productType: stockCard.productType,
+                    riskQuantities: stockCard.riskQuantities,
+                    stockStatus: stockCard.stockStatus,
+                    hasExpirationDate: stockCard.hasExpirationDate,
+                    allowNegativeStock: stockCard.allowNegativeStock,
+    
+                    company: stockCard.companyCode ? {
+                        connect: {
+                            companyCode: stockCard.companyCode,
+                        },
+                    } : undefined,
+    
+                    branch: stockCard.branchCode ? {
+                        connect: {
+                            branchCode: stockCard.branchCode,
+                        },
+                    } : undefined,
+    
+                    Current: stockCard.manufacturerCode ? {
+                        connect: {
+                            currentCode: stockCard.manufacturerCode,
+                        },
+                    } : undefined,
+    
+                    // StockCardWarehouse Many-to-Many relation
+                    StockCardWarehouse: warehouseIds.length > 0 ? {
+                        create: warehouseIds.map(warehouseId => ({
+                            warehouse: {
+                                connect: { id: warehouseId },
+                            },
+                        })),
+                    } : undefined,
+                } as Prisma.StockCardCreateInput, // Type assertion to match Prisma's expected input type
+            });
+    
+            return result;
         } catch (error) {
             console.error("Error creating StockCard:", error);
             throw new Error("Could not create StockCard");
         }
     }
+    
 
     async updateStockCard(
         id: string,

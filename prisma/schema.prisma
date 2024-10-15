@@ -90,7 +90,6 @@ model StockCard {
   invoiceName        String?  @db.VarChar(150) // Fatura Adı
   shortDescription   String?  @db.VarChar(150) // Kısa Açıklama
   description        String?  @unique @db.VarChar(250) // Açıklama
-  warehouseCode      String?  @unique
   manufacturerCode   String?  @db.VarChar(50) // Üretici Kodu (Ayrı tabloya alınacak)
   companyCode        String?  @db.VarChar(50) // Şirket Kodu
   branchCode         String?  @db.VarChar(50) // Şube Kodu

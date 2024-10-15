@@ -49,20 +49,8 @@ export const WarehouseRelations = t.Object(
       t.Object(
         {
           id: t.String({ additionalProperties: true }),
-          branchName: t.String({ additionalProperties: true }),
-          branchCode: t.String({ additionalProperties: true }),
-          address: t.String({ additionalProperties: true }),
-          countryCode: t.String({ additionalProperties: true }),
-          city: t.String({ additionalProperties: true }),
-          district: t.String({ additionalProperties: true }),
-          phone: t.String({ additionalProperties: true }),
-          email: t.String({ additionalProperties: true }),
-          website: t.String({ additionalProperties: true }),
-          companyCode: t.String({ additionalProperties: true }),
-          createdAt: t.Date({ additionalProperties: true }),
-          updatedAt: t.Date({ additionalProperties: true }),
-          createdBy: __nullable__(t.String({ additionalProperties: true })),
-          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+          branchId: t.String({ additionalProperties: true }),
+          warehouseId: t.String({ additionalProperties: true }),
         },
         { additionalProperties: true },
       ),
@@ -304,6 +292,16 @@ export const WarehouseRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    StockCardWarehouse: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          stockCardId: t.String({ additionalProperties: true }),
+          warehouseId: t.String({ additionalProperties: true }),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -435,6 +433,21 @@ export const WarehouseRelationsInputCreate = t.Object(
       ),
     ),
     Invoice: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    StockCardWarehouse: t.Optional(
       t.Object(
         {
           connect: t.Array(
@@ -611,6 +624,30 @@ export const WarehouseRelationsInputUpdate = t.Partial(
         ),
         { additionalProperties: true },
       ),
+      StockCardWarehouse: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
     },
     { additionalProperties: true },
   ),
@@ -716,6 +753,7 @@ export const WarehouseSelect = t.Partial(
       stockMovements: t.Boolean(),
       outMovements: t.Boolean(),
       Invoice: t.Boolean(),
+      StockCardWarehouse: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -733,6 +771,7 @@ export const WarehouseInclude = t.Partial(
       stockMovements: t.Boolean(),
       outMovements: t.Boolean(),
       Invoice: t.Boolean(),
+      StockCardWarehouse: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
