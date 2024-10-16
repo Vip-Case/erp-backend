@@ -368,7 +368,7 @@ model Current {
   phone         String?   @db.VarChar(50)
   email         String?   @db.VarChar(100)
   website       String?   @db.VarChar(100)
-  companyCode   String    @db.VarChar(50)
+  companyCode   String    @db.VarChar(50) @unique
   branchCode    String    @db.VarChar(50)
   warehouseCode String    @db.VarChar(50)
   priceListId   String

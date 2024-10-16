@@ -30,11 +30,13 @@ export class CurrentService {
                     website: current.website,
                     
                     company: current.companyCode ? {
-                        connect: { companyCode: current.companyCode },
+                        connect: {
+                            companyCode: current.companyCode
+                            }
                     } : {},
                     branch: current.branchCode ? {
                         connect: {
-                            id: current.branchCode
+                            branchCode: current.branchCode
                         }
                     } : {},
                     priceList: current.priceListId ? {
@@ -44,7 +46,7 @@ export class CurrentService {
                     } : {},
                     warehouse: current.warehouseCode ? {
                         connect: { 
-                            id: current.warehouseCode
+                            warehouseCode: current.warehouseCode
                         }
                     } : {}
 
@@ -78,7 +80,9 @@ export class CurrentService {
                     website: current.website,
                     
                     company: current.companyCode ? {
-                        connect: { companyCode: current.companyCode },
+                        connect: { 
+                            id: current.companyCode 
+                        }
                     } : {},
                     branch: current.branchCode ? {
                         connect: {
@@ -96,8 +100,8 @@ export class CurrentService {
                         }
                     } : {}
 
-                } as Prisma.CurrentUpdateInput,
-            });
+                } as Prisma.CurrentUpdateInput
+                });
         } catch (error) {
             logger.error(`Error updating current with id ${id}`, error);
             throw error;

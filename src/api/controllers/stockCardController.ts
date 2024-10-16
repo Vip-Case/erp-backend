@@ -5,7 +5,6 @@ import { StockCard, StockCardAttribute, StockCardBarcode, StockCardCategoryItem,
 // Service Initialization
 const stockCardService = new StockCardService();
 
-
 const StockCardController = {
     // StockCard'ı oluşturan API
     createStockCard: async (ctx: Context) => {

@@ -30,12 +30,12 @@ export class CurrentMovementService {
                     } : undefined,
                     company: currentMovement.companyCode ? {
                         connect: {
-                            id: currentMovement.companyCode
+                            companyCode: currentMovement.companyCode
                         }
                     } : {},
                     branch: currentMovement.branchCode ? {
                         connect: {
-                            id: currentMovement.branchCode
+                            branchCode: currentMovement.branchCode
                         }
                     } : {},
                     StockCardPriceList: currentMovement.priceListId ? {
@@ -77,12 +77,12 @@ export class CurrentMovementService {
                     } : undefined,
                     company: currentMovement.companyCode ? {
                         connect: {
-                            id: currentMovement.companyCode
+                            companyCode: currentMovement.companyCode
                         }
                     } : {},
                     branch: currentMovement.branchCode ? {
                         connect: {
-                            id: currentMovement.branchCode
+                            branchCode: currentMovement.branchCode
                         }
                     } : {},
                     StockCardPriceList: currentMovement.priceListId ? {

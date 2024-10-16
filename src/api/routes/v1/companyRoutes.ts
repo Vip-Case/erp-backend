@@ -1,7 +1,6 @@
 
 import { Elysia } from 'elysia';
 import CompanyController from '../../controllers/companyController';
-import { CompanyPlain, CompanyPlainInputCreate } from '../../../../prisma/prismabox/Company';
 
 export const CompanyRoutes = (app: Elysia) => {
     app.group("/companies", (app) =>

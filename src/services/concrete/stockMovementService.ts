@@ -40,11 +40,11 @@ export class StockMovementService {
                             branchCode: stockMovementData.branchCode
                         }
                     } : {},
-                    stockCard: {
+                    stockCard: stockMovementData.stockCard ? {
                         connect: {
                             productCode: stockMovementData.productCode
                         }
-                    },
+                    } : undefined,
                     priceList: stockMovementData.priceListId ? {
                         connect: {
                             id: stockMovementData.priceListId
