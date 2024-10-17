@@ -4,7 +4,7 @@ import { StockCardAttributePlain } from '../../../../prisma/prismabox/StockCardA
 
 export const AttributeRoutes = (app: Elysia) => {
     app.group("/attributes", (app) =>
-        app.get("/", AttributeController.getAllAttributes, { tags: ["Attributes"], response: { body: StockCardAttributePlain } })
+        app.get("/", AttributeController.getAllAttributes, { tags: ["Attributes"] })
             .post("/", AttributeController.createAttribute, { tags: ["Attributes"] })
             .get("/:id", AttributeController.getAttributeById, { tags: ["Attributes"] })
             .put("/:id", AttributeController.updateAttribute, { tags: ["Attributes"] })

@@ -21,7 +21,7 @@ afterAll(async () => {
 });
 
 describe('API Endpoints', () => {
-    it('should return currents for GET /branches', async () => {
+    it('should return branches for GET /branches', async () => {
         const response = await fetch('http://localhost:3000/branches/');
         const data = await response.json();
 
@@ -29,7 +29,7 @@ describe('API Endpoints', () => {
         expect(data.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should create a new current with POST /branches', async () => {
+    it('should create a new branch with POST /branches', async () => {
         const newBranch = branch[0];
         const response = await fetch('http://localhost:3000/branches/', {
             method: 'POST',
@@ -45,7 +45,7 @@ describe('API Endpoints', () => {
         expect(data.branchCode).toBe(newBranch.branchCode); 
     });
 
-    it('should update a current with PUT /branches/:id', async () => {
+    it('should update a branch with PUT /branches/:id', async () => {
         const updatedBranch = { branchName: 'One branch' };
 
         // createdId'nin undefined olmadığından emin olun
@@ -64,7 +64,7 @@ describe('API Endpoints', () => {
         expect(data.branchName).toBe(updatedBranch.branchName); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
-    it('should delete a current with DELETE /branches/:id', async () => {
+    it('should delete a branch with DELETE /branches/:id', async () => {
         const response = await fetch(`http://localhost:3000/branches/${createdBranchId}`, {
             method: 'DELETE'
         });

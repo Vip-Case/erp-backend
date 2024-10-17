@@ -21,7 +21,7 @@ afterAll(async () => {
 });
 
 describe('API Endpoints', () => {
-    it('should return currents for GET /currentMovements', async () => {
+    it('should return currentMovements for GET /currentMovements', async () => {
         const response = await fetch('http://localhost:3000/currentMovements/');
         const data = await response.json();
 
@@ -29,7 +29,7 @@ describe('API Endpoints', () => {
         expect(data.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should create a new current with POST /currentMovements', async () => {
+    it('should create a new currentMovement with POST /currentMovements', async () => {
         const newCurrentMovement = currentMovement[0];
         const response = await fetch('http://localhost:3000/currentMovements/', {
             method: 'POST',
@@ -45,7 +45,7 @@ describe('API Endpoints', () => {
         expect(data.movementType).toBe(newCurrentMovement.movementType); 
     });
 
-    it('should update a current with PUT /currentMovements/:id', async () => {
+    it('should update a currentMovement with PUT /currentMovements/:id', async () => {
         const updatedCurrentMovement = { movementType: 'Alacak' };
 
         // createdId'nin undefined olmadığından emin olun
@@ -64,7 +64,7 @@ describe('API Endpoints', () => {
         expect(data.movementType).toBe(updatedCurrentMovement.movementType); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
-    it('should delete a current with DELETE /currentMovements/:id', async () => {
+    it('should delete a currentMovement with DELETE /currentMovements/:id', async () => {
         const response = await fetch(`http://localhost:3000/currentMovements/${createdMovementId}`, {
             method: 'DELETE'
         });

@@ -29,7 +29,7 @@ describe('API Endpoints', () => {
         expect(data.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should create a new user with POST /warehouses', async () => {
+    it('should create a new warehouse with POST /warehouses', async () => {
         const newWarehouse = warehouse[0];
         const response = await fetch('http://localhost:3000/warehouses/', {
             method: 'POST',
@@ -45,8 +45,8 @@ describe('API Endpoints', () => {
         expect(data.warehouseName).toBe(newWarehouse.warehouseName); 
     });
 
-    it('should update a user with PUT /warehouses/:id', async () => {
-        const updatedWarehouse = { warehouseName: 'user1' };
+    it('should update a warehouse with PUT /warehouses/:id', async () => {
+        const updatedWarehouse = { warehouseName: 'warehouse1' };
 
         // createdId'nin undefined olmadığından emin olun
         expect(createdWarehosueId).toBeDefined();
@@ -64,7 +64,7 @@ describe('API Endpoints', () => {
         expect(data.warehouseName).toBe(updatedWarehouse.warehouseName); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
-    it('should delete a user with DELETE /warehouses/:id', async () => {
+    it('should delete a warehouse with DELETE /warehouses/:id', async () => {
         const response = await fetch(`http://localhost:3000/warehouses/${createdWarehosueId}`, {
             method: 'DELETE'
         });

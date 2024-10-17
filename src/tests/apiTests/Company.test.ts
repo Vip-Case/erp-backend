@@ -21,7 +21,7 @@ afterAll(async () => {
 });
 
 describe('API Endpoints', () => {
-    it('should return currents for GET /companies', async () => {
+    it('should return companies for GET /companies', async () => {
         const response = await fetch('http://localhost:3000/companies/');
         const data = await response.json();
 
@@ -29,7 +29,7 @@ describe('API Endpoints', () => {
         expect(data.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should create a new current with POST /companies', async () => {
+    it('should create a new company with POST /companies', async () => {
         const newCompany = company[0];
         const response = await fetch('http://localhost:3000/companies/', {
             method: 'POST',
@@ -45,7 +45,7 @@ describe('API Endpoints', () => {
         expect(data.companyCode).toBe(newCompany.companyCode); 
     });
 
-    it('should update a current with PUT /companies/:id', async () => {
+    it('should update a company with PUT /companies/:id', async () => {
         const updatedCompany = { companyCode: 'second company' };
 
         // createdId'nin undefined olmadığından emin olun
@@ -64,7 +64,7 @@ describe('API Endpoints', () => {
         expect(data.companyCode).toBe(updatedCompany.companyCode); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
-    it('should delete a current with DELETE /companies/:id', async () => {
+    it('should delete a company with DELETE /companies/:id', async () => {
         const response = await fetch(`http://localhost:3000/companies/${createdCompanyId}`, {
             method: 'DELETE'
         });

@@ -21,7 +21,7 @@ afterAll(async () => {
 });
 
 describe('API Endpoints', () => {
-    it('should return currents for GET /categories', async () => {
+    it('should return categories for GET /categories', async () => {
         const response = await fetch('http://localhost:3000/categories/');
         const data = await response.json();
 
@@ -29,7 +29,7 @@ describe('API Endpoints', () => {
         expect(data.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should create a new current with POST /branches', async () => {
+    it('should create a new category with POST /categories', async () => {
         const newCategory = category[0];
         const response = await fetch('http://localhost:3000/categories/', {
             method: 'POST',
@@ -45,7 +45,7 @@ describe('API Endpoints', () => {
         expect(data.categoryName).toBe(newCategory.categoryName); 
     });
 
-    it('should update a current with PUT /categories/:id', async () => {
+    it('should update a category with PUT /categories/:id', async () => {
         const updatedCategory = { categoryName: 'One item' };
 
         // createdId'nin undefined olmadığından emin olun
@@ -64,7 +64,7 @@ describe('API Endpoints', () => {
         expect(data.categoryName).toBe(updatedCategory.categoryName); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
-    it('should delete a current with DELETE /categories/:id', async () => {
+    it('should delete a category with DELETE /categories/:id', async () => {
         const response = await fetch(`http://localhost:3000/categories/${createdCategoryId}`, {
             method: 'DELETE'
         });

@@ -21,7 +21,7 @@ afterAll(async () => {
 });
 
 describe('API Endpoints', () => {
-    it('should return invoices for GET /companies', async () => {
+    it('should return invoices for GET /invoices', async () => {
         const response = await fetch('http://localhost:3000/invoices/');
         const data = await response.json();
 
