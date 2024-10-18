@@ -71,6 +71,15 @@ enum CurrentMovementDocumentType {
   Muhtelif
 }
 
+enum ReceiptType {
+  Devir
+  Sayim
+  Nakil
+  Giris
+  Cikis
+  Fire
+}
+
 model Role {
   id          String   @id @default(cuid())
   roleName    String   @unique @db.VarChar(50)
@@ -90,12 +99,13 @@ model StockCard {
   invoiceName        String?  @db.VarChar(150) // Fatura Adı
   shortDescription   String?  @db.VarChar(150) // Kısa Açıklama
   description        String?  @unique @db.VarChar(250) // Açıklama
-  manufacturerCode   String?  @db.VarChar(50) // Üretici Kodu (Ayrı tabloya alınacak)
+  manufacturerCode   String?  @db.VarChar(50) // Üretici Kodu (ürünün üreticideki kodu)
   companyCode        String?  @db.VarChar(50) // Şirket Kodu
   branchCode         String?  @db.VarChar(50) // Şube Kodu
   brand              String?  @db.VarChar(100) // Marka
   unitOfMeasure      String?  @db.VarChar(50) // Ölçü Birimi
   productType        String   @db.VarChar(50) // Ürün Tipi
+  marketNames         String?  @db.VarChar(250) // Piyasa Adları
   riskQuantities     Decimal? @db.Decimal(15, 4) // Risk Miktarı
   stockStatus        Boolean  @default(true) // Stok Durumu
   hasExpirationDate  Boolean  @default(false) // Son Kullanma Tarihi Var mı?
@@ -107,7 +117,6 @@ model StockCard {
 
   Company   Company?    @relation(fields: [companyCode], references: [companyCode])
   Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
-  Current   Current?    @relation(fields: [manufacturerCode], references: [currentCode])
 
   Attributes          StockCardAttribute[] // Özellikler
   Barcodes            StockCardBarcode[] // Barkodlar
@@ -118,6 +127,10 @@ model StockCard {
   StockMovement StockMovement[]
   InvoiceDetail InvoiceDetail[]
   StockCardWarehouse StockCardWarehouse[]
+  ProfitMargin ProfitMargin[]
+
+
+  ReceiptDetail ReceiptDetail[]
 }
 
 model StockCardPriceList {
@@ -144,6 +157,19 @@ model StockCardPriceListItems {
   StockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
 
+model ProfitMargin {
+  id          String   @id @default(cuid()) // Id
+  stockCardId String   // İlgili Stok Kartı
+  branchCode    String?   // İlgili Şube (isteğe bağlı)
+  profitMargin Decimal  @db.Decimal(5, 2) // Kar Marjı (%)
+  createdAt    DateTime  @default(now())  // Oluşturulma Tarihi
+  updatedAt    DateTime  @updatedAt       // Güncellenme Tarihi
+
+  stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
+
+}
+
 model StockCardBarcode {
   id                 String               @id @default(cuid())
   stockCardId        String
@@ -155,6 +181,7 @@ model StockCardBarcode {
 model StockCardCategory {
   id               String                  @id @default(cuid())
   categoryName     String                  @db.VarChar(100)
+  categoryCode     String                  @unique @db.VarChar(100)
   parentCategoryId String?
   parentCategory   StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
   childCategories  StockCardCategory[]     @relation("CategoryHierarchy")
@@ -297,6 +324,10 @@ model Branch {
   
   Invoice         Invoice[] @relation("InvoiceOutBranch")
   OutInvoice      Invoice[] @relation("InvoiceBranch")
+
+  ProfitMargin ProfitMargin[]
+
+  Receipt Receipt[]
 }
 
 model Warehouse {
@@ -327,6 +358,8 @@ model Warehouse {
   Invoice        Invoice[]
 
   StockCardWarehouse StockCardWarehouse[]
+
+  Receipt Receipt[]
 }
 
 // Many-to-Many relation between Branch and Warehouse
@@ -352,6 +385,40 @@ model StockCardWarehouse {
   @@unique([stockCardId, warehouseId]) // Duplicate ilişkileri önlemek için
 }
 
+model Receipt {
+  id            String    @id @default(cuid())
+  receiptType   ReceiptType 
+  receiptDate   DateTime  @default(now())
+  documentNo    String   @db.VarChar(50)
+  branchCode    String    @db.VarChar(50)
+  warehouseCode String    @db.VarChar(50)
+  description   String?    
+
+  branch             Branch               @relation(fields: [branchCode], references: [branchCode])
+  warehouse          Warehouse            @relation(fields: [warehouseCode], references: [warehouseCode])
+  
+
+  ReceiptDetail ReceiptDetail[]
+}
+
+model ReceiptDetail {
+  id          String   @id @default(cuid())
+  receiptId   String 
+  productCode String
+  quantity    Decimal  @db.Decimal(15, 4)
+  unitPrice   Decimal  @db.Decimal(15, 4)
+  totalPrice  Decimal  @db.Decimal(15, 4)
+  vatRate     Decimal  @db.Decimal(5, 2)
+  discount    Decimal  @db.Decimal(15, 4)
+  netPrice    Decimal  @db.Decimal(15, 4)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+         
+  Receipt Receipt    @relation(fields: [receiptId], references: [id])
+  StockCard StockCard     @relation(fields: [productCode], references: [productCode])
+} 
 
 model Current {
   id            String    @id @default(cuid())
@@ -381,7 +448,6 @@ model Current {
   branch             Branch               @relation(fields: [branchCode], references: [branchCode])
   warehouse          Warehouse            @relation(fields: [warehouseCode], references: [warehouseCode])
   priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id])
-  StockCard          StockCard[]
   CurrentReportGroup CurrentReportGroup[]
 
   StockMovement StockMovement[]
@@ -494,6 +560,7 @@ model Invoice {
   InvoiceDetail InvoiceDetail[]
   StockMovement StockMovement[]
   CurrentMovement CurrentMovement[]
+
 }
 
 model InvoiceDetail{
