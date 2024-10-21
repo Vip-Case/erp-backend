@@ -7,7 +7,7 @@ const invoiceService = new InvoiceService();
 
 const InvoiceController = {
     // API to create an invoice
-    createInvoice: async (ctx: Context) => {
+    createInvoice: async (ctx: Context) => { 
         const invoiceData = ctx.body as Invoice;
         try {
             const invoice = await invoiceService.createInvoice(invoiceData);

@@ -105,7 +105,7 @@ model StockCard {
   brand              String?  @db.VarChar(100) // Marka
   unitOfMeasure      String?  @db.VarChar(50) // Ölçü Birimi
   productType        String   @db.VarChar(50) // Ürün Tipi
-  marketNames         String?  @db.VarChar(250) // Piyasa Adları
+  marketNames        String?  @db.VarChar(250) // Piyasa Adları
   riskQuantities     Decimal? @db.Decimal(15, 4) // Risk Miktarı
   stockStatus        Boolean  @default(true) // Stok Durumu
   hasExpirationDate  Boolean  @default(false) // Son Kullanma Tarihi Var mı?

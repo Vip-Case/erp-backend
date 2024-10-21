@@ -95,12 +95,12 @@ export class CurrentService {
                     
                     company: current.companyCode ? {
                         connect: { 
-                            id: current.companyCode 
+                            companyCode: current.companyCode 
                         }
                     } : {},
                     branch: current.branchCode ? {
                         connect: {
-                            id: current.branchCode
+                            branchCode: current.branchCode
                         }
                     } : {},
                     priceList: current.priceListId ? {
@@ -110,7 +110,7 @@ export class CurrentService {
                     } : {},
                     warehouse: current.warehouseCode ? {
                         connect: { 
-                            id: current.warehouseCode
+                            warehouseCode: current.warehouseCode
                         }
                     } : {}
 

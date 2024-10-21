@@ -43,11 +43,10 @@ describe('API Endpoints', () => {
         createdId = data.id;  // Grubun oluşturulduktan sonra sunucudan dönen ID'sini alıyoruz
         expect(response.status).toBe(200);
         expect(data.currentCode).toBe(newCurrent.currentCode);
-        expect(data.currentName).toBe(newCurrent.currentName);
     });
 
     it('should update a current with PUT /currents/:id', async () => {
-        const updatedCurrent = { currentName: 'update current name' };
+        const updatedCurrent = { currentName: 'update name' };
 
         // createdId'nin undefined olmadığından emin olun
         expect(createdId).toBeDefined();

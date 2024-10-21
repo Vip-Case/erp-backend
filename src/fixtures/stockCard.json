@@ -2,6 +2,8 @@
     {
         "productCode": "stk",
         "productName": "stok",
-        "productType": "ürün"
+        "productType": "ürün",
+        "marketNames": "dfsfs"
+
     }
 ]

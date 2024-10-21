@@ -4,11 +4,9 @@ import { Prisma, Receipt, ReceiptDetail } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
-
 export const ReceiptRelations = {
     ReceiptDetail: true
 };
-
 
 export class ReceiptService {
     private receiptRepository: BaseRepository<Receipt>;

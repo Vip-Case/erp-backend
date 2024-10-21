@@ -1,8 +1,11 @@
 [
     {
-        "currentCode": "first71",
-        "currentName": "first current71",
+        "currentCode": "first1",
+        "currentName": "current1",
         "currentType": "Customer",
+        "birthOfDate":  "2024-10-21T00:00:00Z",
+        "institution": "fgfgs",
+        "MersisNo": "5353553",
         "companyCode": "frst",
         "branchCode": "vp",
         "warehouseCode": "wesd",
