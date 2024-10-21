@@ -117,6 +117,7 @@ model StockCard {
 
   Company   Company?    @relation(fields: [companyCode], references: [companyCode])
   Branch    Branch?     @relation(fields: [branchCode], references: [branchCode])
+  
 
   Attributes          StockCardAttribute[] // Özellikler
   Barcodes            StockCardBarcode[] // Barkodlar
@@ -128,8 +129,6 @@ model StockCard {
   InvoiceDetail InvoiceDetail[]
   StockCardWarehouse StockCardWarehouse[]
   ProfitMargin ProfitMargin[]
-
-
   ReceiptDetail ReceiptDetail[]
 }
 
@@ -397,7 +396,6 @@ model Receipt {
   branch             Branch               @relation(fields: [branchCode], references: [branchCode])
   warehouse          Warehouse            @relation(fields: [warehouseCode], references: [warehouseCode])
   
-
   ReceiptDetail ReceiptDetail[]
 }
 
@@ -425,9 +423,16 @@ model Current {
   currentCode   String    @unique @db.VarChar(50)
   currentName   String    @db.VarChar(100)
   currentType   String    @db.VarChar(50)
+  institution   String    @db.VarChar(50)
   identityNo    String?   @db.VarChar(50)
   taxNumber     String?   @db.VarChar(50)
   taxOffice     String?   @db.VarChar(50)
+  birthOfDate   DateTime
+  KepAdress     String?   @db.VarChar(50)
+  MersisNo      String    @db.VarChar(50)
+  accounts      String?   
+  works         String? 
+  plasiyer      String?
   address       String?   @db.VarChar(250)
   countryCode   String?   @db.VarChar(3)
   city          String?   @db.VarChar(50)
@@ -453,6 +458,7 @@ model Current {
   StockMovement StockMovement[]
   CurrentMovement CurrentMovement[]
   Invoice Invoice[]
+  CurrentCategoryItem CurrentCategoryItem[]
 }
 
 model CurrentMovement {
@@ -481,6 +487,24 @@ model CurrentMovement {
   invoice            Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
 }
 
+model CurrentCategory {
+  id               String                  @id @default(cuid())
+  categoryName     String                  @db.VarChar(100)
+  categoryCode     String                  @unique @db.VarChar(100)
+  parentCategoryId String?
+  parentCategory   CurrentCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  childCategories  CurrentCategory[]     @relation("CategoryHierarchy")
+  CategoryItems    CurrentCategoryItem[]
+}
+
+model CurrentCategoryItem {
+  id          String            @id @default(cuid())
+  currentId String
+  categoryId  String
+  category    CurrentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  current   Current         @relation(fields: [currentId], references: [id], onDelete: Cascade)
+}
+
 model CurrentReportGroup {
   id            String               @id @default(cuid())
   groupCode     String               @unique @db.VarChar(100)
@@ -494,6 +518,15 @@ model CurrentReportGroup {
   updatedBy     String?
 
   Current Current[]
+}
+
+model Banks {
+  id       String          @id @default(cuid())
+  iban     String          @unique @db.VarChar(100)
+  bankName String          @db.VarChar(50)
+  bankBranchName   String  @db.VarChar(50)
+  bankBranchCode   String  @db.VarChar(50)
+  accountNo     Decimal?   @db.Decimal(15, 4)
 }
 
 model User {

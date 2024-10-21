@@ -8,20 +8,15 @@ import {
     StockCardTaxRate,
     Warehouse,
     Current,
+    ProfitMargin,
+    ReceiptDetail,
 } from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 
 const stockCardRelations = {
-    Attributes: true,
-    Barcodes: true,
-    Categories: true,
-    StockCardPriceLists: true,
-    TaxRates: true,
-    Variations: true,
     Branch: true,
     Company: true,
-    Warehouse: true,
 };
 
 export class StockCardService {
@@ -37,6 +32,7 @@ export class StockCardService {
                     brand: stockCard.brand,
                     unitOfMeasure: stockCard.unitOfMeasure,
                     productType: stockCard.productType,
+                    marketNames: stockCard.marketNames,
                     riskQuantities: stockCard.riskQuantities,
                     stockStatus: stockCard.stockStatus,
                     hasExpirationDate: stockCard.hasExpirationDate,
@@ -48,10 +44,6 @@ export class StockCardService {
 
                     branch: stockCard.branchCode ? {
                         connect: { branchCode: stockCard.branchCode },
-                    } : undefined,
-
-                    Current: stockCard.manufacturerCode ? {
-                        connect: { currentCode: stockCard.manufacturerCode },
                     } : undefined,
 
                     // StockCardWarehouse Many-to-Many relation
@@ -82,6 +74,7 @@ export class StockCardService {
                     brand: stockCard.brand,
                     unitOfMeasure: stockCard.unitOfMeasure,
                     productType: stockCard.productType,
+                    marketNames: stockCard.marketNames,
                     riskQuantities: stockCard.riskQuantities,
                     stockStatus: stockCard.stockStatus,
                     hasExpirationDate: stockCard.hasExpirationDate,
@@ -93,10 +86,6 @@ export class StockCardService {
 
                     branch: stockCard.branchCode ? {
                         connect: { branchCode: stockCard.branchCode },
-                    } : undefined,
-
-                    Current: stockCard.manufacturerCode ? {
-                        connect: { currentCode: stockCard.manufacturerCode },
                     } : undefined,
 
                     // StockCardWarehouse Many-to-Many relation
@@ -169,6 +158,9 @@ export class StockCardService {
         taxRates?: StockCardTaxRate[];
         current?: Current;
         warehouseIds?: string[];
+        profitMargin?: ProfitMargin[];
+        receiptDetail?: ReceiptDetail[];
+
     }): Promise<StockCard | null> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
@@ -187,6 +179,7 @@ export class StockCardService {
                             brand: data.stockCard.brand,
                             unitOfMeasure: data.stockCard.unitOfMeasure,
                             productType: data.stockCard.productType,
+                            marketNames: data.stockCard.marketNames,
                             riskQuantities: data.stockCard.riskQuantities,
                             stockStatus: data.stockCard.stockStatus,
                             hasExpirationDate: data.stockCard.hasExpirationDate,
@@ -199,11 +192,7 @@ export class StockCardService {
                             branch: data.stockCard.branchCode ? {
                                 connect: { branchCode: data.stockCard.branchCode },
                             } : undefined,
-        
-                            Current: data.stockCard.manufacturerCode ? {
-                                connect: { currentCode: data.stockCard.manufacturerCode },
-                            } : undefined,
-        
+    
                             // StockCardWarehouse Many-to-Many relation
                             StockCardWarehouse: (data.warehouseIds ?? []).length > 0 ? {
                                 create: (data.warehouseIds ?? []).map(warehouseId => ({
@@ -258,6 +247,24 @@ export class StockCardService {
                         });
                     }
 
+                    if (data.profitMargin) {
+                        await prisma.profitMargin.createMany({
+                            data: data.profitMargin.map((profitMargin) => ({
+                                ...profitMargin,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
+                    }
+
+                    if (data.receiptDetail) {
+                        await prisma.receiptDetail.createMany({
+                            data: data.receiptDetail.map((receiptDetail) => ({
+                                ...receiptDetail,
+                                stockCardId: stockCard.id,
+                            })),
+                        });
+                    }
+
                     return stockCard;
                 } else {
                     logger.info("Current Role is not Manufacturer");
@@ -281,6 +288,8 @@ export class StockCardService {
         taxRates?: StockCardTaxRate[];
         current?: Current;
         warehouseIds?: string[];
+        profitMargin?: ProfitMargin[];
+        receiptDetail?: ReceiptDetail[];
     }): Promise<StockCard | null> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
@@ -300,6 +309,7 @@ export class StockCardService {
                             brand: data.stockCard.brand,
                             unitOfMeasure: data.stockCard.unitOfMeasure,
                             productType: data.stockCard.productType,
+                            marketNames: data.stockCard.marketNames,
                             riskQuantities: data.stockCard.riskQuantities,
                             stockStatus: data.stockCard.stockStatus,
                             hasExpirationDate: data.stockCard.hasExpirationDate,
@@ -311,10 +321,6 @@ export class StockCardService {
         
                             Branch: data.stockCard.branchCode ? {
                                 connect: { branchCode: data.stockCard.branchCode },
-                            } : undefined,
-        
-                            Current: data.stockCard.manufacturerCode ? {
-                                connect: { currentCode: data.stockCard.manufacturerCode },
                             } : undefined,
         
                             // StockCardWarehouse Many-to-Many relation
@@ -381,6 +387,28 @@ export class StockCardService {
                         );
                     }
 
+                    if (data.profitMargin) {
+                        await Promise.all(
+                            data.profitMargin.map((profitMargin) =>
+                                prisma.profitMargin.update({
+                                    where: { id: profitMargin.id },
+                                    data: profitMargin,
+                                })
+                            )
+                        );
+                    }
+
+                    if (data.receiptDetail) {
+                        await Promise.all(
+                            data.receiptDetail.map((receiptDetail) =>
+                                prisma.receiptDetail.update({
+                                    where: { id: receiptDetail.id },
+                                    data: receiptDetail,
+                                })
+                            )
+                        );
+                    }
+
                     return stockCard;
                 } else {
                     logger.info("Current Role is not Manufacturer or null");
@@ -420,6 +448,14 @@ export class StockCardService {
 
                 await prisma.stockCardTaxRate.deleteMany({
                     where: { stockCardId: id },
+                });
+
+                await prisma.profitMargin.deleteMany({
+                    where: { stockCardId: id },
+                });
+
+                await prisma.receiptDetail.deleteMany({
+                    where: { productCode: id },
                 });
 
                 return true;

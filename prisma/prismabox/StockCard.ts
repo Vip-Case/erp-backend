@@ -16,6 +16,7 @@ export const StockCardPlain = t.Object(
     brand: __nullable__(t.String({ additionalProperties: true })),
     unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
     productType: t.String({ additionalProperties: true }),
+    marketNames: __nullable__(t.String({ additionalProperties: true })),
     riskQuantities: __nullable__(t.Number({ additionalProperties: true })),
     stockStatus: t.Boolean({ additionalProperties: true }),
     hasExpirationDate: t.Boolean({ additionalProperties: true }),
@@ -67,35 +68,6 @@ export const StockCardRelations = t.Object(
           email: t.String({ additionalProperties: true }),
           website: t.String({ additionalProperties: true }),
           companyCode: t.String({ additionalProperties: true }),
-          createdAt: t.Date({ additionalProperties: true }),
-          updatedAt: t.Date({ additionalProperties: true }),
-          createdBy: __nullable__(t.String({ additionalProperties: true })),
-          updatedBy: __nullable__(t.String({ additionalProperties: true })),
-        },
-        { additionalProperties: true },
-      ),
-    ),
-    Current: __nullable__(
-      t.Object(
-        {
-          id: t.String({ additionalProperties: true }),
-          currentCode: t.String({ additionalProperties: true }),
-          currentName: t.String({ additionalProperties: true }),
-          currentType: t.String({ additionalProperties: true }),
-          identityNo: __nullable__(t.String({ additionalProperties: true })),
-          taxNumber: __nullable__(t.String({ additionalProperties: true })),
-          taxOffice: __nullable__(t.String({ additionalProperties: true })),
-          address: __nullable__(t.String({ additionalProperties: true })),
-          countryCode: __nullable__(t.String({ additionalProperties: true })),
-          city: __nullable__(t.String({ additionalProperties: true })),
-          district: __nullable__(t.String({ additionalProperties: true })),
-          phone: __nullable__(t.String({ additionalProperties: true })),
-          email: __nullable__(t.String({ additionalProperties: true })),
-          website: __nullable__(t.String({ additionalProperties: true })),
-          companyCode: t.String({ additionalProperties: true }),
-          branchCode: t.String({ additionalProperties: true }),
-          warehouseCode: t.String({ additionalProperties: true }),
-          priceListId: t.String({ additionalProperties: true }),
           createdAt: t.Date({ additionalProperties: true }),
           updatedAt: t.Date({ additionalProperties: true }),
           createdBy: __nullable__(t.String({ additionalProperties: true })),
@@ -270,6 +242,39 @@ export const StockCardRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    ProfitMargin: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          stockCardId: t.String({ additionalProperties: true }),
+          branchCode: __nullable__(t.String({ additionalProperties: true })),
+          profitMargin: t.Number({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    ReceiptDetail: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          receiptId: t.String({ additionalProperties: true }),
+          productCode: t.String({ additionalProperties: true }),
+          quantity: t.Number({ additionalProperties: true }),
+          unitPrice: t.Number({ additionalProperties: true }),
+          totalPrice: t.Number({ additionalProperties: true }),
+          vatRate: t.Number({ additionalProperties: true }),
+          discount: t.Number({ additionalProperties: true }),
+          netPrice: t.Number({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+          createdBy: __nullable__(t.String({ additionalProperties: true })),
+          updatedBy: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -301,6 +306,9 @@ export const StockCardPlainInputCreate = t.Object(
       __nullable__(t.String({ additionalProperties: true })),
     ),
     productType: t.String({ additionalProperties: true }),
+    marketNames: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
     riskQuantities: t.Optional(
       __nullable__(t.Number({ additionalProperties: true })),
     ),
@@ -330,6 +338,7 @@ export const StockCardPlainInputUpdate = t.Object(
     brand: __nullable__(t.String({ additionalProperties: true })),
     unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
     productType: t.String({ additionalProperties: true }),
+    marketNames: __nullable__(t.String({ additionalProperties: true })),
     riskQuantities: __nullable__(t.Number({ additionalProperties: true })),
     stockStatus: t.Optional(t.Boolean({ additionalProperties: true })),
     hasExpirationDate: t.Optional(t.Boolean({ additionalProperties: true })),
@@ -356,19 +365,6 @@ export const StockCardRelationsInputCreate = t.Object(
       ),
     ),
     Branch: t.Optional(
-      t.Object(
-        {
-          connect: t.Object(
-            {
-              id: t.String({ additionalProperties: true }),
-            },
-            { additionalProperties: true },
-          ),
-        },
-        { additionalProperties: true },
-      ),
-    ),
-    Current: t.Optional(
       t.Object(
         {
           connect: t.Object(
@@ -516,6 +512,36 @@ export const StockCardRelationsInputCreate = t.Object(
         { additionalProperties: true },
       ),
     ),
+    ProfitMargin: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    ReceiptDetail: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -539,21 +565,6 @@ export const StockCardRelationsInputUpdate = t.Partial(
         { additionalProperties: true },
       ),
       Branch: t.Partial(
-        t.Object(
-          {
-            connect: t.Object(
-              {
-                id: t.String({ additionalProperties: true }),
-              },
-              { additionalProperties: true },
-            ),
-            disconnect: t.Boolean(),
-          },
-          { additionalProperties: true },
-        ),
-        { additionalProperties: true },
-      ),
-      Current: t.Partial(
         t.Object(
           {
             connect: t.Object(
@@ -784,6 +795,54 @@ export const StockCardRelationsInputUpdate = t.Partial(
         ),
         { additionalProperties: true },
       ),
+      ProfitMargin: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
+      ReceiptDetail: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
     },
     { additionalProperties: true },
   ),
@@ -809,6 +868,7 @@ export const StockCardWhere = t.Partial(
         brand: t.String(),
         unitOfMeasure: t.String(),
         productType: t.String(),
+        marketNames: t.String(),
         riskQuantities: t.Number(),
         stockStatus: t.Boolean(),
         hasExpirationDate: t.Boolean(),
@@ -860,6 +920,7 @@ export const StockCardWhereUnique = t.Recursive(
             brand: t.String(),
             unitOfMeasure: t.String(),
             productType: t.String(),
+            marketNames: t.String(),
             riskQuantities: t.Number(),
             stockStatus: t.Boolean(),
             hasExpirationDate: t.Boolean(),
@@ -892,6 +953,7 @@ export const StockCardSelect = t.Partial(
       brand: t.Boolean(),
       unitOfMeasure: t.Boolean(),
       productType: t.Boolean(),
+      marketNames: t.Boolean(),
       riskQuantities: t.Boolean(),
       stockStatus: t.Boolean(),
       hasExpirationDate: t.Boolean(),
@@ -902,7 +964,6 @@ export const StockCardSelect = t.Partial(
       updatedBy: t.Boolean(),
       Company: t.Boolean(),
       Branch: t.Boolean(),
-      Current: t.Boolean(),
       Attributes: t.Boolean(),
       Barcodes: t.Boolean(),
       Categories: t.Boolean(),
@@ -912,6 +973,8 @@ export const StockCardSelect = t.Partial(
       StockMovement: t.Boolean(),
       InvoiceDetail: t.Boolean(),
       StockCardWarehouse: t.Boolean(),
+      ProfitMargin: t.Boolean(),
+      ReceiptDetail: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -924,7 +987,6 @@ export const StockCardInclude = t.Partial(
     {
       Company: t.Boolean(),
       Branch: t.Boolean(),
-      Current: t.Boolean(),
       Attributes: t.Boolean(),
       Barcodes: t.Boolean(),
       Categories: t.Boolean(),
@@ -934,6 +996,8 @@ export const StockCardInclude = t.Partial(
       StockMovement: t.Boolean(),
       InvoiceDetail: t.Boolean(),
       StockCardWarehouse: t.Boolean(),
+      ProfitMargin: t.Boolean(),
+      ReceiptDetail: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -956,6 +1020,7 @@ export const StockCardOrderBy = t.Partial(
       brand: t.Union([t.Literal("asc"), t.Literal("desc")]),
       unitOfMeasure: t.Union([t.Literal("asc"), t.Literal("desc")]),
       productType: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      marketNames: t.Union([t.Literal("asc"), t.Literal("desc")]),
       riskQuantities: t.Union([t.Literal("asc"), t.Literal("desc")]),
       stockStatus: t.Union([t.Literal("asc"), t.Literal("desc")]),
       hasExpirationDate: t.Union([t.Literal("asc"), t.Literal("desc")]),

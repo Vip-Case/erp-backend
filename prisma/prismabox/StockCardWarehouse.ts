@@ -31,6 +31,7 @@ export const StockCardWarehouseRelations = t.Object(
         brand: __nullable__(t.String({ additionalProperties: true })),
         unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
         productType: t.String({ additionalProperties: true }),
+        marketNames: __nullable__(t.String({ additionalProperties: true })),
         riskQuantities: __nullable__(t.Number({ additionalProperties: true })),
         stockStatus: t.Boolean({ additionalProperties: true }),
         hasExpirationDate: t.Boolean({ additionalProperties: true }),

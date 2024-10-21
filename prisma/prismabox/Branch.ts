@@ -84,9 +84,16 @@ export const BranchRelations = t.Object(
           currentCode: t.String({ additionalProperties: true }),
           currentName: t.String({ additionalProperties: true }),
           currentType: t.String({ additionalProperties: true }),
+          institution: t.String({ additionalProperties: true }),
           identityNo: __nullable__(t.String({ additionalProperties: true })),
           taxNumber: __nullable__(t.String({ additionalProperties: true })),
           taxOffice: __nullable__(t.String({ additionalProperties: true })),
+          birthOfDate: t.Date({ additionalProperties: true }),
+          KepAdress: __nullable__(t.String({ additionalProperties: true })),
+          MersisNo: t.String({ additionalProperties: true }),
+          accounts: __nullable__(t.String({ additionalProperties: true })),
+          works: __nullable__(t.String({ additionalProperties: true })),
+          plasiyer: __nullable__(t.String({ additionalProperties: true })),
           address: __nullable__(t.String({ additionalProperties: true })),
           countryCode: __nullable__(t.String({ additionalProperties: true })),
           city: __nullable__(t.String({ additionalProperties: true })),
@@ -125,6 +132,7 @@ export const BranchRelations = t.Object(
           brand: __nullable__(t.String({ additionalProperties: true })),
           unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
           productType: t.String({ additionalProperties: true }),
+          marketNames: __nullable__(t.String({ additionalProperties: true })),
           riskQuantities: __nullable__(
             t.Number({ additionalProperties: true }),
           ),
@@ -366,6 +374,43 @@ export const BranchRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    ProfitMargin: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          stockCardId: t.String({ additionalProperties: true }),
+          branchCode: __nullable__(t.String({ additionalProperties: true })),
+          profitMargin: t.Number({ additionalProperties: true }),
+          createdAt: t.Date({ additionalProperties: true }),
+          updatedAt: t.Date({ additionalProperties: true }),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    Receipt: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          receiptType: t.Union(
+            [
+              t.Literal("Devir"),
+              t.Literal("Sayim"),
+              t.Literal("Nakil"),
+              t.Literal("Giris"),
+              t.Literal("Cikis"),
+              t.Literal("Fire"),
+            ],
+            { additionalProperties: true },
+          ),
+          receiptDate: t.Date({ additionalProperties: true }),
+          documentNo: t.String({ additionalProperties: true }),
+          branchCode: t.String({ additionalProperties: true }),
+          warehouseCode: t.String({ additionalProperties: true }),
+          description: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -529,6 +574,36 @@ export const BranchRelationsInputCreate = t.Object(
       ),
     ),
     OutInvoice: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    ProfitMargin: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    Receipt: t.Optional(
       t.Object(
         {
           connect: t.Array(
@@ -753,6 +828,54 @@ export const BranchRelationsInputUpdate = t.Partial(
         ),
         { additionalProperties: true },
       ),
+      ProfitMargin: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
+      Receipt: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
     },
     { additionalProperties: true },
   ),
@@ -863,6 +986,8 @@ export const BranchSelect = t.Partial(
       CurrentMovement: t.Boolean(),
       Invoice: t.Boolean(),
       OutInvoice: t.Boolean(),
+      ProfitMargin: t.Boolean(),
+      Receipt: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -882,6 +1007,8 @@ export const BranchInclude = t.Partial(
       CurrentMovement: t.Boolean(),
       Invoice: t.Boolean(),
       OutInvoice: t.Boolean(),
+      ProfitMargin: t.Boolean(),
+      Receipt: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },

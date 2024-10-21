@@ -17,6 +17,7 @@ export const StockCardCategoryItemRelations = t.Object(
       {
         id: t.String({ additionalProperties: true }),
         categoryName: t.String({ additionalProperties: true }),
+        categoryCode: t.String({ additionalProperties: true }),
         parentCategoryId: __nullable__(
           t.String({ additionalProperties: true }),
         ),
@@ -41,6 +42,7 @@ export const StockCardCategoryItemRelations = t.Object(
         brand: __nullable__(t.String({ additionalProperties: true })),
         unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
         productType: t.String({ additionalProperties: true }),
+        marketNames: __nullable__(t.String({ additionalProperties: true })),
         riskQuantities: __nullable__(t.Number({ additionalProperties: true })),
         stockStatus: t.Boolean({ additionalProperties: true }),
         hasExpirationDate: t.Boolean({ additionalProperties: true }),

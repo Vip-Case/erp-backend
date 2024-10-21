@@ -6,6 +6,7 @@ export const StockCardCategoryPlain = t.Object(
   {
     id: t.String({ additionalProperties: true }),
     categoryName: t.String({ additionalProperties: true }),
+    categoryCode: t.String({ additionalProperties: true }),
     parentCategoryId: __nullable__(t.String({ additionalProperties: true })),
   },
   { additionalProperties: true },
@@ -18,6 +19,7 @@ export const StockCardCategoryRelations = t.Object(
         {
           id: t.String({ additionalProperties: true }),
           categoryName: t.String({ additionalProperties: true }),
+          categoryCode: t.String({ additionalProperties: true }),
           parentCategoryId: __nullable__(
             t.String({ additionalProperties: true }),
           ),
@@ -30,6 +32,7 @@ export const StockCardCategoryRelations = t.Object(
         {
           id: t.String({ additionalProperties: true }),
           categoryName: t.String({ additionalProperties: true }),
+          categoryCode: t.String({ additionalProperties: true }),
           parentCategoryId: __nullable__(
             t.String({ additionalProperties: true }),
           ),
@@ -52,12 +55,18 @@ export const StockCardCategoryRelations = t.Object(
 );
 
 export const StockCardCategoryPlainInputCreate = t.Object(
-  { categoryName: t.String({ additionalProperties: true }) },
+  {
+    categoryName: t.String({ additionalProperties: true }),
+    categoryCode: t.String({ additionalProperties: true }),
+  },
   { additionalProperties: true },
 );
 
 export const StockCardCategoryPlainInputUpdate = t.Object(
-  { categoryName: t.String({ additionalProperties: true }) },
+  {
+    categoryName: t.String({ additionalProperties: true }),
+    categoryCode: t.String({ additionalProperties: true }),
+  },
   { additionalProperties: true },
 );
 
@@ -191,6 +200,7 @@ export const StockCardCategoryWhere = t.Partial(
         OR: t.Array(Self),
         id: t.String(),
         categoryName: t.String(),
+        categoryCode: t.String(),
         parentCategoryId: t.String(),
       }),
     { $id: "StockCardCategory" },
@@ -201,8 +211,11 @@ export const StockCardCategoryWhere = t.Partial(
 export const StockCardCategoryWhereUnique = t.Recursive(
   (Self) =>
     t.Intersect([
-      t.Partial(t.Object({ id: t.String() })),
-      t.Union([t.Object({ id: t.String() })]),
+      t.Partial(t.Object({ id: t.String(), categoryCode: t.String() })),
+      t.Union([
+        t.Object({ id: t.String() }),
+        t.Object({ categoryCode: t.String() }),
+      ]),
       t.Partial(
         t.Object({
           AND: t.Union([Self, t.Array(Self)]),
@@ -215,6 +228,7 @@ export const StockCardCategoryWhereUnique = t.Recursive(
           {
             id: t.String(),
             categoryName: t.String(),
+            categoryCode: t.String(),
             parentCategoryId: t.String(),
           },
           { additionalProperties: true },
@@ -230,6 +244,7 @@ export const StockCardCategorySelect = t.Partial(
     {
       id: t.Boolean(),
       categoryName: t.Boolean(),
+      categoryCode: t.Boolean(),
       parentCategoryId: t.Boolean(),
       parentCategory: t.Boolean(),
       childCategories: t.Boolean(),
@@ -259,6 +274,7 @@ export const StockCardCategoryOrderBy = t.Partial(
     {
       id: t.Union([t.Literal("asc"), t.Literal("desc")]),
       categoryName: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      categoryCode: t.Union([t.Literal("asc"), t.Literal("desc")]),
       parentCategoryId: t.Union([t.Literal("asc"), t.Literal("desc")]),
     },
     { additionalProperties: true },
