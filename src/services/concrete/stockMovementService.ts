@@ -40,7 +40,7 @@ export class StockMovementService {
                             branchCode: stockMovementData.branchCode
                         }
                     } : {},
-                    stockCard: stockMovementData.stockCard ? {
+                    stockCard: stockMovementData.productCode ? {
                         connect: {
                             productCode: stockMovementData.productCode
                         }
@@ -59,7 +59,7 @@ export class StockMovementService {
                         connect: {
                             id: stockMovementData.documentNo
                         }
-                    } : undefined,
+                    } : undefined
                 } as Prisma.StockMovementCreateInput,
             });
             return stockMovement;
@@ -100,11 +100,11 @@ export class StockMovementService {
                             branchCode: stockMovementData.branchCode
                         }
                     } : {},
-                    stockCard: {
+                    stockCard: stockMovementData.productCode ? {
                         connect: {
                             productCode: stockMovementData.productCode
                         }
-                    },
+                    } : undefined,
                     priceList: stockMovementData.priceListId ? {
                         connect: {
                             id: stockMovementData.priceListId

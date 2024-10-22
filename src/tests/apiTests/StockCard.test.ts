@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import app from '../..';
-import stockCard from 'c:/Users/amine/Desktop/backend/src/fixtures/stockCard.json';
+import stockCard from '../../fixtures/stockCard.json';
 
 let server: any;
 let createdStockCardId: string; // Testlerde kullanmak üzere dinamik ID tutacağız
@@ -40,13 +40,15 @@ describe('API Endpoints', () => {
         });
 
         const data = await response.json();
+        console.log(response)
         createdStockCardId = data.id;  // Grubun oluşturulduktan sonra sunucudan dönen ID'sini alıyoruz
+        console.log(response)
         expect(response.status).toBe(200);
-        expect(data.productName).toBe(newStockCard.productName); 
+        expect(data.productCode).toBe(newStockCard.stockCard.productCode); 
     });
 
     it('should update a stockcard with PUT /stockcards/:id', async () => {
-        const updatedStockCard = { productName: 'second' };
+        const updatedStockCard = { productCode: 'second' };
 
         // createdId'nin undefined olmadığından emin olun
         expect(createdStockCardId).toBeDefined();
@@ -61,7 +63,7 @@ describe('API Endpoints', () => {
 
         const data = await response.json();
         expect(response.status).toBe(200);
-        expect(data.productName).toBe(updatedStockCard.productName); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
+        expect(data.productCode).toBe(updatedStockCard.productCode); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
     it('should delete a stockcard with DELETE /stockcards/:id', async () => {

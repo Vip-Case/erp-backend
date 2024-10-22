@@ -1,14 +1,14 @@
 [
     {
-        "branchName": "one",
-        "branchCode": "br",
-        "address": "sfs",
-        "countryCode": "dgs",
-        "city": "ddgs",
-        "district": "dgdf",
-        "phone": "9899343",
-        "email": "dfgdfs@gmail.com",
-        "website": "fksfs.tr",
-        "companyCode": "frst"
+        "branchName": "one1",
+        "branchCode": "br1",
+        "address": "sfs1",
+        "countryCode": "dg",
+        "city": "ddgrs",
+        "district": "dgdfr",
+        "phone": "98993353",
+        "email": "dfgs@gmail.com",
+        "website": "fsfs.tr",
+        "companyCode": "two"
     }
 ]

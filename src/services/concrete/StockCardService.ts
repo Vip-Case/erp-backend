@@ -13,6 +13,7 @@ import {
 } from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
+import { BaseRepository } from "../../repositories/baseRepository";
 
 const stockCardRelations = {
     Branch: true,
@@ -20,41 +21,78 @@ const stockCardRelations = {
 };
 
 export class StockCardService {
-    async createStockCard(stockCard: StockCard, warehouseIds: string[]): Promise<StockCard> {
+    
+    private stockCardRepository: BaseRepository<StockCard>;
+
+    constructor() {
+        this.stockCardRepository = new BaseRepository<StockCard>(prisma.stockCard);
+    }
+
+    async createStockCard(stockCard: StockCard, warehouseIds: string[] | undefined): Promise<StockCard> {
         try {
-            const result = await prisma.stockCard.create({
-                data: {
-                    productCode: stockCard.productCode,
-                    productName: stockCard.productName,
-                    invoiceName: stockCard.invoiceName,
-                    shortDescription: stockCard.shortDescription,
-                    description: stockCard.description,
-                    brand: stockCard.brand,
-                    unitOfMeasure: stockCard.unitOfMeasure,
-                    productType: stockCard.productType,
-                    marketNames: stockCard.marketNames,
-                    riskQuantities: stockCard.riskQuantities,
-                    stockStatus: stockCard.stockStatus,
-                    hasExpirationDate: stockCard.hasExpirationDate,
-                    allowNegativeStock: stockCard.allowNegativeStock,
+            if (warehouseIds = undefined) {
+                const resultWithoutWarehouse = await prisma.stockCard.create({
+                    data: {
+                        productCode: stockCard.productCode,
+                        productName: stockCard.productName,
+                        invoiceName: stockCard.invoiceName,
+                        shortDescription: stockCard.shortDescription,
+                        description: stockCard.description,
+                        brand: stockCard.brand,
+                        unitOfMeasure: stockCard.unitOfMeasure,
+                        productType: stockCard.productType,
+                        marketNames: stockCard.marketNames,
+                        riskQuantities: stockCard.riskQuantities,
+                        stockStatus: stockCard.stockStatus,
+                        hasExpirationDate: stockCard.hasExpirationDate,
+                        allowNegativeStock: stockCard.allowNegativeStock,
+    
+                        company: stockCard.companyCode ? {
+                            connect: { companyCode: stockCard.companyCode },
+                        } : undefined,
+    
+                        branch: stockCard.branchCode ? {
+                            connect: { branchCode: stockCard.branchCode },
+                        } : undefined,
+                    } as Prisma.StockCardCreateInput,
+                });
+                return resultWithoutWarehouse;
+            }else {
+                const resultWithWarehouse = await prisma.stockCard.create({
+                    data: {
+                        productCode: stockCard.productCode,
+                        productName: stockCard.productName,
+                        invoiceName: stockCard.invoiceName,
+                        shortDescription: stockCard.shortDescription,
+                        description: stockCard.description,
+                        brand: stockCard.brand,
+                        unitOfMeasure: stockCard.unitOfMeasure,
+                        productType: stockCard.productType,
+                        marketNames: stockCard.marketNames,
+                        riskQuantities: stockCard.riskQuantities,
+                        stockStatus: stockCard.stockStatus,
+                        hasExpirationDate: stockCard.hasExpirationDate,
+                        allowNegativeStock: stockCard.allowNegativeStock,
+    
+                        company: stockCard.companyCode ? {
+                            connect: { companyCode: stockCard.companyCode },
+                        } : undefined,
+    
+                        branch: stockCard.branchCode ? {
+                            connect: { branchCode: stockCard.branchCode },
+                        } : undefined,
 
-                    company: stockCard.companyCode ? {
-                        connect: { companyCode: stockCard.companyCode },
-                    } : undefined,
+                        // StockCardWarehouse Many-to-Many relation
+                        StockCardWarehouse: (warehouseIds ?? []).length > 0 ? {
+                            create: (warehouseIds ?? []).map(warehouseId => ({
+                                warehouse: { connect: { id: warehouseId } },
+                            })),
+                        } : undefined,
 
-                    branch: stockCard.branchCode ? {
-                        connect: { branchCode: stockCard.branchCode },
-                    } : undefined,
-
-                    // StockCardWarehouse Many-to-Many relation
-                    StockCardWarehouse: warehouseIds.length > 0 ? {
-                        create: warehouseIds.map(warehouseId => ({
-                            warehouse: { connect: { id: warehouseId } },
-                        })),
-                    } : undefined,
-                } as Prisma.StockCardCreateInput,
-            });
-            return result;
+                    } as Prisma.StockCardCreateInput,
+                });
+                return resultWithWarehouse;
+            }
         } catch (error) {
             logger.error("Error creating StockCard:", error);
             throw new Error("Could not create StockCard");
@@ -70,7 +108,7 @@ export class StockCardService {
                     productName: stockCard.productName,
                     invoiceName: stockCard.invoiceName,
                     shortDescription: stockCard.shortDescription,
-                    description: stockCard.description,
+                    description: stockCard.description, 
                     brand: stockCard.brand,
                     unitOfMeasure: stockCard.unitOfMeasure,
                     productType: stockCard.productType,

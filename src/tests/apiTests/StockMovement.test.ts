@@ -30,23 +30,23 @@ describe('API Endpoints', () => {
     });
 
     it('should create a new stockMovement with POST /stockMovements', async () => {
-        const newWarehouse = stockMovement[0];
+        const newStockMovement = stockMovement[0];
         const response = await fetch('http://localhost:3000/stockMovements/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(newWarehouse),
+            body: JSON.stringify(newStockMovement),
         });
 
         const data = await response.json();
         createdStockMovementId = data.id;  // Grubun oluşturulduktan sonra sunucudan dönen ID'sini alıyoruz
         expect(response.status).toBe(200);
-        expect(data.movementType).toBe(newWarehouse.movementType); 
+        expect(data.movementType).toBe(newStockMovement.movementType); 
     });
 
     it('should update a stockMovement with PUT /stockMovements/:id', async () => {
-        const updatedWarehouse = { movementType: 'stockMovement1' };
+        const updatedStockMovement = { movementType: 'Uretim' };
 
         // createdId'nin undefined olmadığından emin olun
         expect(createdStockMovementId).toBeDefined();
@@ -56,12 +56,12 @@ describe('API Endpoints', () => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(updatedWarehouse),
+            body: JSON.stringify(updatedStockMovement),
         });
 
         const data = await response.json();
         expect(response.status).toBe(200);
-        expect(data.movementType).toBe(updatedWarehouse.movementType); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
+        expect(data.movementType).toBe(updatedStockMovement.movementType); // Yeni grubun doğru güncellendiğini kontrol ediyoruz
     });
 
     it('should delete a stockMovement with DELETE /stockMovements/:id', async () => {

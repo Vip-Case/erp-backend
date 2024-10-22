@@ -8,9 +8,9 @@ const stockCardService = new StockCardService();
 const StockCardController = {
     // StockCard'ı oluşturan API
     createStockCard: async (ctx: Context) => {
-        const body = ctx.body as { stockCard: StockCard, warehouseIds: string[] };
+        const body = ctx.body as { stockCard: StockCard, warehouseIds: string[] | null};
         const stockCardData: StockCard = body.stockCard;
-        const warehouseData: string[] = body.warehouseIds;
+        const warehouseData: string[] = body.warehouseIds !== null ? body.warehouseIds : [];
 
         try {
             const stockCard = await stockCardService.createStockCard(stockCardData, warehouseData);
@@ -18,7 +18,7 @@ const StockCardController = {
             return stockCard;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Error creating stock card", details: error.message };
+            return { error: "Error creating stock card", details: error };
         }
     },
 

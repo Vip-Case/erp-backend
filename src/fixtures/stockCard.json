@@ -1,9 +1,10 @@
 [
     {
-        "productCode": "stk",
-        "productName": "stok",
-        "productType": "ürün",
-        "marketNames": "dfsfs"
-
+        "stockCard": {
+            "productCode": "edeneme",
+            "productName": "fgds",
+            "productType": "ffsf",
+            "marketNames": "sdfsd"
+        }
     }
 ]
