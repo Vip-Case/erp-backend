@@ -1,11 +1,14 @@
 [
     {
-        "currentCode": "first",
-        "currentName": "first current",
+        "currentCode": "firsft1",
+        "currentName": "currefnt1",
         "currentType": "Customer",
-        "companyCode": "VIP",
-        "branchCode": "21",
-        "warehouseCode": "CD",
-        "priceListId": "cm21u8w7h00001336cos14719"
+        "birthOfDate":  "2024-10-21T00:00:00Z",
+        "institution": "fgfgsf",
+        "MersisNo": "53535563",
+        "companyCode": "two",
+        "branchCode": "iki",
+        "warehouseCode": "hgj",
+        "priceListId": "cm2ke09f00003h2pswtl3uvx3"
     }
 ]

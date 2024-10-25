@@ -1,22 +1,24 @@
-import StockCardService from '../../services/concrete/stockCardService';
+import StockCardService from '../../services/concrete/StockCardService';
 import { Context } from 'elysia';
-import { StockCard, StockCardAttribute, StockCardBarcode, StockCardCategoryItem, StockCardPriceListItems, StockCardTaxRate } from '@prisma/client';
+import { StockCard, StockCardAttribute, StockCardBarcode, StockCardCategoryItem, StockCardPriceListItems, StockCardTaxRate, Warehouse } from '@prisma/client';
 
 // Service Initialization
 const stockCardService = new StockCardService();
 
-
 const StockCardController = {
     // StockCard'ı oluşturan API
     createStockCard: async (ctx: Context) => {
-        const stockCardData: StockCard = ctx.body as StockCard;
+        const body = ctx.body as { stockCard: StockCard, warehouseIds: string[] | null};
+        const stockCardData: StockCard = body.stockCard;
+        const warehouseData: string[] = body.warehouseIds !== null ? body.warehouseIds : [];
+
         try {
-            const stockCard = await stockCardService.createStockCard(stockCardData);
+            const stockCard = await stockCardService.createStockCard(stockCardData, warehouseData);
             ctx.set.status = 200;
             return stockCard;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Error creating stock card", details: error.message };
+            return { error: "Error creating stock card", details: error };
         }
     },
 

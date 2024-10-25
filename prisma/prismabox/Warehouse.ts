@@ -83,9 +83,16 @@ export const WarehouseRelations = t.Object(
           currentCode: t.String({ additionalProperties: true }),
           currentName: t.String({ additionalProperties: true }),
           currentType: t.String({ additionalProperties: true }),
+          institution: t.String({ additionalProperties: true }),
           identityNo: __nullable__(t.String({ additionalProperties: true })),
           taxNumber: __nullable__(t.String({ additionalProperties: true })),
           taxOffice: __nullable__(t.String({ additionalProperties: true })),
+          birthOfDate: t.Date({ additionalProperties: true }),
+          KepAdress: __nullable__(t.String({ additionalProperties: true })),
+          MersisNo: t.String({ additionalProperties: true }),
+          accounts: __nullable__(t.String({ additionalProperties: true })),
+          works: __nullable__(t.String({ additionalProperties: true })),
+          plasiyer: __nullable__(t.String({ additionalProperties: true })),
           address: __nullable__(t.String({ additionalProperties: true })),
           countryCode: __nullable__(t.String({ additionalProperties: true })),
           city: __nullable__(t.String({ additionalProperties: true })),
@@ -302,6 +309,30 @@ export const WarehouseRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    Receipt: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          receiptType: t.Union(
+            [
+              t.Literal("Devir"),
+              t.Literal("Sayim"),
+              t.Literal("Nakil"),
+              t.Literal("Giris"),
+              t.Literal("Cikis"),
+              t.Literal("Fire"),
+            ],
+            { additionalProperties: true },
+          ),
+          receiptDate: t.Date({ additionalProperties: true }),
+          documentNo: t.String({ additionalProperties: true }),
+          branchCode: t.String({ additionalProperties: true }),
+          warehouseCode: t.String({ additionalProperties: true }),
+          description: __nullable__(t.String({ additionalProperties: true })),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -448,6 +479,21 @@ export const WarehouseRelationsInputCreate = t.Object(
       ),
     ),
     StockCardWarehouse: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    Receipt: t.Optional(
       t.Object(
         {
           connect: t.Array(
@@ -648,6 +694,30 @@ export const WarehouseRelationsInputUpdate = t.Partial(
         ),
         { additionalProperties: true },
       ),
+      Receipt: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
     },
     { additionalProperties: true },
   ),
@@ -754,6 +824,7 @@ export const WarehouseSelect = t.Partial(
       outMovements: t.Boolean(),
       Invoice: t.Boolean(),
       StockCardWarehouse: t.Boolean(),
+      Receipt: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -772,6 +843,7 @@ export const WarehouseInclude = t.Partial(
       outMovements: t.Boolean(),
       Invoice: t.Boolean(),
       StockCardWarehouse: t.Boolean(),
+      Receipt: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },

@@ -8,9 +8,16 @@ export const CurrentPlain = t.Object(
     currentCode: t.String({ additionalProperties: true }),
     currentName: t.String({ additionalProperties: true }),
     currentType: t.String({ additionalProperties: true }),
+    institution: t.String({ additionalProperties: true }),
     identityNo: __nullable__(t.String({ additionalProperties: true })),
     taxNumber: __nullable__(t.String({ additionalProperties: true })),
     taxOffice: __nullable__(t.String({ additionalProperties: true })),
+    birthOfDate: t.Date({ additionalProperties: true }),
+    KepAdress: __nullable__(t.String({ additionalProperties: true })),
+    MersisNo: t.String({ additionalProperties: true }),
+    accounts: __nullable__(t.String({ additionalProperties: true })),
+    works: __nullable__(t.String({ additionalProperties: true })),
+    plasiyer: __nullable__(t.String({ additionalProperties: true })),
     address: __nullable__(t.String({ additionalProperties: true })),
     countryCode: __nullable__(t.String({ additionalProperties: true })),
     city: __nullable__(t.String({ additionalProperties: true })),
@@ -100,39 +107,6 @@ export const CurrentRelations = t.Object(
         isActive: t.Boolean({ additionalProperties: true }),
       },
       { additionalProperties: true },
-    ),
-    StockCard: t.Array(
-      t.Object(
-        {
-          id: t.String({ additionalProperties: true }),
-          productCode: t.String({ additionalProperties: true }),
-          productName: t.String({ additionalProperties: true }),
-          invoiceName: __nullable__(t.String({ additionalProperties: true })),
-          shortDescription: __nullable__(
-            t.String({ additionalProperties: true }),
-          ),
-          description: __nullable__(t.String({ additionalProperties: true })),
-          manufacturerCode: __nullable__(
-            t.String({ additionalProperties: true }),
-          ),
-          companyCode: __nullable__(t.String({ additionalProperties: true })),
-          branchCode: __nullable__(t.String({ additionalProperties: true })),
-          brand: __nullable__(t.String({ additionalProperties: true })),
-          unitOfMeasure: __nullable__(t.String({ additionalProperties: true })),
-          productType: t.String({ additionalProperties: true }),
-          riskQuantities: __nullable__(
-            t.Number({ additionalProperties: true }),
-          ),
-          stockStatus: t.Boolean({ additionalProperties: true }),
-          hasExpirationDate: t.Boolean({ additionalProperties: true }),
-          allowNegativeStock: t.Boolean({ additionalProperties: true }),
-          createdAt: t.Date({ additionalProperties: true }),
-          updatedAt: t.Date({ additionalProperties: true }),
-          createdBy: __nullable__(t.String({ additionalProperties: true })),
-          updatedBy: __nullable__(t.String({ additionalProperties: true })),
-        },
-        { additionalProperties: true },
-      ),
     ),
     CurrentReportGroup: t.Array(
       t.Object(
@@ -315,6 +289,16 @@ export const CurrentRelations = t.Object(
         { additionalProperties: true },
       ),
     ),
+    CurrentCategoryItem: t.Array(
+      t.Object(
+        {
+          id: t.String({ additionalProperties: true }),
+          currentId: t.String({ additionalProperties: true }),
+          categoryId: t.String({ additionalProperties: true }),
+        },
+        { additionalProperties: true },
+      ),
+    ),
   },
   { additionalProperties: true },
 );
@@ -324,6 +308,7 @@ export const CurrentPlainInputCreate = t.Object(
     currentCode: t.String({ additionalProperties: true }),
     currentName: t.String({ additionalProperties: true }),
     currentType: t.String({ additionalProperties: true }),
+    institution: t.String({ additionalProperties: true }),
     identityNo: t.Optional(
       __nullable__(t.String({ additionalProperties: true })),
     ),
@@ -331,6 +316,18 @@ export const CurrentPlainInputCreate = t.Object(
       __nullable__(t.String({ additionalProperties: true })),
     ),
     taxOffice: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
+    birthOfDate: t.Date({ additionalProperties: true }),
+    KepAdress: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
+    MersisNo: t.String({ additionalProperties: true }),
+    accounts: t.Optional(
+      __nullable__(t.String({ additionalProperties: true })),
+    ),
+    works: t.Optional(__nullable__(t.String({ additionalProperties: true }))),
+    plasiyer: t.Optional(
       __nullable__(t.String({ additionalProperties: true })),
     ),
     address: t.Optional(__nullable__(t.String({ additionalProperties: true }))),
@@ -362,9 +359,16 @@ export const CurrentPlainInputUpdate = t.Object(
     currentCode: t.String({ additionalProperties: true }),
     currentName: t.String({ additionalProperties: true }),
     currentType: t.String({ additionalProperties: true }),
+    institution: t.String({ additionalProperties: true }),
     identityNo: __nullable__(t.String({ additionalProperties: true })),
     taxNumber: __nullable__(t.String({ additionalProperties: true })),
     taxOffice: __nullable__(t.String({ additionalProperties: true })),
+    birthOfDate: t.Date({ additionalProperties: true }),
+    KepAdress: __nullable__(t.String({ additionalProperties: true })),
+    MersisNo: t.String({ additionalProperties: true }),
+    accounts: __nullable__(t.String({ additionalProperties: true })),
+    works: __nullable__(t.String({ additionalProperties: true })),
+    plasiyer: __nullable__(t.String({ additionalProperties: true })),
     address: __nullable__(t.String({ additionalProperties: true })),
     countryCode: __nullable__(t.String({ additionalProperties: true })),
     city: __nullable__(t.String({ additionalProperties: true })),
@@ -427,21 +431,6 @@ export const CurrentRelationsInputCreate = t.Object(
       },
       { additionalProperties: true },
     ),
-    StockCard: t.Optional(
-      t.Object(
-        {
-          connect: t.Array(
-            t.Object(
-              {
-                id: t.String({ additionalProperties: true }),
-              },
-              { additionalProperties: true },
-            ),
-          ),
-        },
-        { additionalProperties: true },
-      ),
-    ),
     CurrentReportGroup: t.Optional(
       t.Object(
         {
@@ -488,6 +477,21 @@ export const CurrentRelationsInputCreate = t.Object(
       ),
     ),
     Invoice: t.Optional(
+      t.Object(
+        {
+          connect: t.Array(
+            t.Object(
+              {
+                id: t.String({ additionalProperties: true }),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    CurrentCategoryItem: t.Optional(
       t.Object(
         {
           connect: t.Array(
@@ -551,30 +555,6 @@ export const CurrentRelationsInputUpdate = t.Partial(
             { additionalProperties: true },
           ),
         },
-        { additionalProperties: true },
-      ),
-      StockCard: t.Partial(
-        t.Object(
-          {
-            connect: t.Array(
-              t.Object(
-                {
-                  id: t.String({ additionalProperties: true }),
-                },
-                { additionalProperties: true },
-              ),
-            ),
-            disconnect: t.Array(
-              t.Object(
-                {
-                  id: t.String({ additionalProperties: true }),
-                },
-                { additionalProperties: true },
-              ),
-            ),
-          },
-          { additionalProperties: true },
-        ),
         { additionalProperties: true },
       ),
       CurrentReportGroup: t.Partial(
@@ -673,6 +653,30 @@ export const CurrentRelationsInputUpdate = t.Partial(
         ),
         { additionalProperties: true },
       ),
+      CurrentCategoryItem: t.Partial(
+        t.Object(
+          {
+            connect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+            disconnect: t.Array(
+              t.Object(
+                {
+                  id: t.String({ additionalProperties: true }),
+                },
+                { additionalProperties: true },
+              ),
+            ),
+          },
+          { additionalProperties: true },
+        ),
+        { additionalProperties: true },
+      ),
     },
     { additionalProperties: true },
   ),
@@ -690,9 +694,16 @@ export const CurrentWhere = t.Partial(
         currentCode: t.String(),
         currentName: t.String(),
         currentType: t.String(),
+        institution: t.String(),
         identityNo: t.String(),
         taxNumber: t.String(),
         taxOffice: t.String(),
+        birthOfDate: t.Date(),
+        KepAdress: t.String(),
+        MersisNo: t.String(),
+        accounts: t.String(),
+        works: t.String(),
+        plasiyer: t.String(),
         address: t.String(),
         countryCode: t.String(),
         city: t.String(),
@@ -717,10 +728,17 @@ export const CurrentWhere = t.Partial(
 export const CurrentWhereUnique = t.Recursive(
   (Self) =>
     t.Intersect([
-      t.Partial(t.Object({ id: t.String(), currentCode: t.String() })),
+      t.Partial(
+        t.Object({
+          id: t.String(),
+          currentCode: t.String(),
+          companyCode: t.String(),
+        }),
+      ),
       t.Union([
         t.Object({ id: t.String() }),
         t.Object({ currentCode: t.String() }),
+        t.Object({ companyCode: t.String() }),
       ]),
       t.Partial(
         t.Object({
@@ -736,9 +754,16 @@ export const CurrentWhereUnique = t.Recursive(
             currentCode: t.String(),
             currentName: t.String(),
             currentType: t.String(),
+            institution: t.String(),
             identityNo: t.String(),
             taxNumber: t.String(),
             taxOffice: t.String(),
+            birthOfDate: t.Date(),
+            KepAdress: t.String(),
+            MersisNo: t.String(),
+            accounts: t.String(),
+            works: t.String(),
+            plasiyer: t.String(),
             address: t.String(),
             countryCode: t.String(),
             city: t.String(),
@@ -770,9 +795,16 @@ export const CurrentSelect = t.Partial(
       currentCode: t.Boolean(),
       currentName: t.Boolean(),
       currentType: t.Boolean(),
+      institution: t.Boolean(),
       identityNo: t.Boolean(),
       taxNumber: t.Boolean(),
       taxOffice: t.Boolean(),
+      birthOfDate: t.Boolean(),
+      KepAdress: t.Boolean(),
+      MersisNo: t.Boolean(),
+      accounts: t.Boolean(),
+      works: t.Boolean(),
+      plasiyer: t.Boolean(),
       address: t.Boolean(),
       countryCode: t.Boolean(),
       city: t.Boolean(),
@@ -792,11 +824,11 @@ export const CurrentSelect = t.Partial(
       branch: t.Boolean(),
       warehouse: t.Boolean(),
       priceList: t.Boolean(),
-      StockCard: t.Boolean(),
       CurrentReportGroup: t.Boolean(),
       StockMovement: t.Boolean(),
       CurrentMovement: t.Boolean(),
       Invoice: t.Boolean(),
+      CurrentCategoryItem: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -811,11 +843,11 @@ export const CurrentInclude = t.Partial(
       branch: t.Boolean(),
       warehouse: t.Boolean(),
       priceList: t.Boolean(),
-      StockCard: t.Boolean(),
       CurrentReportGroup: t.Boolean(),
       StockMovement: t.Boolean(),
       CurrentMovement: t.Boolean(),
       Invoice: t.Boolean(),
+      CurrentCategoryItem: t.Boolean(),
       _count: t.Boolean(),
     },
     { additionalProperties: true },
@@ -830,9 +862,16 @@ export const CurrentOrderBy = t.Partial(
       currentCode: t.Union([t.Literal("asc"), t.Literal("desc")]),
       currentName: t.Union([t.Literal("asc"), t.Literal("desc")]),
       currentType: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      institution: t.Union([t.Literal("asc"), t.Literal("desc")]),
       identityNo: t.Union([t.Literal("asc"), t.Literal("desc")]),
       taxNumber: t.Union([t.Literal("asc"), t.Literal("desc")]),
       taxOffice: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      birthOfDate: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      KepAdress: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      MersisNo: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      accounts: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      works: t.Union([t.Literal("asc"), t.Literal("desc")]),
+      plasiyer: t.Union([t.Literal("asc"), t.Literal("desc")]),
       address: t.Union([t.Literal("asc"), t.Literal("desc")]),
       countryCode: t.Union([t.Literal("asc"), t.Literal("desc")]),
       city: t.Union([t.Literal("asc"), t.Literal("desc")]),

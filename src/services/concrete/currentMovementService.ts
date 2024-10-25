@@ -1,6 +1,6 @@
 
 import prisma from "../../config/prisma";
-import { CurrentMovement } from "@prisma/client";
+import { CurrentMovement, Prisma } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
@@ -22,6 +22,7 @@ export class CurrentMovementService {
                     balanceAmount: currentMovement.balanceAmount,
                     movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
+                    
                     current: currentMovement.currentCode ? {
                         connect: {
                             id: currentMovement.currentCode
@@ -29,12 +30,12 @@ export class CurrentMovementService {
                     } : undefined,
                     company: currentMovement.companyCode ? {
                         connect: {
-                            id: currentMovement.companyCode
+                            companyCode: currentMovement.companyCode
                         }
                     } : {},
                     branch: currentMovement.branchCode ? {
                         connect: {
-                            id: currentMovement.branchCode
+                            branchCode: currentMovement.branchCode
                         }
                     } : {},
                     StockCardPriceList: currentMovement.priceListId ? {
@@ -47,7 +48,7 @@ export class CurrentMovementService {
                             id: currentMovement.documentNo
                         }
                     } : undefined,
-                }
+                } as Prisma.CurrentMovementCreateInput,
             });
             return createdCurrentMovement;
         } catch (error) {
@@ -58,7 +59,44 @@ export class CurrentMovementService {
 
     async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>): Promise<CurrentMovement> {
         try {
-            return await this.currentMovementRepository.update(id, currentMovement);
+            return await prisma.currentMovement.update({
+                where:  {id},
+                data: {
+                    dueDate: currentMovement.dueDate,
+                    description: currentMovement.description,
+                    debtAmount: currentMovement.debtAmount,
+                    creditAmount: currentMovement.creditAmount,
+                    balanceAmount: currentMovement.balanceAmount,
+                    movementType: currentMovement.movementType,
+                    documentType: currentMovement.documentType,
+
+                    current: currentMovement.currentCode ? {
+                        connect: {
+                            id: currentMovement.currentCode
+                        }
+                    } : undefined,
+                    company: currentMovement.companyCode ? {
+                        connect: {
+                            companyCode: currentMovement.companyCode
+                        }
+                    } : {},
+                    branch: currentMovement.branchCode ? {
+                        connect: {
+                            branchCode: currentMovement.branchCode
+                        }
+                    } : {},
+                    StockCardPriceList: currentMovement.priceListId ? {
+                        connect: {
+                            id: currentMovement.priceListId
+                        }
+                    } : undefined,
+                    invoice: currentMovement.documentNo ? {
+                        connect: {
+                            id: currentMovement.documentNo
+                        }
+                    } : undefined,
+                } as Prisma.CurrentMovementUpdateInput,
+                });
         } catch (error) {
             logger.error(`Error updating current movement with id ${id}`, error);
             throw error;

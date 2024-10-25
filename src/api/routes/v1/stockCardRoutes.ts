@@ -5,9 +5,9 @@ import { StockCardPlain } from '../../../../prisma/prismabox/StockCard';
 
 export const StockCardRoutes = (app: Elysia) => {
     app.group("/stockcards", (app) =>
-        app.get("/", StockCardController.getAllStockCards, { tags: ["Stock Cards"] })
-            .post("", StockCardController.createStockCard, { tags: ["Stock Cards"], body: StockCardPlainInputCreate, response: { body: StockCardPlain } })
-            .get("/:id", StockCardController.getStockCardById, { tags: ["Stock Cards"], response: { body: StockCardPlain } })
+        app.get("/", StockCardController.getAllStockCards, { tags: ["Stock Cards"] }) //, body: StockCardPlainInputCreate, response: { body: StockCardPlain }
+            .post("", StockCardController.createStockCard, { tags: ["Stock Cards"]}) //, response: { body: StockCardPlain }
+            .get("/:id", StockCardController.getStockCardById, { tags: ["Stock Cards"] })
             .put("/:id", StockCardController.updateStockCard, { tags: ["Stock Cards"] })
             .delete("/:id", StockCardController.deleteStockCard, { tags: ["Stock Cards"] })
             .post("/createStockCardsWithRelations", StockCardController.createStockCardsWithRelations, { tags: ["Stock Cards"] })

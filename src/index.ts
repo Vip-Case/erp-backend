@@ -15,6 +15,8 @@ import UserRoutes from './api/routes/v1/userRoutes';
 import RoleRoutes from './api/routes/v1/roleRoutes';
 import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
 import CategoryRoutes from './api/routes/v1/categoryRoutes';
+import ReceiptRoutes from './api/routes/v1/receiptRoutes';
+import BanksRoutes from './api/routes/v1/banksRoutes';
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -42,6 +44,9 @@ const app = new Elysia()
         { name: "Users", description: "User operations" }, // User'lar için tag
         { name: "Roles", description: "Role operations" }, // Role'lar için tag
         { name: "Invoices", description: "Invoice operations" }, // Invoice'lar için
+        { name: "Receipts", description: "Receipt operations" }, // Receipt'lar için
+        { name: "Banks", description: "Banks operations" }, // Banks'lar için
+
         
       ]
     },
@@ -63,6 +68,8 @@ CurrentGroupRoutes(app);
 UserRoutes(app);
 RoleRoutes(app);
 InvoiceRoutes(app);
+ReceiptRoutes(app);
+BanksRoutes(app);
 
 
 // Uygulama belirtilen portta dinlemeye başlıyor
