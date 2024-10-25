@@ -260,7 +260,6 @@ model Company {
   Branch    Branch[]
   Warehouse Warehouse[]
   User      User[]
-  Current   Current[]
   StockCard StockCard[]
 
   CurrentMovement CurrentMovement[]
@@ -290,7 +289,6 @@ model Branch {
   // Relationships
   User            User[]
   Warehouse       BranchWarehouse[]  // Many-to-many relation with Warehouse via BranchWarehouse
-  Current         Current[]
   StockCard       StockCard[]
   StockMovement   StockMovement[]
   CurrentMovement CurrentMovement[]
@@ -320,7 +318,6 @@ model Warehouse {
   // Relationships
   Branch         BranchWarehouse[]  // Many-to-many relation with Branch via BranchWarehouse
   User           User[]
-  Current        Current[]
   stockMovements StockMovement[] @relation("StockMovementWarehouse")  // Main warehouse relation
   outMovements   StockMovement[] @relation("StockMovementOutWarehouse")  // Outgoing warehouse relation
 
@@ -368,18 +365,12 @@ model Current {
   phone         String?   @db.VarChar(50)
   email         String?   @db.VarChar(100)
   website       String?   @db.VarChar(100)
-  companyCode   String    @db.VarChar(50)
-  branchCode    String    @db.VarChar(50)
-  warehouseCode String    @db.VarChar(50)
   priceListId   String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   createdBy     String?
   updatedBy     String?
 
-  company            Company              @relation(fields: [companyCode], references: [companyCode])
-  branch             Branch               @relation(fields: [branchCode], references: [branchCode])
-  warehouse          Warehouse            @relation(fields: [warehouseCode], references: [warehouseCode])
   priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id])
   StockCard          StockCard[]
   CurrentReportGroup CurrentReportGroup[]
