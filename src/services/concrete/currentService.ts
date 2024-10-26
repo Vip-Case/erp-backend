@@ -25,19 +25,8 @@ export class CurrentService {
                     birthOfDate: current.birthOfDate,
                     KepAdress: current.KepAdress,
                     MersisNo: current.MersisNo,
-                    accounts: current.accounts,
-                    works: current.works,
-                    plasiyer: current.plasiyer,
-                    address: current.address,
-                    countryCode: current.countryCode,
-                    city: current.city,
-                    district: current.district,
-                    phone: current.phone,
-                    email: current.email,
-                    website: current.website,
-                    companyCode: current.companyCode,
-                    branchCode: current.branchCode,
-                    warehouseCode: current.warehouseCode,
+                    
+
                     priceList: current.priceListId ? {
                         connect: {
                             id: current.priceListId

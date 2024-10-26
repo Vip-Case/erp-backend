@@ -398,6 +398,8 @@ model Branch {
   Invoice    Invoice[] @relation("InvoiceOutBranch")
   OutInvoice Invoice[] @relation("InvoiceBranch")
   Receipt    Receipt[]
+
+  CurrentBranch CurrentBranch[]
 }
 
 model Warehouse {
@@ -505,9 +507,9 @@ model Current {
   name        String?         @db.VarChar(50)
   surname     String?         @db.VarChar(50)
   birthOfDate DateTime?
-  KepAdress   String?         @db.VarChar(50)
-  MersisNo    String?          @db.VarChar(50)
-  SicilNo     String?          @db.VarChar(50)
+  kepAdress   String?         @db.VarChar(50)
+  mersisNo    String?          @db.VarChar(50)
+  sicilNo     String?          @db.VarChar(50)
   priceListId String
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -526,6 +528,20 @@ model Current {
   CurrentFinancial CurrentFinancial[]
   CurrentRisk CurrentRisk[]
   CurrentOfficials CurrentOfficials[]
+  CurrentBranch CurrentBranch[]
+}
+
+model CurrentBranch {
+  id          String   @id @default(cuid())
+  currentCode String   @unique @db.VarChar(50)
+  branchCode  String   @db.VarChar(50)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  current Current @relation(fields: [currentCode], references: [currentCode])
+  branch  Branch  @relation(fields: [branchCode], references: [branchCode])
 }
 
 model CurrentAddress {
