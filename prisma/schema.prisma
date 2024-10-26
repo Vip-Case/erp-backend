@@ -504,7 +504,7 @@ model Current {
   title       String?         @db.VarChar(100)
   name        String?         @db.VarChar(50)
   surname     String?         @db.VarChar(50)
-  birthOfDate DateTime
+  birthOfDate DateTime?
   KepAdress   String?         @db.VarChar(50)
   MersisNo    String?          @db.VarChar(50)
   SicilNo     String?          @db.VarChar(50)
@@ -521,15 +521,10 @@ model Current {
   Invoice                Invoice[]
   CurrentCategoryItem    CurrentCategoryItem[]
   CurrentReportGroupItem CurrentReportGroupItem[]
-
   StockCardManufacturer StockCardManufacturer[]
-
   CurrentAddress CurrentAddress[]
-
   CurrentFinancial CurrentFinancial[]
-
   CurrentRisk CurrentRisk[]
-
   CurrentOfficials CurrentOfficials[]
 }
 
