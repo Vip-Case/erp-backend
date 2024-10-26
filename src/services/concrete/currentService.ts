@@ -35,27 +35,14 @@ export class CurrentService {
                     phone: current.phone,
                     email: current.email,
                     website: current.website,
-                    
-                    company: current.companyCode ? {
-                        connect: {
-                            companyCode: current.companyCode
-                            }
-                    } : {},
-                    branch: current.branchCode ? {
-                        connect: {
-                            branchCode: current.branchCode
-                        }
-                    } : {},
+                    companyCode: current.companyCode,
+                    branchCode: current.branchCode,
+                    warehouseCode: current.warehouseCode,
                     priceList: current.priceListId ? {
                         connect: {
                             id: current.priceListId
                         }
-                    } : {},
-                    warehouse: current.warehouseCode ? {
-                        connect: { 
-                            warehouseCode: current.warehouseCode
-                        }
-                    } : {}
+                    } : undefined,
 
                 } as Prisma.CurrentCreateInput,
             });

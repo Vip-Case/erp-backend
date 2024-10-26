@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import app from '../..';
-import currentGroup from 'c:/Users/amine/Desktop/backend/src/fixtures/currentGroup.json';
+import currentGroup from '../../fixtures/currentGroup.json';
 
 let server: any;
 let createdGroupId: string; // Testlerde kullanmak üzere dinamik ID tutacağız
