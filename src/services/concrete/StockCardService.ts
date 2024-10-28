@@ -1,15 +1,15 @@
 import {
     Prisma,
     StockCard,
-    StockCardAttribute,
     StockCardBarcode,
     StockCardCategoryItem,
     StockCardPriceListItems,
     StockCardTaxRate,
-    Warehouse,
-    Current,
-    ProfitMargin,
-    ReceiptDetail,
+    StockCardVariation,
+    StockCardWarehouse,
+    StockCardManufacturer,
+    StockCardAttributeItems,
+    StockCardEFatura
 } from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
@@ -22,11 +22,6 @@ const stockCardRelations = {
 
 export class StockCardService {
     
-    private stockCardRepository: BaseRepository<StockCard>;
-
-    constructor() {
-        this.stockCardRepository = new BaseRepository<StockCard>(prisma.stockCard);
-    }
 
     async createStockCard(stockCard: StockCard, warehouseIds: string[] | undefined): Promise<StockCard> {
         try {
@@ -35,13 +30,14 @@ export class StockCardService {
                     data: {
                         productCode: stockCard.productCode,
                         productName: stockCard.productName,
-                        invoiceName: stockCard.invoiceName,
+                        unit: stockCard.unit,
                         shortDescription: stockCard.shortDescription,
                         description: stockCard.description,
-                        brand: stockCard.brand,
-                        unitOfMeasure: stockCard.unitOfMeasure,
                         productType: stockCard.productType,
-                        marketNames: stockCard.marketNames,
+                        gtip: stockCard.gtip,
+                        pluCode: stockCard.pluCode,
+                        desi: stockCard.desi,
+                        adetBoleni: stockCard.adetBoleni,
                         riskQuantities: stockCard.riskQuantities,
                         stockStatus: stockCard.stockStatus,
                         hasExpirationDate: stockCard.hasExpirationDate,
@@ -53,6 +49,10 @@ export class StockCardService {
     
                         branch: stockCard.branchCode ? {
                             connect: { branchCode: stockCard.branchCode },
+                        } : undefined,
+
+                        brand: stockCard.brandId ? {
+                            connect: { brand: stockCard.brandId },
                         } : undefined,
                     } as Prisma.StockCardCreateInput,
                 });
@@ -62,13 +62,14 @@ export class StockCardService {
                     data: {
                         productCode: stockCard.productCode,
                         productName: stockCard.productName,
-                        invoiceName: stockCard.invoiceName,
+                        unit: stockCard.unit,
                         shortDescription: stockCard.shortDescription,
                         description: stockCard.description,
-                        brand: stockCard.brand,
-                        unitOfMeasure: stockCard.unitOfMeasure,
                         productType: stockCard.productType,
-                        marketNames: stockCard.marketNames,
+                        gtip: stockCard.gtip,
+                        pluCode: stockCard.pluCode,
+                        desi: stockCard.desi,
+                        adetBoleni: stockCard.adetBoleni,
                         riskQuantities: stockCard.riskQuantities,
                         stockStatus: stockCard.stockStatus,
                         hasExpirationDate: stockCard.hasExpirationDate,
@@ -80,6 +81,10 @@ export class StockCardService {
     
                         branch: stockCard.branchCode ? {
                             connect: { branchCode: stockCard.branchCode },
+                        } : undefined,
+
+                        brand: stockCard.brandId ? {
+                            connect: { brand: stockCard.brandId },
                         } : undefined,
 
                         // StockCardWarehouse Many-to-Many relation
@@ -105,26 +110,31 @@ export class StockCardService {
                 where: { id },
                 data: {
                     productCode: stockCard.productCode,
-                    productName: stockCard.productName,
-                    invoiceName: stockCard.invoiceName,
-                    shortDescription: stockCard.shortDescription,
-                    description: stockCard.description, 
-                    brand: stockCard.brand,
-                    unitOfMeasure: stockCard.unitOfMeasure,
-                    productType: stockCard.productType,
-                    marketNames: stockCard.marketNames,
-                    riskQuantities: stockCard.riskQuantities,
-                    stockStatus: stockCard.stockStatus,
-                    hasExpirationDate: stockCard.hasExpirationDate,
-                    allowNegativeStock: stockCard.allowNegativeStock,
+                        productName: stockCard.productName,
+                        unit: stockCard.unit,
+                        shortDescription: stockCard.shortDescription,
+                        description: stockCard.description,
+                        productType: stockCard.productType,
+                        gtip: stockCard.gtip,
+                        pluCode: stockCard.pluCode,
+                        desi: stockCard.desi,
+                        adetBoleni: stockCard.adetBoleni,
+                        riskQuantities: stockCard.riskQuantities,
+                        stockStatus: stockCard.stockStatus,
+                        hasExpirationDate: stockCard.hasExpirationDate,
+                        allowNegativeStock: stockCard.allowNegativeStock,
+    
+                        company: stockCard.companyCode ? {
+                            connect: { companyCode: stockCard.companyCode },
+                        } : undefined,
+    
+                        branch: stockCard.branchCode ? {
+                            connect: { branchCode: stockCard.branchCode },
+                        } : undefined,
 
-                    company: stockCard.companyCode ? {
-                        connect: { companyCode: stockCard.companyCode },
-                    } : undefined,
-
-                    branch: stockCard.branchCode ? {
-                        connect: { branchCode: stockCard.branchCode },
-                    } : undefined,
+                        brand: stockCard.brandId ? {
+                            connect: { brand: stockCard.brandId },
+                        } : undefined,
 
                     // StockCardWarehouse Many-to-Many relation
                     StockCardWarehouse: (warehouseIds ?? []).length > 0 ? {
@@ -189,15 +199,7 @@ export class StockCardService {
 
     async createStockCardsWithRelations(data: {
         stockCard: StockCard;
-        attributes?: StockCardAttribute[];
-        barcodes?: StockCardBarcode[];
-        categoryItems?: StockCardCategoryItem[];
-        priceListItems?: StockCardPriceListItems[];
-        taxRates?: StockCardTaxRate[];
-        current?: Current;
-        warehouseIds?: string[];
-        profitMargin?: ProfitMargin[];
-        receiptDetail?: ReceiptDetail[];
+        
 
     }): Promise<StockCard | null> {
         try {

@@ -144,12 +144,10 @@ model StockCard {
   branchCode         String?     @db.VarChar(50)
   brandId            String?     @db.VarChar(100)
   productType        ProductType @default(BasitUrun)
-  marketNames        String?     @db.VarChar(250)
   gtip               String?     @db.VarChar(50)
   pluCode            String?     @db.VarChar(50)
   desi               Decimal?    @db.Decimal(15, 4)
   adetBoleni         Decimal?    @db.Decimal(15, 4)
-  fastSaleGroup      String?     @db.VarChar(50)
   riskQuantities     Decimal?    @db.Decimal(15, 4)
   stockStatus        Boolean     @default(true)
   hasExpirationDate  Boolean     @default(false)
@@ -175,6 +173,7 @@ model StockCard {
   StockCardEFatura        StockCardEFatura[]
   StockCardManufacturer   StockCardManufacturer[]
   StockCardAttributeItems StockCardAttributeItems[]
+  StockCardMarketNames    StockCardMarketNames[]
 }
 
 model StockCardEFatura {
@@ -255,6 +254,14 @@ model StockCardBarcode {
   barcode            String               @unique @db.VarChar(100)
   stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   StockCardVariation StockCardVariation[] @relation("StockCardBarcodeToStockCardVariation")
+}
+
+model StockCardMarketNames {
+  id          String @id @default(cuid())
+  stockCardId String
+  marketName  String @db.VarChar(100)
+
+  stockCard StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model StockCardCategory {
@@ -515,7 +522,7 @@ model Current {
   surname     String?         @db.VarChar(50)
   webSite     String?         @db.VarChar(100)
   birthOfDate DateTime?
-  kepAddress   String?         @db.VarChar(50)
+  kepAddress  String?         @db.VarChar(50)
   mersisNo    String?         @db.VarChar(50)
   sicilNo     String?         @db.VarChar(50)
   priceListId String
