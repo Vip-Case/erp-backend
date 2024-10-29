@@ -728,17 +728,10 @@ export const CurrentWhere = t.Partial(
 export const CurrentWhereUnique = t.Recursive(
   (Self) =>
     t.Intersect([
-      t.Partial(
-        t.Object({
-          id: t.String(),
-          currentCode: t.String(),
-          companyCode: t.String(),
-        }),
-      ),
+      t.Partial(t.Object({ id: t.String(), currentCode: t.String() })),
       t.Union([
         t.Object({ id: t.String() }),
         t.Object({ currentCode: t.String() }),
-        t.Object({ companyCode: t.String() }),
       ]),
       t.Partial(
         t.Object({
