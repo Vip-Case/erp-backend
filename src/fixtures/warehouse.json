@@ -1,13 +1,35 @@
 [
     {
-        "warehouseName": "onse",
-        "warehouseCode": "hgjs",
-        "address": "öyjdyj",
-        "countryCode": "jg",
-        "city": "jghr",
-        "district": "gj",
-        "phone": "76868",
-        "email": "fhh@gmail.com",
-        "companyCode": "two"
+        "warehouseName": "E-Ticaret",
+        "warehouseCode": "ETC",
+        "address": "15 Mayıs Mahallesi 559/2 Sokak Kızılelma İş Merkezi No: 8A",
+        "countryCode": "TR",
+        "city": "Denizli",
+        "district": "Pamukkale",
+        "phone": "0256 123 45 67",
+        "email": "info@etcdepo.com",
+        "companyCode": "VIP"
+    },
+    {
+        "warehouseName": "Perakende",
+        "warehouseCode": "PRK",
+        "address": "Kozyatağı Mahallesi, Mühürdar Caddesi, No: 1, D: 1",
+        "countryCode": "TR",
+        "city": "İstanbul",
+        "district": "Kadıköy",
+        "phone": "0256 123 45 67",
+        "email": "info@prkdepo.com",
+        "companyCode": "VIP"
+    },
+    {
+        "warehouseName": "Toptan",
+        "warehouseCode": "TPT",
+        "address": "Kavaklıdere Mahallesi, 1. Cadde, No: 1, D: 1",
+        "countryCode": "TR",
+        "city": "Ankara",
+        "district": "Çankaya",
+        "phone": "0256 123 45 67",
+        "email": "info@tptdepo.com",
+        "companyCode": "VIP"
     }
 ]

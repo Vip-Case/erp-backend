@@ -22,40 +22,20 @@ export class CurrentService {
                     identityNo: current.identityNo,
                     taxNumber: current.taxNumber,
                     taxOffice: current.taxOffice,
+                    title: current.title,
+                    name: current.name,
+                    surname: current.surname,
                     birthOfDate: current.birthOfDate,
-                    KepAdress: current.KepAdress,
-                    MersisNo: current.MersisNo,
-                    accounts: current.accounts,
-                    works: current.works,
-                    plasiyer: current.plasiyer,
-                    address: current.address,
-                    countryCode: current.countryCode,
-                    city: current.city,
-                    district: current.district,
-                    phone: current.phone,
-                    email: current.email,
-                    website: current.website,
-                    
-                    company: current.companyCode ? {
-                        connect: {
-                            companyCode: current.companyCode
-                            }
-                    } : {},
-                    branch: current.branchCode ? {
-                        connect: {
-                            branchCode: current.branchCode
-                        }
-                    } : {},
+                    webSite: current.webSite,
+                    kepAddress: current.kepAddress,
+                    mersisNo: current.mersisNo,
+                    sicilNo: current.sicilNo,
+
                     priceList: current.priceListId ? {
                         connect: {
                             id: current.priceListId
                         }
-                    } : {},
-                    warehouse: current.warehouseCode ? {
-                        connect: { 
-                            warehouseCode: current.warehouseCode
-                        }
-                    } : {}
+                    } : undefined,
 
                 } as Prisma.CurrentCreateInput,
             });
@@ -79,38 +59,18 @@ export class CurrentService {
                     identityNo: current.identityNo,
                     taxNumber: current.taxNumber,
                     taxOffice: current.taxOffice,
+                    title: current.title,
+                    name: current.name,
+                    surname: current.surname,
                     birthOfDate: current.birthOfDate,
-                    KepAdress: current.KepAdress,
-                    MersisNo: current.MersisNo,
-                    accounts: current.accounts,
-                    works: current.works,
-                    plasiyer: current.plasiyer,
-                    address: current.address,
-                    countryCode: current.countryCode,
-                    city: current.city,
-                    district: current.district,
-                    phone: current.phone,
-                    email: current.email,
-                    website: current.website,
+                    webSite: current.webSite,
+                    kepAddress: current.kepAddress,
+                    mersisNo: current.mersisNo,
+                    sicilNo: current.sicilNo,
                     
-                    company: current.companyCode ? {
-                        connect: { 
-                            companyCode: current.companyCode 
-                        }
-                    } : {},
-                    branch: current.branchCode ? {
-                        connect: {
-                            branchCode: current.branchCode
-                        }
-                    } : {},
                     priceList: current.priceListId ? {
                         connect: {
                             id: current.priceListId
-                        }
-                    } : {},
-                    warehouse: current.warehouseCode ? {
-                        connect: { 
-                            warehouseCode: current.warehouseCode
                         }
                     } : {}
 

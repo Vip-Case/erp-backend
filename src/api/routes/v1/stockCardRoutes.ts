@@ -1,7 +1,6 @@
 import { Elysia } from 'elysia';
 import StockCardController from '../../controllers/stockCardController';
-import { StockCardPlainInputCreate } from '../../../../prisma/prismabox/StockCard';
-import { StockCardPlain } from '../../../../prisma/prismabox/StockCard';
+
 
 export const StockCardRoutes = (app: Elysia) => {
     app.group("/stockcards", (app) =>
