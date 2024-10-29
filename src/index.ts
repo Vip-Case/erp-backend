@@ -17,6 +17,7 @@ import RoleRoutes from './api/routes/v1/roleRoutes';
 import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
 import CategoryRoutes from './api/routes/v1/categoryRoutes';
 import ReceiptRoutes from './api/routes/v1/receiptRoutes';
+import importRoutes from './api/routes/v1/importExcelRoutes';
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -76,6 +77,7 @@ UserRoutes(app);
 RoleRoutes(app);
 InvoiceRoutes(app);
 ReceiptRoutes(app);
+importRoutes(app);
 
 
 // Uygulama belirtilen portta dinlemeye başlıyor

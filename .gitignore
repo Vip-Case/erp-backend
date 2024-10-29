@@ -66,6 +66,6 @@ coverage
 # Ignore sql files
 *.sql
 
-
+# Ignore prisma extension file
 prisma/prismabox
 prisma/docs
