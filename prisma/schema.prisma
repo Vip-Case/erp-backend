@@ -791,3 +791,13 @@ model InvoiceDetail {
   Invoice   Invoice   @relation(fields: [invoiceId], references: [id])
   StockCard StockCard @relation(fields: [productCode], references: [productCode])
 }
+
+model casing {
+  id          String   @id @default(cuid())
+  caseName     String   @db.VarChar(50)
+  branchCode    String
+  balance       Decimal  @db.Decimal(15, 2)
+  rate          Decimal  @db.Decimal(10, 6)
+
+  branch             Branch              @relation(fields: [branchCode], references: [branchCode])
+}
