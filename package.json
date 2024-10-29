@@ -5,6 +5,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts",
+    "debug": "bun run --inspect src/index.ts",
     "db:mongo": "bun run src/scripts/setupMongoDB.ts",
     "db:postgres": "bunx prisma migrate dev --name init",
     "studio": "bunx prisma studio"

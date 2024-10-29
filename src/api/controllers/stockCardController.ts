@@ -79,31 +79,10 @@ const StockCardController = {
     // Tüm StockCard'ları ilişkili tabloları ile oluşturan API
     createStockCardsWithRelations: async (ctx: Context) => {
         try {
-            const {
-                stockCard,       // Ana StockCard verisi
-                attributes,      // İsteğe bağlı Attributes
-                barcodes,        // İsteğe bağlı Barcodes
-                categoryItems,   // İsteğe bağlı CategoryItems
-                priceListItems,  // İsteğe bağlı PriceListItems
-                taxRates         // İsteğe bağlı TaxRates
-            } = ctx.body as {
-                stockCard: StockCard,
-                attributes?: StockCardAttribute[],
-                barcodes?: StockCardBarcode[],
-                categoryItems?: StockCardCategoryItem[],
-                priceListItems?: StockCardPriceListItems[],
-                taxRates?: StockCardTaxRate[]
-            };
+            const body = ctx.body as any;
 
             // Servisi çağırarak StockCard ve ilişkilerini oluşturuyoruz
-            const createdStockCard = await stockCardService.createStockCardsWithRelations({
-                stockCard,
-                attributes,
-                barcodes,
-                categoryItems,
-                priceListItems,
-                taxRates
-            });
+            const createdStockCard = await stockCardService.createStockCardsWithRelations(body);
             ctx.set.status = 200;
             return createdStockCard;
         } catch (error: any) {
@@ -116,31 +95,10 @@ const StockCardController = {
     updateStockCardsWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
         try {
-            const {
-                stockCard,       // Ana StockCard verisi
-                attributes,      // İsteğe bağlı Attributes
-                barcodes,        // İsteğe bağlı Barcodes
-                categoryItems,   // İsteğe bağlı CategoryItems
-                priceListItems,  // İsteğe bağlı PriceListItems
-                taxRates         // İsteğe bağlı TaxRates
-            } = ctx.body as {
-                stockCard: StockCard,
-                attributes?: StockCardAttribute[],
-                barcodes?: StockCardBarcode[],
-                categoryItems?: StockCardCategoryItem[],
-                priceListItems?: StockCardPriceListItems[],
-                taxRates?: StockCardTaxRate[]
-            };
+            const body = ctx.body as any;
 
             // Servisi çağırarak StockCard ve ilişkilerini güncelliyoruz
-            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, {
-                stockCard,
-                attributes,
-                barcodes,
-                categoryItems,
-                priceListItems,
-                taxRates
-            });
+            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body);
             ctx.set.status = 200;
             return updatedStockCard;
         } catch (error: any) {

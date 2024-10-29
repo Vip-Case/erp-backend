@@ -1,14 +1,38 @@
 [
     {
-        "branchName": "one1",
-        "branchCode": "br1",
-        "address": "sfs1",
-        "countryCode": "dg",
-        "city": "ddgrs",
-        "district": "dgdfr",
-        "phone": "98993353",
-        "email": "dfgs@gmail.com",
-        "website": "fsfs.tr",
-        "companyCode": "two"
+        "branchName": "Merkez",
+        "branchCode": "MRZ",
+        "address": "15 Mayıs Mahallesi 559/2 Sokak Kızılelma İş Merkezi No: 8A",
+        "countryCode": "TR",
+        "city": "Denizli",
+        "district": "Pamukkale",
+        "phone": "0850 304 0 999",
+        "email": "info@vipcase.com.tr",
+        "website": "vipcase.com.tr",
+        "companyCode": "VIP"
+    },
+    {
+        "branchName": "İstanbul",
+        "branchCode": "IST",
+        "address": "Kozyatağı Mahallesi, Mühürdar Caddesi, No: 1, D: 1",
+        "countryCode": "TR",
+        "city": "İstanbul",
+        "district": "Kadıköy",
+        "phone": "0850 304 0 999",
+        "email": "info@vipcase.com.tr",
+        "website": "vipcase.com.tr",
+        "companyCode": "VIP"
+    },
+    {
+        "branchName": "Ankara",
+        "branchCode": "ANK",
+        "address": "Kavaklıdere Mahallesi, 1. Cadde, No: 1, D: 1",
+        "countryCode": "TR",
+        "city": "Ankara",
+        "district": "Çankaya",
+        "phone": "0850 304 0 999",
+        "email": "info@vipcase.com.tr",
+        "website": "vipcase.com.tr",
+        "companyCode": "VIP"
     }
 ]

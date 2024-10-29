@@ -1,6 +1,47 @@
 [
     {
-        "categoryName": "item",
-        "categoryCode": "fsd"
+        "categoryName": "İphone 11",
+        "categoryCode": "IP11",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 11 Pro",
+        "categoryCode": "IP11Pro",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 11 Pro Max",
+        "categoryCode": "IP11ProMax",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 12",
+        "categoryCode": "IP12",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 12 Pro",
+        "categoryCode": "IP12Pro",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 12 Pro Max",
+        "categoryCode": "IP12ProMax",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 13",
+        "categoryCode": "IP13",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 13 Pro",
+        "categoryCode": "IP13Pro",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
+    },
+    {
+        "categoryName": "İphone 13 Pro Max",
+        "categoryCode": "IP13ProMax",
+        "parentCategoryId": "cm2sq4g7i000010ik8h03ux0y"
     }
 ]

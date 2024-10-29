@@ -243,8 +243,10 @@ model StockCardPriceListItems {
   priceListId        String
   stockCardId        String
   price              Decimal              @db.Decimal(15, 4)
+
   stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
   StockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
 
@@ -293,7 +295,7 @@ model StockCardTaxRate {
 model StockCardAttribute {
   id            String   @id @default(cuid())
   attributeName String   @db.VarChar(100)
-  values        String[]
+  value        String
 
   StockCardAttributeItems StockCardAttributeItems[]
 }
@@ -463,6 +465,7 @@ model StockCardWarehouse {
   id          String @id @default(cuid())
   stockCardId String
   warehouseId String
+  quantity    Decimal @db.Decimal(15, 4)
 
   stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)

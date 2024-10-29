@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
 import { appConfig } from './config/app';
+import { cors } from '@elysiajs/cors'
 import StockCardRoutes from './api/routes/v1/stockCardRoutes';
 import PriceListRoutes from './api/routes/v1/priceListRoutes';
 import AttributeRoutes from './api/routes/v1/attributeRoutes';
@@ -19,6 +20,13 @@ import ReceiptRoutes from './api/routes/v1/receiptRoutes';
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
+.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    maxAge: 600
+}))
   .use(swagger({
     path: "/docs", // Swagger UI'nin erişim yolu
     provider: 'scalar', // API provider'ı
