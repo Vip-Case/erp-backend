@@ -9,6 +9,7 @@ export const CategoryRoutes = (app: Elysia) => {
             .put("/:id", CategoryController.updateCategory, { tags: ["Categories"] })
             .delete("/:id", CategoryController.deleteCategory, { tags: ["Categories"] })
             .get("/filter", CategoryController.getCategoriesWithFilters, { tags: ["Categories"] })
+            .get("/withParents", CategoryController.getAllCategoriesWithParentCategories, { tags: ["Categories"] })
     );
 };
 
