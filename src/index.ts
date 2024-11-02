@@ -18,16 +18,19 @@ import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
 import CategoryRoutes from './api/routes/v1/categoryRoutes';
 import ReceiptRoutes from './api/routes/v1/receiptRoutes';
 import importRoutes from './api/routes/v1/importExcelRoutes';
-
+import BrandRoutes from './api/routes/v1/brandRoutes';
+import { CustomError } from './utils/CustomError';
+import logger from './utils/logger';
+import { Prisma } from '@prisma/client';
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
-.use(cors({
-    origin: '*',
+  .use(cors({
+    origin: "*",
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
     maxAge: 600
-}))
+  }))
   .use(swagger({
     path: "/docs", // Swagger UI'nin erişim yolu
     provider: 'scalar', // API provider'ı
@@ -53,13 +56,59 @@ const app = new Elysia()
         { name: "Roles", description: "Role operations" }, // Role'lar için tag
         { name: "Invoices", description: "Invoice operations" }, // Invoice'lar için
         { name: "Receipts", description: "Receipt operations" }, // Receipt'lar için
-        { name: "Banks", description: "Banks operations" }, // Banks'lar için
+        { name: "Imports", description: "Import operations" }, // Import'lar için
+        { name: "Brands", description: "Brand operations" }, // Brand'ler için
 
-        
       ]
     },
   }))
   .get("/", () => "Elysia is running!") // Ana route tanımlanıyor
+  .onError(({ error, set }) => {
+    // Varsayılan hata yanıtı
+    let statusCode = 500;
+    let message = 'Beklenmeyen bir hata oluştu.';
+    let errorCode: string | undefined;
+    let meta: any;
+
+    // Bilinen hata türlerini işleyin
+    if (error instanceof CustomError) {
+      statusCode = error.statusCode;
+      message = error.message;
+      errorCode = error.errorCode;
+      meta = error.meta;
+    } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      statusCode = 400; // Bad Request
+      message = 'Veritabanı hatası oluştu.';
+      errorCode = error.code;
+      meta = error.meta;
+    } else if (error instanceof Prisma.PrismaClientValidationError) {
+      statusCode = 400;
+      message = 'Doğrulama hatası oluştu.';
+      meta = error.message;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
+
+    // Hataları loglayın
+    logger.error('Hata oluştu:', {
+      message: error.message,
+      stack: error.stack,
+      code: (error as any).code,
+      meta: (error as any).meta,
+    });
+
+    // Yanıtı ayarlayın ve gönderin
+    set.status = statusCode;
+
+    return {
+      error: {
+        message,
+        errorCode,
+        meta,
+      },
+    };
+  });
+
 
 // API rotalarını dahil ediyoruz
 StockCardRoutes(app);
@@ -78,7 +127,7 @@ RoleRoutes(app);
 InvoiceRoutes(app);
 ReceiptRoutes(app);
 importRoutes(app);
-
+BrandRoutes(app);
 
 // Uygulama belirtilen portta dinlemeye başlıyor
 app.listen(appConfig.port, () => {

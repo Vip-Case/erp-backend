@@ -3,6 +3,11 @@ import { BaseRepository } from "../../repositories/baseRepository";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 
+// StockCardCategory tipini genişleterek parentCategories alanını ekliyoruz
+type StockCardCategoryWithParents = StockCardCategory & {
+    parentCategories?: StockCardCategory[];
+};
+
 export class CategoryService {
     private categoryRepository: BaseRepository<StockCardCategory>;
 
@@ -61,6 +66,46 @@ export class CategoryService {
         } catch (error) {
             logger.error("Error fetching categories with filters", error);
             throw error;
+        }
+    }
+
+    // Yeni: Kategorileri üst kategorileriyle birlikte döndürme
+    async getAllCategoriesWithParentCategories(): Promise<StockCardCategoryWithParents[]> {
+        try {
+            const categories = await prisma.stockCardCategory.findMany({
+                include: {
+                    parentCategory: true, // Üst kategoriyi dahil et
+                },
+            });
+
+            // Her kategori için üst kategorilerini zincir halinde almak
+            for (const category of categories as StockCardCategoryWithParents[]) {
+                category.parentCategories = await this.getParentCategories(category.id);
+            }
+
+            return categories;
+
+        } catch (error) {
+            logger.error("Error fetching all categories with parent categories", error);
+            throw new Error("Could not fetch categories with parent categories");
+        }
+    }
+
+    // Yardımcı recursive fonksiyon
+    private async getParentCategories(categoryId: string, categories: any[] = []): Promise<StockCardCategoryWithParents[]> {
+        const category = await prisma.stockCardCategory.findUnique({
+            where: { id: categoryId },
+            include: { parentCategory: true },
+        });
+
+        if (!category) return categories;
+
+        categories.push(category as StockCardCategoryWithParents);
+
+        if (category.parentCategoryId) {
+            return this.getParentCategories(category.parentCategoryId, categories);
+        } else {
+            return categories;
         }
     }
 }
