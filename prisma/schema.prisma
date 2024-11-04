@@ -121,18 +121,6 @@ enum CurrentType {
   Diger
 }
 
-model Role {
-  id          String   @id @default(cuid())
-  roleName    String   @unique @db.VarChar(50)
-  description String   @db.VarChar(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  User User[]
-}
-
 enum VaultDirection {
   Introduction //Giriş
   Exit //Çıkış
@@ -161,6 +149,18 @@ enum VaultDocumentType {
   General //Genel
   Accounting //Muhasebe
   Official //Resmi
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  roleName    String   @unique @db.VarChar(50)
+  description String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  User User[]
 }
 
 model StockCard {

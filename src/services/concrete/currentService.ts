@@ -1,123 +1,499 @@
-
 import prisma from "../../config/prisma";
-import { Branch, Company, Current, Prisma, StockCard, StockCardPriceList, Warehouse } from "@prisma/client";
-import { BaseRepository } from "../../repositories/baseRepository";
+import {
+    Current,
+    CurrentAddress,
+    CurrentBranch,
+    CurrentCategoryItem,
+    CurrentFinancial,
+    CurrentOfficials,
+    CurrentReportGroupItem,
+    CurrentRisk,
+    Prisma,
+    StockCardPriceList
+} from "@prisma/client";
 import logger from "../../utils/logger";
 
-export class CurrentService {
-    private currentRepository: BaseRepository<Current>;
+const currentRelations = {
+    priceList: true,
+    CurrentAddress: true,
+    CurrentBranch: true,
+    CurrentCategoryItem: true,
+    CurrentReportGroupItem: true,
+    CurrentFinancial: true,
+    CurrentRisk: true,
+    CurrentOfficials: true
+};
 
-    constructor() {
-        this.currentRepository = new BaseRepository<Current>(prisma.current);
-    }
-
-    async createCurrent(current: Current): Promise<Current> {
+export class currentService {
+    async createCurrent(data: {
+        current: Prisma.CurrentCreateInput;
+        priceListId: string;
+        currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
+        currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
+        currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
+        currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
+        currentReportGroupItem?: Prisma.CurrentReportGroupItemCreateNestedManyWithoutCurrentInput;
+        currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
+        currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
+                 
+    }): Promise<Current> {
         try {
-            const createdCurrent = await prisma.current.create({
+            const newCurrent = await prisma.current.create({
                 data: {
-                    currentCode: current.currentCode,
-                    currentName: current.currentName,
-                    currentType: current.currentType,
-                    institution: current.institution,
-                    identityNo: current.identityNo,
-                    taxNumber: current.taxNumber,
-                    taxOffice: current.taxOffice,
-                    title: current.title,
-                    name: current.name,
-                    surname: current.surname,
-                    birthOfDate: current.birthOfDate,
-                    webSite: current.webSite,
-                    kepAddress: current.kepAddress,
-                    mersisNo: current.mersisNo,
-                    sicilNo: current.sicilNo,
+                    ...data.current,
+                    priceList: data.priceListId ? { connect: { id: data.priceListId } } : {},
+                    CurrentAddress: data.currentAddress,
+                    CurrentBranch: data.currentBranch,
+                    CurrentCategoryItem: data.currentCategoryItem,
+                    CurrentFinancial: data.currentFinancial,
+                    CurrentReportGroupItem: data.currentReportGroupItem,
+                    CurrentRisk: data.currentRisk,
+                    CurrentOfficials: data.currentOfficials
 
-                    priceList: current.priceListId ? {
-                        connect: {
-                            id: current.priceListId
-                        }
-                    } : undefined,
-
-                } as Prisma.CurrentCreateInput,
+                },
+                include: currentRelations
             });
 
-            return createdCurrent;
-        } catch (error) {
-            logger.error("Error creating current", error);
-            throw error;
+            return newCurrent;
+        } catch (error) {logger.error("Error creating current:", error);
+
+            // Hata türünü kontrol edin ve uygun şekilde fırlatın
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                // Prisma hatası
+                throw new Error(`Prisma hatası: ${error.message}`);
+            } else if (error instanceof Error) {
+                // Genel hata
+                throw new Error(`Hata: ${error.message}`);
+            } else {
+                // Bilinmeyen hata
+                throw new Error("Bilinmeyen bir hata oluştu");
+            }
         }
     }
 
-    async updateCurrent(id: string, current: Partial<Current>): Promise<Current> {
+    async updateCurrent(id: string, data: {
+        current: Prisma.CurrentUpdateInput;
+        priceListId: string;
+        currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
+        currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
+        currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
+        currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
+        currentReportGroupItem?: Prisma.CurrentReportGroupItemUpdateManyWithoutCurrentNestedInput;
+        currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
+        currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
+        
+    }): Promise<Current> {
         try {
-            return await prisma.current.update({
-                where: {id},
+            const updatedCurrent = await prisma.current.update({
+                where: { id },
                 data: {
-                    currentCode: current.currentCode,
-                    currentName: current.currentName,
-                    currentType: current.currentType,
-                    institution: current.institution,
-                    identityNo: current.identityNo,
-                    taxNumber: current.taxNumber,
-                    taxOffice: current.taxOffice,
-                    title: current.title,
-                    name: current.name,
-                    surname: current.surname,
-                    birthOfDate: current.birthOfDate,
-                    webSite: current.webSite,
-                    kepAddress: current.kepAddress,
-                    mersisNo: current.mersisNo,
-                    sicilNo: current.sicilNo,
-                    
-                    priceList: current.priceListId ? {
-                        connect: {
-                            id: current.priceListId
-                        }
-                    } : {}
+                    ...data.current,
+                    priceList: data.priceListId ? { connect: { id: data.priceListId } } : {},
+                    CurrentAddress: data.currentAddress,
+                    CurrentBranch: data.currentBranch,
+                    CurrentCategoryItem: data.currentCategoryItem,
+                    CurrentFinancial: data.currentFinancial,
+                    CurrentReportGroupItem: data.currentReportGroupItem,
+                    CurrentRisk: data.currentRisk,
+                    CurrentOfficials: data.currentOfficials
 
-                } as Prisma.CurrentUpdateInput
-                });
+                },
+                include: currentRelations
+            });
+
+            return updatedCurrent;
         } catch (error) {
-            logger.error(`Error updating current with id ${id}`, error);
-            throw error;
+            logger.error("Error updating current:", error);
+            throw new Error("Could not update current");
         }
     }
 
-    async deleteCurrent(id: string): Promise<boolean> {
+    async deleteCurrent(id: string): Promise<{ success: boolean; message: string }> {
         try {
-            return await this.currentRepository.delete(id);
+            await prisma.$transaction(async (prisma) => {
+                await prisma.current.delete({ where: {id} });
+                await prisma.currentAddress.deleteMany({where: {currentCode: id}});
+                await prisma.currentBranch.deleteMany({where: {currentCode: id}});
+                await prisma.currentCategoryItem.deleteMany({where: {currentCode: id}});
+                await prisma.currentFinancial.deleteMany({where: {currentCode: id}});
+                await prisma.currentReportGroupItem.deleteMany({where: {currentCode: id}});
+                await prisma.currentRisk.deleteMany({where: {currentCode: id}});
+                await prisma.currentOfficials.deleteMany({where: {currentCode: id}});
+                
+            });
+
+            return { success: true, message: "Current successfully deleted" };
         } catch (error) {
-            logger.error(`Error deleting current with id ${id}`, error);
-            throw error;
+            logger.error("Error deleting StockCard:", error);
+            return { success: false, message: "Could not delete StockCard" };
         }
     }
 
     async getCurrentById(id: string): Promise<Current | null> {
         try {
-            return await this.currentRepository.findById(id);
+            return await prisma.current.findUnique({
+                where: { id },
+                include: currentRelations
+            });
         } catch (error) {
-            logger.error(`Error fetching current with id ${id}`, error);
-            throw error;
+            logger.error("Error finding StockCard by ID:", error);
+            throw new Error("Could not find StockCard by ID");
         }
     }
 
     async getAllCurrents(): Promise<Current[]> {
         try {
-            return await this.currentRepository.findAll();
+            return await prisma.current.findMany({
+                include: currentRelations
+            });
         } catch (error) {
-            logger.error("Error fetching all currents", error);
-            throw error;
+            logger.error("Error finding StockCard by ID:", error);
+            throw new Error("Could not find StockCard by ID");
         }
     }
 
-    async getCurrentsWithFilters(filter: any): Promise<Current[] | null> {
+    async getCurrentsWithFilters(filters: Partial<Prisma.CurrentWhereInput>): Promise<Current[] | null> {
+      try {
+          return await prisma.current.findMany({
+              where: filters,
+              include: currentRelations
+          });
+      } catch (error) {
+          logger.error("Error finding StockCards with filters:", error);
+          throw new Error("Could not find StockCards with filters");
+      }
+  }
+
+    async createCurrentWithRelations(data: {
+        current: Current;
+        priceList: StockCardPriceList[];
+        currentAdress?: CurrentAddress[];
+        currentBranch?: CurrentBranch[];
+        currentCategoryItem?: CurrentCategoryItem[];
+        currentReportGroupItem?: CurrentReportGroupItem[];
+        currentRisk?: CurrentRisk[];
+        currentFinancial?: CurrentFinancial[];
+        currentOfficials?: CurrentOfficials[];
+
+    }) {
         try {
-            return await this.currentRepository.findWithFilters(filter);
+            const result = await prisma.$transaction(async (prisma) => {
+
+                const current = await prisma.current.create({
+                    data: {
+                        ...data.current,
+
+                        priceList: data.current.priceListId ? {
+                            connect: { id: data.current.priceListId }
+                        } : {}
+
+                    } as Prisma.CurrentCreateInput
+                });
+
+                const currentCode = current.currentCode;
+
+                if (data.currentAdress) {
+                    await Promise.all(
+                        data.currentAdress.map((currentAdress) =>
+                            prisma.currentAddress.create({
+                                data: {
+                                    addressName: currentAdress.addressName,
+                                    addressType: currentAdress.addressType,
+                                    address: currentAdress.address,
+                                    countryCode: currentAdress.countryCode,
+                                    city: currentAdress.city,
+                                    district: currentAdress.district,
+                                    postalCode: currentAdress.postalCode,
+                                    phone: currentAdress.phone,
+                                    phone2: currentAdress.phone2,
+                                    email: currentAdress.email,
+                                    email2: currentAdress.email2,
+                                    current: { connect: { currentCode: currentAdress.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentBranch) {
+                    await Promise.all(
+                        data.currentBranch.map((currentBranch) =>
+                            prisma.currentBranch.create({
+                                data: {
+                                    branch: { connect: { branchCode: currentBranch.branchCode } },
+                                    current: { connect: { currentCode: currentBranch.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentFinancial) {
+                    await Promise.all(
+                        data.currentFinancial.map((currentFinancial) =>
+                            prisma.currentFinancial.create({
+                                data: {
+                                    bankName: currentFinancial.bankName,
+                                    bankBranch: currentFinancial.bankBranch,
+                                    bankBranchCode: currentFinancial.bankBranchCode,
+                                    iban: currentFinancial.iban,
+                                    accountNo: currentFinancial.accountNo,
+                                    current: { connect: { currentCode: currentFinancial.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentRisk) {
+                    await Promise.all(
+                        data.currentRisk.map((currentRisk) =>
+                            prisma.currentRisk.create({
+                                data: {
+                                    currency: currentRisk.currency,
+                                    teminatYerelTutar: currentRisk.teminatYerelTutar,
+                                    acikHesapYerelLimit: currentRisk.acikHesapYerelLimit,
+                                    hesapKesimGunu: currentRisk.hesapKesimGunu,
+                                    vadeGun: currentRisk.vadeGun,
+                                    gecikmeLimitGunu: currentRisk.gecikmeLimitGunu,
+                                    varsayilanAlisIskontosu: currentRisk.varsayilanAlisIskontosu,
+                                    varsayilanSatisIskontosu: currentRisk.varsayilanSatisIskontosu,
+                                    ekstreGonder: currentRisk.ekstreGonder,
+                                    limitKontrol: currentRisk.limitKontrol,
+                                    acikHesap: currentRisk.acikHesap,
+                                    posKullanim: currentRisk.posKullanim,
+                                    current: { connect: { currentCode: currentRisk.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentOfficials) {
+                    await Promise.all(
+                        data.currentOfficials.map((currentOfficials) =>
+                            prisma.currentOfficials.create({
+                                data: {
+                                    title: currentOfficials.title,
+                                    name: currentOfficials.name,
+                                    surname: currentOfficials.surname,
+                                    phone: currentOfficials.phone,
+                                    email: currentOfficials.email,
+                                    note: currentOfficials.note,
+                                    current: { connect: { currentCode: currentOfficials.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentCategoryItem) {
+                    await Promise.all(
+                        data.currentCategoryItem.map((currentCategoryItem) =>
+                            prisma.currentCategoryItem.create({
+                                data: {
+                                    category: { connect: { id: currentCategoryItem.categoryId } },
+                                    current: { connect: { currentCode: currentCategoryItem.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentReportGroupItem) {
+                    await Promise.all(
+                        data.currentReportGroupItem.map((currentReportGroupItem) =>
+                            prisma.currentReportGroupItem.create({
+                                data: {
+                                    group: { connect: { id: currentReportGroupItem.groupId } },
+                                    current: { connect: { currentCode: currentReportGroupItem.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+
+            });
         } catch (error) {
-            logger.error("Error fetching currents with filters", error);
-            throw error;
+            logger.error("Error creating StockCard with relations:", error);
+            throw new Error("Could not create StockCard with relations");
         }
     }
 
+    async updateCurrentWithRelations(id: string, data: {
+        current: Current;
+        priceList?: StockCardPriceList[];
+        currentAdress?: CurrentAddress[];
+        currentBranch?: CurrentBranch[];
+        currentCategoryItem?: CurrentCategoryItem[];
+        currentReportGroupItem?: CurrentReportGroupItem[];
+        currentRisk?: CurrentRisk[];
+        currentFinancial?: CurrentFinancial[];
+        currentOfficials?: CurrentOfficials[];
+    }){
+        try {
+            const result = await prisma.$transaction(async (prisma) => {
+                const current = await prisma.current.update({
+                    where: { id },
+                    data: {
+                        ...data.current,
+                        
+                        priceList: data.current.priceListId ? {
+                            connect: { id: data.current.priceListId }
+                        } : {}
+                    } as Prisma.CurrentUpdateInput
+                });
+
+                if (data.currentAdress) {
+                    await Promise.all(
+                        data.currentAdress.map((currentAdress) =>
+                            prisma.currentAddress.update({
+                                where: { id: currentAdress.id },
+                                data: currentAdress
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentBranch) {
+                    await Promise.all(
+                        data.currentBranch.map((currentBranch) =>
+                            prisma.currentBranch.update({
+                                where: { id: currentBranch.id },
+                                data: currentBranch
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentFinancial) {
+                    await Promise.all(
+                        data.currentFinancial.map((currentFinancial) =>
+                            prisma.currentFinancial.update({
+                                where: { id: currentFinancial.id },
+                                data: currentFinancial
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentRisk) {
+                    await Promise.all(
+                        data.currentRisk.map((currentRisk) =>
+                            prisma.currentRisk.update({
+                                where: { id: currentRisk.id },
+                                data: currentRisk
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentOfficials) {
+                    await Promise.all(
+                        data.currentOfficials.map((currentOfficials) =>
+                            prisma.currentOfficials.update({
+                                where: { id: currentOfficials.id },
+                                data: currentOfficials
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentCategoryItem) {
+                    await Promise.all(
+                        data.currentCategoryItem.map((currentCategoryItem) =>
+                            prisma.currentCategoryItem.update({
+                                where: { id: currentCategoryItem.id },
+                                data: currentCategoryItem
+                            })
+                        )
+                    );
+                }
+
+                if (data.currentReportGroupItem) {
+                    await Promise.all(
+                        data.currentReportGroupItem.map((currentReportGroupItem) =>
+                            prisma.currentReportGroupItem.update({
+                                where: { id: currentReportGroupItem.id },
+                                data: currentReportGroupItem
+                            })
+                        )
+                    );
+                }
+                
+            });
+        } catch (error) {
+            logger.error("Error creating StockCard with relations:", error);
+            throw new Error("Could not create StockCard with relations");
+        }
+    }
+
+    async deleteCurrentWithRelations(id: string) {
+        try {
+            return await prisma.$transaction(async (prisma) => {
+              
+                await prisma.currentAddress.deleteMany({
+                    where: { current: { id } }
+                });
+
+                await prisma.currentBranch.deleteMany({
+                    where: { current: { id } }
+                });
+
+                await prisma.currentCategoryItem.deleteMany({
+                    where: { current: { id } }
+                });
+                
+                await prisma.currentReportGroupItem.deleteMany({
+                    where: { current: { id } }
+                });
+                
+                await prisma.currentFinancial.deleteMany({
+                    where: { current: { id } }
+                });
+                
+                await prisma.currentOfficials.deleteMany({
+                    where: { current: { id } }
+                });
+                
+                await prisma.currentRisk.deleteMany({
+                    where: { current: { id } }
+                });
+                
+                await prisma.current.deleteMany({
+                    where: { id }
+                });
+
+            });
+        } catch (error) {
+            logger.error("Error deleting Current with relations:", error);
+            throw new Error("Could not delete Current with relations");
+        }
+    }
+
+    async getCurrentWithRelationsById(id: string): Promise<Current | null>{
+        try {
+            return await prisma.current.findUnique({
+                where: { id },
+                include: currentRelations
+            });
+        } catch (error) {
+            logger.error("Error finding StockCard with relations by ID:", error);
+            throw new Error("Could not find StockCard with relations by ID");
+        }
+    }
+
+    async getAllCurrentWithRelations(): Promise<Current[]>{
+        try {
+            return await prisma.current.findMany({
+                include: currentRelations
+            });
+        } catch (error) {
+            logger.error("Error finding all StockCards with relations:", error);
+            throw new Error("Could not find all StockCards with relations");
+        }
+    }
 }
 
-export default CurrentService;
+export default currentService;

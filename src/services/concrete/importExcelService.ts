@@ -1,13 +1,15 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { z } from 'zod';
+import currentService from './currentService';
 
 const prisma = new PrismaClient();
+
 
 const StockCardSchema = z.object({
     productCode: z.string(),
     productName: z.string(),
-    invoiceName: z.string().nullable().optional(),
+    unit: z.string(),
     shortDescription: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
     manufacturerCode: z.string().nullable().optional(),
@@ -24,38 +26,66 @@ const StockCardSchema = z.object({
 }).strict();
 
 
+const CurrentType = z.enum(['AliciSatici', 'Alici', 'Satici', 'Personel', 'SanalPazar', 'Kurum', 'AnaGrupSirketi',
+    'Ithalat', 'Ihracat', 'IthalatIhracat', 'Musteri', 'Tedarikci', 'Diger']);
+
+const InstitutionType = z.enum(['Sirket', 'Sahis']);
+const AddressType = z.enum(['Fatura', 'Sevk', 'Teslimat']);
+
 const CurrentSchema = z.object({
     currentCode: z.string(),
     currentName: z.string(),
-    currentType: z.string(),
-    institution: z.string(),
-    identityNo: z.string().nullable().optional(),
-    taxNumber: z.string().nullable().optional(),
-    taxOffice: z.string().nullable().optional(),
+    currentType: CurrentType,
+    institution: InstitutionType,
+    identityNo: z.string().nullable(),
+    taxNumber: z.string().nullable(),
+    taxOffice: z.string().nullable(),
+    title: z.string().nullable(),
+    name: z.string().nullable(),
+    surname: z.string().nullable(),
+    webSite: z.string().nullable(),
     birthOfDate: z.preprocess((arg) => {
         if (typeof arg === "number") {
-            // Excel tarihlerinde, 1 Ocak 1900'den itibaren gün sayısı olarak gösterildiği için bu dönüşümü yapıyoruz
             return new Date((arg - 25569) * 86400 * 1000);
         }
         return arg;
-    }, z.date()),
-    KepAdress: z.string().nullable().optional(),
-    MersisNo: z.preprocess((arg) => String(arg), z.string()),
-    accounts: z.string().nullable().optional(),
-    works: z.string().nullable().optional(),
-    plasiyer: z.string().nullable().optional(),
-    address: z.string().nullable().optional(),
-    countryCode: z.preprocess((arg) => String(arg), z.string().nullable().optional()),
-    city: z.string().nullable().optional(),
-    district: z.string().nullable().optional(),
-    phone: z.preprocess((arg) => String(arg), z.string().nullable().optional()),
-    email: z.string().nullable().optional(),
-    website: z.string().nullable().optional(),
-    companyCode: z.string(),
+    }, z.date().nullable()),
+    kepAddress: z.string().nullable(),
+    mersisNo: z.string().nullable(),
+    sicilNo: z.string().nullable(),
+    priceListId: z.string().optional(),
+    note: z.string(),
     branchCode: z.string(),
-    warehouseCode: z.string(),
-    priceListId: z.string()
-}).strict();
+    addressName: z.string(),
+    addressType: AddressType,
+    address: z.string(),
+    countryCode: z.string(),
+    city: z.string(),
+    district: z.string(), postalCode: z.union([z.string(), z.number()]).transform((val) => String(val)),
+    phone: z.union([z.string(), z.number()]).transform((val) => String(val)),
+    phone2: z.union([z.string(), z.number()]).transform((val) => String(val)),
+    email: z.string().email(),
+    email2: z.string().email(),
+    bankName: z.string(),
+    bankBranch: z.string(),
+    bankBranchCode: z.string(),
+    iban: z.string(),
+    accountNo: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    currency: z.string(),
+    teminatYerelTutar: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    acikHesapYerelLimit: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    hesapKesimGunu: z.number().nullable().optional(),
+    vadeGun: z.number().nullable().optional(),
+    gecikmeLimitGunu: z.number().nullable().optional(),
+    varsayilanAlisIskontosu: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    varsayilanSatisIskontosu: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    ekstreGonder: z.boolean().nullable().optional(),
+    limitKontrol: z.boolean().nullable().optional(),
+    acikHesap: z.boolean().nullable().optional(),
+    posKullanim: z.boolean().nullable().optional(),
+    categoryId: z.string().nullable().optional(),
+    groupId: z.string().nullable().optional(),
+});
 
 // Gerekli enumları tanımlayın
 const DocumentType = z.enum(['Invoice', 'Order', 'Waybill', 'Other']); // enum değerleri örnektir, doğru değerleri ekleyin
@@ -84,27 +114,27 @@ const StockMovementSchema = z.object({
 
 const CurrentMovementType = z.enum(['Borc', 'Alacak']);
 const CurrentMovementDocumentType = z.enum(['Devir', 'Fatura', 'IadeFatura', 'Kasa', 'MusteriSeneti',
-     'BorcSeneti', 'MusteriCeki', 'BorcCeki', 'KarsiliksizCek', 'Muhtelif']);
+    'BorcSeneti', 'MusteriCeki', 'BorcCeki', 'KarsiliksizCek', 'Muhtelif']);
 
-     const CurrentMovementSchema = z.object({
-        currentCode: z.string().nullable().optional(),
-        dueDate: z.preprocess((arg) => {
-            if (typeof arg === "number") {
-                return new Date((arg - 25569) * 86400 * 1000);
-            }
-            return arg;
-        }, z.date().nullable().optional()),
-        description: z.string().max(250).nullable().optional(),
-        debtAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
-        creditAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
-        balanceAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
-        priceListId: z.string().nullable().optional(),
-        movementType: CurrentMovementType.optional(),
-        documentType: CurrentMovementDocumentType.nullable().optional(),
-        documentNo: z.string().nullable().optional(),
-        companyCode: z.string(),
-        branchCode: z.string()
-    }).strict();
+const CurrentMovementSchema = z.object({
+    currentCode: z.string().nullable().optional(),
+    dueDate: z.preprocess((arg) => {
+        if (typeof arg === "number") {
+            return new Date((arg - 25569) * 86400 * 1000);
+        }
+        return arg;
+    }, z.date().nullable().optional()),
+    description: z.string().max(250).nullable().optional(),
+    debtAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
+    creditAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
+    balanceAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
+    priceListId: z.string().nullable().optional(),
+    movementType: CurrentMovementType.optional(),
+    documentType: CurrentMovementDocumentType.nullable().optional(),
+    documentNo: z.string().nullable().optional(),
+    companyCode: z.string(),
+    branchCode: z.string()
+}).strict();
 
 // `undefined` olan alanları `null` yapacak helper fonksiyon
 function replaceUndefinedWithNull(data: Record<string, any>) {
@@ -127,6 +157,12 @@ export const importExcelService = async (file: File) => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const data = xlsx.utils.sheet_to_json(sheet);
 
+
+        const stockCardsData: any[] = [];
+        const currentsData: any[] = [];
+        const stockMovementsData: any[] = [];
+        const currentMovementsData: any[] = [];
+
         const firstRow = data[0];
         let isStockCard = StockCardSchema.safeParse(firstRow).success;
         let isCurrent = CurrentSchema.safeParse(firstRow).success;
@@ -142,12 +178,9 @@ export const importExcelService = async (file: File) => {
             throw new Error("Dosya formatı geçerli değil. Lütfen StockCard, Current, StockMovement veya CurrentMovement formatında bir dosya yükleyin.");
         }
 
-        const stockCardsData: any[] = [];
-        const currentsData: any[] = [];
-        const stockMovementsData: any[] = [];
-        const currentMovementsData: any[] = [];
-
         for (const row of data as Record<string, any>[]) {
+
+
             if (isStockCard) {
                 const stockCardValidation = StockCardSchema.safeParse(row);
                 if (stockCardValidation.success) {
@@ -159,12 +192,15 @@ export const importExcelService = async (file: File) => {
                     const rowData = replaceUndefinedWithNull(currentValidation.data);
                     currentsData.push(rowData);
 
-                    Object.entries(rowData).forEach(([key, value]) => {
-                        console.log(`Alan: ${key}, Değer: ${value}, Uzunluk: ${typeof value === "string" ? value.length : "N/A"}`);
-                    });
+                    /*
+                        Object.entries(rowData).forEach(([key, value]) => {
+                            console.log(`Alan: ${key}, Değer: ${value}, Uzunluk: ${typeof value === "string" ? value.length : "N/A"}`);
+                        });*/
                 } else {
                     console.log("Eklenmeyen satır:", row);
-                    console.log("Hata nedeni:", currentValidation.error.errors);
+                    console.log("Hata nedeni:", currentValidation.error.issues);
+                    console.log("Doğrulama hataları:", currentValidation.error.format());
+                    throw new Error("Veri doğrulaması başarısız oldu.");
                 }
             } else if (isStockMovement) {
                 const stockMovementValidation = StockMovementSchema.safeParse(row);
@@ -187,30 +223,127 @@ export const importExcelService = async (file: File) => {
             }
         }
 
-        // Satır satır ekleme veya güncelleme
-        if (currentsData.length > 0) {
-            for (const row of currentsData) {
-                try {
-                    await prisma.current.upsert({
-                        where: { currentCode: row.currentCode }, // `currentCode` eşleşmesine göre kontrol
-                        update: {
-                            ...row,
-                            countryCode: row.countryCode ?? null,
-                            phone: row.phone ?? null
-                        },
-                        create: {
-                            ...row,
-                            countryCode: row.countryCode ?? null,
-                            phone: row.phone ?? null
-                        }
-                    });
-                    console.log("Kayıt başarıyla eklendi veya güncellendi:", row);
-                } catch (error) {
-                    console.log("Hata veren kayıt:", row);
-                    console.error("Hata nedeni:", error);
+        const currentsService = new currentService();
+
+        // Verileri işliyoruz
+        for (const currentData of currentsData) {
+            // currentData'dan priceListId'yi ayırıyoruz
+            const { priceListId, ...currentDataWithoutPriceListId } = currentData;
+
+            // Current ana verisi
+            const current: Prisma.CurrentCreateInput = {
+                priceList: {
+                    connect: { id: currentData.priceListId },
+                },
+                currentCode: currentData.currentCode,
+                currentName: currentData.currentName,
+                currentType: currentData.currentType,
+                institution: currentData.institution,
+                identityNo: currentData.identityNo,
+                taxNumber: currentData.taxNumber,
+                taxOffice: currentData.taxOffice,
+                title: currentData.title,
+                name: currentData.name,
+                surname: currentData.surname,
+                webSite: currentData.webSite,
+                birthOfDate: currentData.birthOfDate,
+                kepAddress: currentData.kepAddress,
+                mersisNo: currentData.mersisNo,
+                sicilNo: currentData.sicilNo,
+
+            };
+
+            // İlişkili veriler
+            const currentAddress = currentData.addressName ? {
+                create: [{
+                    addressName: currentData.addressName,
+                    addressType: currentData.addressType,
+                    address: currentData.address,
+                    countryCode: currentData.countryCode,
+                    city: currentData.city,
+                    district: currentData.district,
+                    postalCode: currentData.postalCode,
+                    phone: currentData.phone,
+                    phone2: currentData.phone2,
+                    email: currentData.email,
+                    email2: currentData.email2,
+                }]
+            } : undefined;
+
+            const currentBranch = currentData.branchCode ? {
+                create: [{
+                    branchCode: currentData.branchCode,
+                }]
+            } : undefined;
+
+            const currentFinancial = currentData.bankName ? {
+                create: [{
+                    bankName: currentData.bankName,
+                    bankBranch: currentData.bankBranch,
+                    bankBranchCode: currentData.bankBranchCode,
+                    iban: currentData.iban,
+                    accountNo: currentData.accountNo,
+                }]
+            } : undefined;
+
+            const currentRisk = currentData.currency ? {
+                create: {
+                    currency: currentData.currency,
+                    teminatYerelTutar: currentData.teminatYerelTutar,
+                    acikHesapYerelLimit: currentData.acikHesapYerelLimit,
+                    hesapKesimGunu: currentData.hesapKesimGunu,
+                    vadeGun: currentData.vadeGun,
+                    gecikmeLimitGunu: currentData.gecikmeLimitGunu,
+                    varsayilanAlisIskontosu: currentData.varsayilanAlisIskontosu,
+                    varsayilanSatisIskontosu: currentData.varsayilanSatisIskontosu,
+                    ekstreGonder: currentData.ekstreGonder,
+                    limitKontrol: currentData.limitKontrol,
+                    acikHesap: currentData.acikHesap,
+                    posKullanim: currentData.posKullanim,
                 }
-            }
+            } : undefined;
+
+            const currentOfficials = currentData.title ? {
+                create: [{
+                    title: currentData.title,
+                    name: currentData.name,
+                    surname: currentData.surname,
+                    phone: currentData.phone,
+                    email: currentData.email,
+                    note: currentData.note,
+                }]
+            } : undefined;
+
+            const currentCategoryItem = currentData.categoryId ? {
+                create: [{
+                    category: {
+                        connect: { id: currentData.categoryId }
+                    }
+                }]
+            } : undefined;
+
+            const currentReportGroupItem = currentData.groupId ? {
+                create: [{
+                    group: {
+                        connect: { id: currentData.groupId }
+                    }
+                }]
+            } : undefined;
+
+            // createCurrent fonksiyonunu kullanarak verileri ekliyoruz
+            await currentsService.createCurrent({
+                current: current,
+                priceListId: priceListId,
+                currentAddress: currentAddress,
+                currentBranch: currentBranch,
+                currentFinancial: currentFinancial,
+                currentRisk: currentRisk,
+                currentOfficials: currentOfficials,
+                currentCategoryItem: currentCategoryItem,
+                currentReportGroupItem: currentReportGroupItem,
+            });
         }
+
 
         if (stockCardsData.length > 0) {
             await prisma.stockCard.createMany({ data: stockCardsData, skipDuplicates: true });

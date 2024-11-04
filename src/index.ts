@@ -18,6 +18,7 @@ import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
 import CategoryRoutes from './api/routes/v1/categoryRoutes';
 import ReceiptRoutes from './api/routes/v1/receiptRoutes';
 import importRoutes from './api/routes/v1/importExcelRoutes';
+import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
 import { CustomError } from './utils/CustomError';
 import logger from './utils/logger';
@@ -58,7 +59,7 @@ const app = new Elysia()
         { name: "Receipts", description: "Receipt operations" }, // Receipt'lar için
         { name: "Imports", description: "Import operations" }, // Import'lar için
         { name: "Brands", description: "Brand operations" }, // Brand'ler için
-
+        { name: "Vaults", description: "Vaults operations" }, // Banks'lar için
       ]
     },
   }))
@@ -127,6 +128,7 @@ RoleRoutes(app);
 InvoiceRoutes(app);
 ReceiptRoutes(app);
 importRoutes(app);
+VaultRoutes(app);
 BrandRoutes(app);
 
 // Uygulama belirtilen portta dinlemeye başlıyor
