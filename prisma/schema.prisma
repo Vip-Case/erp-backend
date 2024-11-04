@@ -123,32 +123,32 @@ enum CurrentType {
 
 enum VaultDirection {
   Introduction //Giriş
-  Exit        //Çıkış
-  ReceivedVirement    //Alınan virman
+  Exit //Çıkış
+  ReceivedVirement //Alınan virman
 }
 
 enum VaultType {
-  DebtTransfer   //borç devri
-  ServiceChargeCollection     //hizmet masraf tahsilatı
-  CompanyCreditCardWithdrawals      //firma kredi kartından para çekme
-  BuyingForeignCurrency       //döviz alma
-  InputReceipt      //giriş fişi
-  BankWithdrawals     //bankadan para çekme
-  ReceivingValuableAssets     //değerli kıymet alma
-  ReceivableTransfer        //Alacak Devri
-  ServiceChargePayment      //Hizmet Masraf Ödemesi
-  CompanyCreditCardDeposit      //Firma Kredi Kartına Para Yatırma
-  CurrencyExchange      //Döviz Bozdurma
-  LoanPayment       //Kredi Ödemesi
-  ExitReceipt       //Çıkış Fişi
-  PaymentToBank     //Bankaya Ödeme
-  PreciousMetalExchange     //Değerli Kıymet Bozdurma
+  DebtTransfer //borç devri
+  ServiceChargeCollection //hizmet masraf tahsilatı
+  CompanyCreditCardWithdrawals //firma kredi kartından para çekme
+  BuyingForeignCurrency //döviz alma
+  InputReceipt //giriş fişi
+  BankWithdrawals //bankadan para çekme
+  ReceivingValuableAssets //değerli kıymet alma
+  ReceivableTransfer //Alacak Devri
+  ServiceChargePayment //Hizmet Masraf Ödemesi
+  CompanyCreditCardDeposit //Firma Kredi Kartına Para Yatırma
+  CurrencyExchange //Döviz Bozdurma
+  LoanPayment //Kredi Ödemesi
+  ExitReceipt //Çıkış Fişi
+  PaymentToBank //Bankaya Ödeme
+  PreciousMetalExchange //Değerli Kıymet Bozdurma
 }
 
 enum VaultDocumentType {
-  General     //Genel
-  Accounting   //Muhasebe
-  Official      //Resmi
+  General //Genel
+  Accounting //Muhasebe
+  Official //Resmi
 }
 
 model Role {
@@ -180,7 +180,7 @@ model StockCard {
   adetBoleni         Decimal?    @db.Decimal(15, 4)
   siraNo             String?     @db.VarChar(50)
   raf                String?     @db.VarChar(50)
-  karMarji           Decimal?    @db.Decimal(5, 2)
+  karMarji           Decimal?    @db.Decimal(15, 4)
   riskQuantities     Decimal?    @db.Decimal(15, 4)
   maliyet            Decimal?    @db.Decimal(15, 4)
   maliyetDoviz       String?     @db.VarChar(3)
@@ -212,21 +212,21 @@ model StockCard {
 }
 
 model StockCardEFatura {
-  id                   String   @id @default(cuid())
-  productCode          String   @unique @db.VarChar(100)
-  productName          String   @db.VarChar(150)
-  stockCardId          String
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  createdBy            String?
-  updatedBy            String?
+  id          String   @id @default(cuid())
+  productCode String   @unique @db.VarChar(100)
+  productName String   @db.VarChar(150)
+  stockCardId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
-  stockCard          StockCard          @relation(fields: [stockCardId], references: [id])
+  stockCard StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model StockCardManufacturer {
   id          String   @id @default(cuid())
-  productCode String   @unique @db.VarChar(100)
+  productCode String   @db.VarChar(100)
   productName String   @db.VarChar(150)
   barcode     String   @unique @db.VarChar(100)
   brandId     String   @db.VarChar(100)
@@ -271,13 +271,13 @@ model StockCardPriceList {
 }
 
 model StockCardPriceListItems {
-  id                 String               @id @default(cuid())
-  priceListId        String
-  stockCardId        String
-  price              Decimal              @db.Decimal(15, 4)
+  id          String  @id @default(cuid())
+  priceListId String
+  stockCardId String
+  price       Decimal @db.Decimal(15, 4)
 
-  stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  stockCard StockCard          @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  priceList StockCardPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
 
   StockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
@@ -300,7 +300,7 @@ model StockCardMarketNames {
 
 model StockCardCategory {
   id               String                  @id @default(cuid())
-  categoryName     String                  @db.VarChar(100)
+  categoryName     String                  @unique @db.VarChar(100)
   categoryCode     String                  @unique @db.VarChar(100)
   parentCategoryId String?
   parentCategory   StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
@@ -325,9 +325,9 @@ model StockCardTaxRate {
 }
 
 model StockCardAttribute {
-  id            String   @id @default(cuid())
-  attributeName String   @db.VarChar(100)
-  value        String
+  id            String @id @default(cuid())
+  attributeName String @db.VarChar(100)
+  value         String
 
   StockCardAttributeItems StockCardAttributeItems[]
 }
@@ -496,7 +496,7 @@ model BranchWarehouse {
 }
 
 model StockCardWarehouse {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   stockCardId String
   warehouseId String
   quantity    Decimal @db.Decimal(15, 4)
@@ -572,22 +572,21 @@ model Current {
 
   priceList StockCardPriceList @relation(fields: [priceListId], references: [id])
 
-  StockMovement          StockMovement[]
-  CurrentMovement        CurrentMovement[]
-  Invoice                Invoice[]
-  CurrentCategoryItem    CurrentCategoryItem[]//
-  CurrentReportGroupItem CurrentReportGroupItem[]//
-  StockCardManufacturer  StockCardManufacturer[]
-  CurrentAddress         CurrentAddress[]//
-  CurrentFinancial       CurrentFinancial[]//
-  CurrentRisk            CurrentRisk[]//
-  CurrentOfficials       CurrentOfficials[]//
-  CurrentBranch          CurrentBranch[]  //
+  StockMovement         StockMovement[]
+  CurrentMovement       CurrentMovement[]
+  Invoice               Invoice[]
+  CurrentCategoryItem   CurrentCategoryItem[]
+  StockCardManufacturer StockCardManufacturer[]
+  CurrentAddress        CurrentAddress[]
+  CurrentFinancial      CurrentFinancial[]
+  CurrentRisk           CurrentRisk[]
+  CurrentOfficials      CurrentOfficials[]
+  CurrentBranch         CurrentBranch[]
 }
 
 model CurrentBranch {
   id          String   @id @default(cuid())
-  currentCode String   @unique @db.VarChar(50)
+  currentCode String   @db.VarChar(50)
   branchCode  String   @db.VarChar(50)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -600,7 +599,7 @@ model CurrentBranch {
 
 model CurrentAddress {
   id          String      @id @default(cuid())
-  currentCode String      @unique @db.VarChar(50)
+  currentCode String      @db.VarChar(50)
   addressName String      @db.VarChar(50)
   addressType AddressType @default(Fatura)
   address     String      @db.VarChar(250)
@@ -622,7 +621,7 @@ model CurrentAddress {
 
 model CurrentFinancial {
   id             String   @id @default(cuid())
-  currentCode    String   @unique @db.VarChar(50)
+  currentCode    String   @db.VarChar(50)
   bankName       String   @db.VarChar(50)
   bankBranch     String   @db.VarChar(50)
   bankBranchCode String   @db.VarChar(50)
@@ -661,7 +660,7 @@ model CurrentRisk {
 
 model CurrentOfficials {
   id          String   @id @default(cuid())
-  currentCode String   @unique @db.VarChar(50)
+  currentCode String   @db.VarChar(50)
   title       String   @db.VarChar(100)
   name        String   @db.VarChar(50)
   surname     String   @db.VarChar(50)
@@ -713,34 +712,11 @@ model CurrentCategory {
 }
 
 model CurrentCategoryItem {
-  id         String          @id @default(cuid())
-  currentCode String   @unique @db.VarChar(50)
-  categoryId String
-  category   CurrentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  current    Current         @relation(fields: [currentCode], references: [currentCode], onDelete: Cascade)
-}
-
-model CurrentReportGroup {
-  id            String               @id @default(cuid())
-  groupCode     String               @unique @db.VarChar(100)
-  description   String               @db.VarChar(100)
-  parentGroupId String?
-  parentGroup   CurrentReportGroup?  @relation("GroupHierarchy", fields: [parentGroupId], references: [id])
-  childGroups   CurrentReportGroup[] @relation("GroupHierarchy")
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  createdBy     String?
-  updatedBy     String?
-
-  CurrentReportGroupItem CurrentReportGroupItem[]
-}
-
-model CurrentReportGroupItem {
-  id        String             @id @default(cuid())
-  currentCode String           @unique @db.VarChar(50)
-  groupId   String
-  group     CurrentReportGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  current   Current            @relation(fields: [currentCode], references: [currentCode], onDelete: Cascade)
+  id          String          @id @default(cuid())
+  currentCode String          @db.VarChar(50)
+  categoryId  String
+  category    CurrentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  current     Current         @relation(fields: [currentCode], references: [currentCode], onDelete: Cascade)
 }
 
 model User {
@@ -831,33 +807,30 @@ model InvoiceDetail {
 }
 
 model Vault {
-  id          String   @id @default(cuid())
-  vaultName     String   @db.VarChar(50)
-  branchCode    String
-  balance       Decimal  @db.Decimal(15, 2)
-  currency          Decimal  @db.Decimal(10, 6)
+  id         String  @id @default(cuid())
+  vaultName  String  @db.VarChar(50)
+  branchCode String
+  balance    Decimal @db.Decimal(15, 2)
+  currency   Decimal @db.Decimal(10, 6)
 
-
-  branch             Branch              @relation(fields: [branchCode], references: [branchCode])
+  branch Branch @relation(fields: [branchCode], references: [branchCode])
 
   VaultMovement VaultMovement[]
 }
 
 model VaultMovement {
-  id          String   @id @default(cuid())
-  vaultId     String  
-  invoiceId   String
-  receiptId   String
-  description   String 
-  entering      Decimal    @db.Decimal(15, 2)
-  emerging      Decimal    @db.Decimal(15, 2)
-  vaultDirection  VaultDirection
-  vaultType       VaultType
-  vaultDocumentType     VaultDocumentType 
+  id                String            @id @default(cuid())
+  vaultId           String
+  invoiceId         String
+  receiptId         String
+  description       String
+  entering          Decimal           @db.Decimal(15, 2)
+  emerging          Decimal           @db.Decimal(15, 2)
+  vaultDirection    VaultDirection
+  vaultType         VaultType
+  vaultDocumentType VaultDocumentType
 
-
-  Vault          Vault           @relation(fields: [vaultId], references: [id])
-  Invoice   Invoice   @relation(fields: [invoiceId], references: [id])
-  Receipt   Receipt   @relation(fields: [receiptId], references: [id])
-
+  Vault   Vault   @relation(fields: [vaultId], references: [id])
+  Invoice Invoice @relation(fields: [invoiceId], references: [id])
+  Receipt Receipt @relation(fields: [receiptId], references: [id])
 }
