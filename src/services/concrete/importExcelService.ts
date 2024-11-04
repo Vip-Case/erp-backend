@@ -244,6 +244,7 @@ export const importExcelService = async (file: File) => {
 
         const stockCardsService = new StockCardService();
 
+        // Verileri işliyoruz
         for (const stockCardData of stockCardsData) {
             await stockCardsService.createStockCardsWithRelations({
                 stockCard: {
