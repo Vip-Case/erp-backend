@@ -182,16 +182,16 @@ model StockCard {
 }
 
 model StockCardEFatura {
-  id                   String   @id @default(cuid())
-  productCode          String   @unique @db.VarChar(100)
-  productName          String   @db.VarChar(150)
-  stockCardId          String
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  createdBy            String?
-  updatedBy            String?
+  id          String   @id @default(cuid())
+  productCode String   @unique @db.VarChar(100)
+  productName String   @db.VarChar(150)
+  stockCardId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
-  stockCard          StockCard          @relation(fields: [stockCardId], references: [id])
+  stockCard StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model StockCardManufacturer {
@@ -241,13 +241,13 @@ model StockCardPriceList {
 }
 
 model StockCardPriceListItems {
-  id                 String               @id @default(cuid())
-  priceListId        String
-  stockCardId        String
-  price              Decimal              @db.Decimal(15, 4)
+  id          String  @id @default(cuid())
+  priceListId String
+  stockCardId String
+  price       Decimal @db.Decimal(15, 4)
 
-  stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  stockCard StockCard          @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  priceList StockCardPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
 
   StockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
@@ -295,9 +295,9 @@ model StockCardTaxRate {
 }
 
 model StockCardAttribute {
-  id            String   @id @default(cuid())
-  attributeName String   @db.VarChar(100)
-  value        String
+  id            String @id @default(cuid())
+  attributeName String @db.VarChar(100)
+  value         String
 
   StockCardAttributeItems StockCardAttributeItems[]
 }
@@ -464,7 +464,7 @@ model BranchWarehouse {
 }
 
 model StockCardWarehouse {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   stockCardId String
   warehouseId String
   quantity    Decimal @db.Decimal(15, 4)
@@ -792,14 +792,4 @@ model InvoiceDetail {
 
   Invoice   Invoice   @relation(fields: [invoiceId], references: [id])
   StockCard StockCard @relation(fields: [productCode], references: [productCode])
-}
-
-model casing {
-  id          String   @id @default(cuid())
-  caseName     String   @db.VarChar(50)
-  branchCode    String
-  balance       Decimal  @db.Decimal(15, 2)
-  rate          Decimal  @db.Decimal(10, 6)
-
-  branch             Branch              @relation(fields: [branchCode], references: [branchCode])
 }
