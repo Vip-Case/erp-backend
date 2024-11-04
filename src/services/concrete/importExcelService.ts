@@ -2,27 +2,46 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { z } from 'zod';
 import currentService from './currentService';
+import StockCardService from './StockCardService';
 
 const prisma = new PrismaClient();
 
+const ProductType = z.enum(['BasitUrun', 'VaryasyonluUrun', 'DijitalUrun', 'Hizmet']);
+const StockUnits = z.enum(['Adet', 'Kg', 'Lt', 'M', 'M2', 'M3', 'Paket', 'Kutu', 'Koli', 'Ton', 'Dolar', 'Euro', 'TL']);
 
 const StockCardSchema = z.object({
     productCode: z.string(),
     productName: z.string(),
-    unit: z.string(),
+    unit: StockUnits,
     shortDescription: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
-    manufacturerCode: z.string().nullable().optional(),
     companyCode: z.string(),
     branchCode: z.string().nullable().optional(),
-    brand: z.string().nullable().optional(),
-    unitOfMeasure: z.string().nullable().optional(),
-    productType: z.string(),
-    marketNames: z.string().nullable().optional(),
-    riskQuantities: z.number().nullable().optional(),
+    brandId: z.string().nullable().optional(),
+    productType: ProductType,
+    gtip: z.string().nullable().optional(),
+    pluCode: z.string().nullable().optional(),
+    desi:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    adetBoleni:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    siraNo: z.string().nullable().optional(),
+    raf: z.string().nullable().optional(),
+    karMarji:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    riskQuantities:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    maliyet:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    maliyetDoviz: z.string().nullable().optional(),
     stockStatus: z.boolean(),
     hasExpirationDate: z.boolean().optional(),
-    allowNegativeStock: z.boolean().optional()
+    allowNegativeStock: z.boolean().optional(),
+    attributeId: z.string().nullable().optional(),
+    categoryId: z.string(),
+    taxName: z.string(),
+    taxRate:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    marketName: z.string(),
+    priceListId: z.string(),
+    price:  z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    barcode: z.string().nullable().optional(),
+    currentId: z.string().nullable().optional(),
+    warehouseId: z.string().nullable().optional(),
 }).strict();
 
 
@@ -222,6 +241,46 @@ export const importExcelService = async (file: File) => {
                 }
             }
         }
+
+        const stockCardsService = new StockCardService();
+
+        // Verileri işliyoruz
+        for (const stockCardData of stockCardsData) {
+            await stockCardsService.createStockCardsWithRelations({
+                stockCard: {
+                    ...stockCardData.data
+                },
+                barcodes: stockCardData.barcodes?.map((barcode: { barcode: string }) => ({ barcode })),
+                attributes: stockCardData.attributes?.map((attribute: { attributeId: string }) => ({ attributeId: attribute.attributeId })),
+                categoryItem: stockCardData.categoryItems?.map((categoryItem: { categoryId: string }) => ({ categoryId: categoryItem.categoryId })),
+                priceListItems: stockCardData.priceListItems?.map((priceListItem: { priceListId: string, price: number }) => ({
+                    priceListId: priceListItem.priceListId,
+                    price: priceListItem.price ?? 0,
+                })),
+                taxRates: stockCardData.taxRates?.map((taxRate: { taxName: string, taxRate: number }) => ({
+                    taxName: taxRate.taxName ?? "defaultTaxName",
+                    taxRate: taxRate.taxRate,
+                })),
+                eFatura: stockCardData.eFatura?.map((eFatura: { productCode: string, productName: string }) => ({
+                    productCode: eFatura.productCode,
+                    productName: eFatura.productName,
+                })),
+                manufacturers: stockCardData.manufacturers?.map((manufacturer: { productCode: string, productName: string, barcode: string, brandId: string, currentId: string }) => ({
+                    productCode: manufacturer.productCode,
+                    productName: manufacturer.productName,
+                    barcode: manufacturer.barcode,
+                    brandId: manufacturer.brandId,
+                    currentId: manufacturer.currentId,
+                })),
+                marketNames: stockCardData.marketNames?.map((marketName: { marketName: string }) => ({ marketName: marketName.marketName })),
+                stockCardWarehouse: stockCardData.stockCardWarehouse?.map((warehouse: { id: string, quantity: number }) => ({
+                    id: warehouse.id,
+                    quantity: warehouse.quantity,
+                })),
+            });
+        }
+        
+
 
         const currentsService = new currentService();
 
