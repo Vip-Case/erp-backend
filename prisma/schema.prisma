@@ -160,7 +160,7 @@ model Role {
   createdBy   String?
   updatedBy   String?
 
-  User User[]
+  user User[]
 }
 
 model StockCard {
@@ -192,23 +192,23 @@ model StockCard {
   createdBy          String?
   updatedBy          String?
 
-  Company Company? @relation(fields: [companyCode], references: [companyCode])
-  Branch  Branch?  @relation(fields: [branchCode], references: [branchCode])
-  Brand   Brand?   @relation(fields: [brandId], references: [id])
+  company Company? @relation(fields: [companyCode], references: [companyCode])
+  branch  Branch?  @relation(fields: [branchCode], references: [branchCode])
+  brand   Brand?   @relation(fields: [brandId], references: [id])
 
-  Barcodes                StockCardBarcode[]
-  Categories              StockCardCategoryItem[]
-  StockCardPriceLists     StockCardPriceListItems[]
-  TaxRates                StockCardTaxRate[]
-  Variations              StockCardVariation[]
-  StockMovement           StockMovement[]
-  InvoiceDetail           InvoiceDetail[]
-  StockCardWarehouse      StockCardWarehouse[]
-  ReceiptDetail           ReceiptDetail[]
-  StockCardEFatura         StockCardEFatura[]
-  StockCardManufacturer   StockCardManufacturer[]
-  StockCardAttributeItems StockCardAttributeItems[]
-  StockCardMarketNames    StockCardMarketNames[]
+  barcodes                StockCardBarcode[]
+  stockCardCategoryItem   StockCardCategoryItem[]
+  stockCardPriceLists     StockCardPriceListItems[]
+  taxRates                StockCardTaxRate[]
+  variations              StockCardVariation[]
+  stockMovement           StockMovement[]
+  invoiceDetail           InvoiceDetail[]
+  stockCardWarehouse      StockCardWarehouse[]
+  receiptDetail           ReceiptDetail[]
+  stockCardEFatura        StockCardEFatura[]
+  stockCardManufacturer   StockCardManufacturer[]
+  stockCardAttributeItems StockCardAttributeItems[]
+  stockCardMarketNames    StockCardMarketNames[]
 }
 
 model StockCardEFatura {
@@ -251,23 +251,22 @@ model Brand {
   createdBy String?
   updatedBy String?
 
-  StockCardManufacturer StockCardManufacturer[]
-
-  StockCard StockCard[]
+  stockCardManufacturer StockCardManufacturer[]
+  stockCard             StockCard[]
 }
 
 model StockCardPriceList {
   id            String  @id @default(cuid())
-  priceListName String  @db.VarChar(100)
+  priceListName String  @unique @db.VarChar(100)
   currency      String  @db.VarChar(3)
   isVatIncluded Boolean @default(true)
   isActive      Boolean @default(true)
 
-  Current                 Current[]
-  StockMovement           StockMovement[]
-  CurrentMovement         CurrentMovement[]
-  Invoice                 Invoice[]
-  StockCardPriceListItems StockCardPriceListItems[]
+  current                 Current[]
+  stockMovement           StockMovement[]
+  currentMovement         CurrentMovement[]
+  invoice                 Invoice[]
+  stockCardPriceListItems StockCardPriceListItems[]
 }
 
 model StockCardPriceListItems {
@@ -279,7 +278,7 @@ model StockCardPriceListItems {
   stockCard StockCard          @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   priceList StockCardPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
 
-  StockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
+  stockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
 
 model StockCardBarcode {
@@ -287,7 +286,7 @@ model StockCardBarcode {
   stockCardId        String
   barcode            String               @unique @db.VarChar(100)
   stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  StockCardVariation StockCardVariation[] @relation("StockCardBarcodeToStockCardVariation")
+  stockCardVariation StockCardVariation[] @relation("StockCardBarcodeToStockCardVariation")
 }
 
 model StockCardMarketNames {
@@ -305,15 +304,15 @@ model StockCardCategory {
   parentCategoryId String?
   parentCategory   StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
   childCategories  StockCardCategory[]     @relation("CategoryHierarchy")
-  CategoryItems    StockCardCategoryItem[]
+  categoryItems    StockCardCategoryItem[]
 }
 
 model StockCardCategoryItem {
-  id          String            @id @default(cuid())
-  stockCardId String
-  categoryId  String
-  category    StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  stockCard   StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  id                String            @id @default(cuid())
+  stockCardId       String
+  categoryId        String
+  stockCardCategory StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  stockCard         StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 }
 
 model StockCardTaxRate {
@@ -329,7 +328,7 @@ model StockCardAttribute {
   attributeName String @db.VarChar(100)
   value         String
 
-  StockCardAttributeItems StockCardAttributeItems[]
+  stockCardAttributeItems StockCardAttributeItems[]
 }
 
 model StockCardAttributeItems {
@@ -349,8 +348,8 @@ model StockCardVariation {
   variationValue String @db.VarChar(100)
 
   stockCard               StockCard                 @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  StockCardPriceListItems StockCardPriceListItems[] @relation("StockCardPriceListItemsToStockCardVariation")
-  StockCardBarcode        StockCardBarcode[]        @relation("StockCardBarcodeToStockCardVariation")
+  stockCardPriceListItems StockCardPriceListItems[] @relation("StockCardPriceListItemsToStockCardVariation")
+  stockCardBarcode        StockCardBarcode[]        @relation("StockCardBarcodeToStockCardVariation")
 }
 
 model StockMovement {
@@ -410,12 +409,12 @@ model Company {
   createdBy   String?
   updatedBy   String?
 
-  Branch          Branch[]
-  Warehouse       Warehouse[]
-  User            User[]
-  StockCard       StockCard[]
-  CurrentMovement CurrentMovement[]
-  Invoice         Invoice[]
+  branch          Branch[]
+  warehouse       Warehouse[]
+  user            User[]
+  stockCard       StockCard[]
+  currentMovement CurrentMovement[]
+  invoice         Invoice[]
 }
 
 model Branch {
@@ -437,19 +436,17 @@ model Branch {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  User            User[]
-  Warehouse       BranchWarehouse[]
-  StockCard       StockCard[]
-  StockMovement   StockMovement[]
-  CurrentMovement CurrentMovement[]
+  user            User[]
+  warehouse       BranchWarehouse[]
+  stockCard       StockCard[]
+  stockMovement   StockMovement[]
+  currentMovement CurrentMovement[]
 
-  Invoice    Invoice[] @relation("InvoiceOutBranch")
-  OutInvoice Invoice[] @relation("InvoiceBranch")
-  Receipt    Receipt[]
-
-  CurrentBranch CurrentBranch[]
-
-  Vault Vault[]
+  invoice       Invoice[]       @relation("InvoiceOutBranch")
+  outInvoice    Invoice[]       @relation("InvoiceBranch")
+  receipt       Receipt[]
+  currentBranch CurrentBranch[]
+  vault         Vault[]
 }
 
 model Warehouse {
@@ -470,18 +467,17 @@ model Warehouse {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  Branch         BranchWarehouse[]
-  User           User[]
+  branch         BranchWarehouse[]
+  user           User[]
   stockMovements StockMovement[]   @relation("StockMovementWarehouse")
   outMovements   StockMovement[]   @relation("StockMovementOutWarehouse")
 
-  Invoice Invoice[]
+  invoice            Invoice[]
+  stockCardWarehouse StockCardWarehouse[]
 
-  StockCardWarehouse StockCardWarehouse[]
-
-  Receipt    Receipt[] @relation("ReceiptWarehouse")
-  OutReceipt Receipt[] @relation("ReceiptOutWarehouse")
-  InReceipt  Receipt[] @relation("ReceiptInWarehouse")
+  receipt    Receipt[] @relation("ReceiptWarehouse")
+  outReceipt Receipt[] @relation("ReceiptOutWarehouse")
+  inReceipt  Receipt[] @relation("ReceiptInWarehouse")
 }
 
 model BranchWarehouse {
@@ -523,9 +519,9 @@ model Receipt {
   warehouse           Warehouse?      @relation("ReceiptWarehouse", fields: [warehouseCode], references: [warehouseCode])
   outReceiptWarehouse Warehouse?      @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
   inReceiptWarehouse  Warehouse?      @relation("ReceiptInWarehouse", fields: [inWarehouse], references: [warehouseCode])
-  ReceiptDetail       ReceiptDetail[]
+  receiptDetail       ReceiptDetail[]
 
-  VaultMovement VaultMovement[]
+  vaultMovement VaultMovement[]
 }
 
 model ReceiptDetail {
@@ -543,8 +539,8 @@ model ReceiptDetail {
   createdBy   String?
   updatedBy   String?
 
-  Receipt   Receipt   @relation(fields: [receiptId], references: [id])
-  StockCard StockCard @relation(fields: [stockCardId], references: [id])
+  receipt   Receipt   @relation(fields: [receiptId], references: [id])
+  stockCard StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model Current {
@@ -572,16 +568,16 @@ model Current {
 
   priceList StockCardPriceList @relation(fields: [priceListId], references: [id])
 
-  StockMovement         StockMovement[]
-  CurrentMovement       CurrentMovement[]
-  Invoice               Invoice[]
-  CurrentCategoryItem   CurrentCategoryItem[]
-  StockCardManufacturer StockCardManufacturer[]
-  CurrentAddress        CurrentAddress[]
-  CurrentFinancial      CurrentFinancial[]
-  CurrentRisk           CurrentRisk[]
-  CurrentOfficials      CurrentOfficials[]
-  CurrentBranch         CurrentBranch[]
+  stockMovement         StockMovement[]
+  currentMovement       CurrentMovement[]
+  invoice               Invoice[]
+  currentCategoryItem   CurrentCategoryItem[]
+  stockCardManufacturer StockCardManufacturer[]
+  currentAddress        CurrentAddress[]
+  currentFinancial      CurrentFinancial[]
+  currentRisk           CurrentRisk[]
+  currentOfficials      CurrentOfficials[]
+  currentBranch         CurrentBranch[]
 }
 
 model CurrentBranch {
@@ -696,7 +692,7 @@ model CurrentMovement {
 
   company            Company             @relation(fields: [companyCode], references: [companyCode])
   branch             Branch              @relation(fields: [branchCode], references: [branchCode])
-  StockCardPriceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
+  stockCardPriceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
   current            Current?            @relation(fields: [currentCode], references: [currentCode])
   invoice            Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
 }
@@ -708,7 +704,7 @@ model CurrentCategory {
   parentCategoryId String?
   parentCategory   CurrentCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
   childCategories  CurrentCategory[]     @relation("CategoryHierarchy")
-  CategoryItems    CurrentCategoryItem[]
+  categoryItems    CurrentCategoryItem[]
 }
 
 model CurrentCategoryItem {
@@ -737,9 +733,9 @@ model User {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  Branch    Branch[]
-  Warehouse Warehouse[]
-  Role      Role[]
+  branch    Branch[]
+  warehouse Warehouse[]
+  role      Role[]
 }
 
 model Invoice {
@@ -773,18 +769,18 @@ model Invoice {
   createdBy         String?
   updatedBy         String?
 
-  Current   Current?            @relation(fields: [currentCode], references: [currentCode])
+  current   Current?            @relation(fields: [currentCode], references: [currentCode])
   company   Company?            @relation(fields: [companyCode], references: [companyCode])
   branch    Branch              @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
   warehouse Warehouse?          @relation(fields: [warehouseCode], references: [warehouseCode])
   priceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
   outBranch Branch?             @relation("InvoiceOutBranch", fields: [outBranchCode], references: [branchCode])
 
-  InvoiceDetail   InvoiceDetail[]
-  StockMovement   StockMovement[]
-  CurrentMovement CurrentMovement[]
+  invoiceDetail   InvoiceDetail[]
+  stockMovement   StockMovement[]
+  currentMovement CurrentMovement[]
 
-  VaultMovement VaultMovement[]
+  vaultMovement VaultMovement[]
 }
 
 model InvoiceDetail {
@@ -802,8 +798,8 @@ model InvoiceDetail {
   createdBy   String?
   updatedBy   String?
 
-  Invoice   Invoice   @relation(fields: [invoiceId], references: [id])
-  StockCard StockCard @relation(fields: [productCode], references: [productCode])
+  invoice   Invoice   @relation(fields: [invoiceId], references: [id])
+  stockCard StockCard @relation(fields: [productCode], references: [productCode])
 }
 
 model Vault {
@@ -815,7 +811,7 @@ model Vault {
 
   branch Branch @relation(fields: [branchCode], references: [branchCode])
 
-  VaultMovement VaultMovement[]
+  vaultMovement VaultMovement[]
 }
 
 model VaultMovement {
@@ -830,7 +826,7 @@ model VaultMovement {
   vaultType         VaultType
   vaultDocumentType VaultDocumentType
 
-  Vault   Vault   @relation(fields: [vaultId], references: [id])
-  Invoice Invoice @relation(fields: [invoiceId], references: [id])
-  Receipt Receipt @relation(fields: [receiptId], references: [id])
+  vault   Vault   @relation(fields: [vaultId], references: [id])
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  receipt Receipt @relation(fields: [receiptId], references: [id])
 }

@@ -14,13 +14,12 @@ import logger from "../../utils/logger";
 
 const currentRelations = {
     priceList: true,
-    CurrentAddress: true,
-    CurrentBranch: true,
-    CurrentCategoryItem: true,
-    CurrentReportGroupItem: true,
-    CurrentFinancial: true,
-    CurrentRisk: true,
-    CurrentOfficials: true
+    currentAddress: true,
+    currentBranch: true,
+    currentCategoryItem: true,
+    currentFinancial: true,
+    currentRisk: true,
+    currentOfficials: true
 };
 
 export class currentService {
@@ -33,26 +32,27 @@ export class currentService {
         currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
         currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
         currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
-                 
+
     }): Promise<Current> {
         try {
             const newCurrent = await prisma.current.create({
                 data: {
                     ...data.current,
                     priceList: data.priceListId ? { connect: { id: data.priceListId } } : {},
-                    CurrentAddress: data.currentAddress,
-                    CurrentBranch: data.currentBranch,
-                    CurrentCategoryItem: data.currentCategoryItem,
-                    CurrentFinancial: data.currentFinancial,
-                    CurrentRisk: data.currentRisk,
-                    CurrentOfficials: data.currentOfficials
+                    currentAddress: data.currentAddress,
+                    currentBranch: data.currentBranch,
+                    currentCategoryItem: data.currentCategoryItem,
+                    currentFinancial: data.currentFinancial,
+                    currentRisk: data.currentRisk,
+                    currentOfficials: data.currentOfficials
 
                 },
                 include: currentRelations
             });
 
             return newCurrent;
-        } catch (error) {logger.error("Error creating current:", error);
+        } catch (error) {
+            logger.error("Error creating current:", error);
 
             // Hata türünü kontrol edin ve uygun şekilde fırlatın
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -77,7 +77,7 @@ export class currentService {
         currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
         currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
         currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
-        
+
     }): Promise<Current> {
         try {
             const updatedCurrent = await prisma.current.update({
@@ -85,12 +85,12 @@ export class currentService {
                 data: {
                     ...data.current,
                     priceList: data.priceListId ? { connect: { id: data.priceListId } } : {},
-                    CurrentAddress: data.currentAddress,
-                    CurrentBranch: data.currentBranch,
-                    CurrentCategoryItem: data.currentCategoryItem,
-                    CurrentFinancial: data.currentFinancial,
-                    CurrentRisk: data.currentRisk,
-                    CurrentOfficials: data.currentOfficials
+                    currentAddress: data.currentAddress,
+                    currentBranch: data.currentBranch,
+                    currentCategoryItem: data.currentCategoryItem,
+                    currentFinancial: data.currentFinancial,
+                    currentRisk: data.currentRisk,
+                    currentOfficials: data.currentOfficials
 
                 },
                 include: currentRelations
@@ -106,14 +106,14 @@ export class currentService {
     async deleteCurrent(id: string): Promise<{ success: boolean; message: string }> {
         try {
             await prisma.$transaction(async (prisma) => {
-                await prisma.current.delete({ where: {id} });
-                await prisma.currentAddress.deleteMany({where: {currentCode: id}});
-                await prisma.currentBranch.deleteMany({where: {currentCode: id}});
-                await prisma.currentCategoryItem.deleteMany({where: {currentCode: id}});
-                await prisma.currentFinancial.deleteMany({where: {currentCode: id}});
-                await prisma.currentRisk.deleteMany({where: {currentCode: id}});
-                await prisma.currentOfficials.deleteMany({where: {currentCode: id}});
-                
+                await prisma.current.delete({ where: { id } });
+                await prisma.currentAddress.deleteMany({ where: { currentCode: id } });
+                await prisma.currentBranch.deleteMany({ where: { currentCode: id } });
+                await prisma.currentCategoryItem.deleteMany({ where: { currentCode: id } });
+                await prisma.currentFinancial.deleteMany({ where: { currentCode: id } });
+                await prisma.currentRisk.deleteMany({ where: { currentCode: id } });
+                await prisma.currentOfficials.deleteMany({ where: { currentCode: id } });
+
             });
 
             return { success: true, message: "Current successfully deleted" };
@@ -147,16 +147,16 @@ export class currentService {
     }
 
     async getCurrentsWithFilters(filters: Partial<Prisma.CurrentWhereInput>): Promise<Current[] | null> {
-      try {
-          return await prisma.current.findMany({
-              where: filters,
-              include: currentRelations
-          });
-      } catch (error) {
-          logger.error("Error finding StockCards with filters:", error);
-          throw new Error("Could not find StockCards with filters");
-      }
-  }
+        try {
+            return await prisma.current.findMany({
+                where: filters,
+                include: currentRelations
+            });
+        } catch (error) {
+            logger.error("Error finding StockCards with filters:", error);
+            throw new Error("Could not find StockCards with filters");
+        }
+    }
 
     async createCurrentWithRelations(data: {
         current: Current;
@@ -293,7 +293,6 @@ export class currentService {
                     );
                 }
 
-
             });
         } catch (error) {
             logger.error("Error creating StockCard with relations:", error);
@@ -310,14 +309,14 @@ export class currentService {
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
-    }){
+    }) {
         try {
             const result = await prisma.$transaction(async (prisma) => {
                 const current = await prisma.current.update({
                     where: { id },
                     data: {
                         ...data.current,
-                        
+
                         priceList: data.current.priceListId ? {
                             connect: { id: data.current.priceListId }
                         } : {}
@@ -389,7 +388,7 @@ export class currentService {
                         )
                     );
                 }
-                
+
             });
         } catch (error) {
             logger.error("Error creating StockCard with relations:", error);
@@ -400,7 +399,7 @@ export class currentService {
     async deleteCurrentWithRelations(id: string) {
         try {
             return await prisma.$transaction(async (prisma) => {
-              
+
                 await prisma.currentAddress.deleteMany({
                     where: { current: { id } }
                 });
@@ -412,19 +411,19 @@ export class currentService {
                 await prisma.currentCategoryItem.deleteMany({
                     where: { current: { id } }
                 });
-               
+
                 await prisma.currentFinancial.deleteMany({
                     where: { current: { id } }
                 });
-                
+
                 await prisma.currentOfficials.deleteMany({
                     where: { current: { id } }
                 });
-                
+
                 await prisma.currentRisk.deleteMany({
                     where: { current: { id } }
                 });
-                
+
                 await prisma.current.deleteMany({
                     where: { id }
                 });
@@ -436,7 +435,7 @@ export class currentService {
         }
     }
 
-    async getCurrentWithRelationsById(id: string): Promise<Current | null>{
+    async getCurrentWithRelationsById(id: string): Promise<Current | null> {
         try {
             return await prisma.current.findUnique({
                 where: { id },
@@ -448,7 +447,7 @@ export class currentService {
         }
     }
 
-    async getAllCurrentWithRelations(): Promise<Current[]>{
+    async getAllCurrentWithRelations(): Promise<Current[]> {
         try {
             return await prisma.current.findMany({
                 include: currentRelations

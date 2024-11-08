@@ -8,7 +8,9 @@
     "debug": "bun run --inspect src/index.ts",
     "db:mongo": "bun run src/scripts/setupMongoDB.ts",
     "db:postgres": "bunx prisma migrate dev --name init",
-    "studio": "bunx prisma studio"
+    "studio": "bunx prisma studio",
+    "seed": "bun run prisma/seed.ts",
+    "destroy": "bun run prisma/destroy.ts"
   },
   "dependencies": {
     "@elysiajs/bearer": "^1.1.2",

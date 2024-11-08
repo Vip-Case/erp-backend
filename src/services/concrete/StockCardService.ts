@@ -125,9 +125,9 @@ export class StockCardService {
             return await prisma.stockCard.findUnique({
                 where: { id },
                 include: {
-                    Brand: true,
-                    Branch: true,
-                    Company: true,
+                    brand: true,
+                    branch: true,
+                    company: true,
                 },
             });
         } catch (error) {
@@ -140,9 +140,9 @@ export class StockCardService {
         try {
             return await prisma.stockCard.findMany({
                 include: {
-                    Brand: true,
-                    Branch: true,
-                    Company: true,
+                    brand: true,
+                    branch: true,
+                    company: true,
                 },
             });
         } catch (error) {
@@ -156,9 +156,9 @@ export class StockCardService {
             return await prisma.stockCard.findMany({
                 where: filters,
                 include: {
-                    Brand: true,
-                    Branch: true,
-                    Company: true,
+                    brand: true,
+                    branch: true,
+                    company: true,
                 },
             });
         } catch (error) {
@@ -204,15 +204,15 @@ export class StockCardService {
                     maliyetFiyat: data.stockCard?.maliyet,
                     maliyetDoviz: data.stockCard?.maliyetDoviz,
 
-                    Company: data.stockCard.companyCode ? {
+                    company: data.stockCard.companyCode ? {
                         connect: { companyCode: data.stockCard.companyCode },
                     } : undefined,
 
-                    Branch: data.stockCard.branchCode ? {
+                    branch: data.stockCard.branchCode ? {
                         connect: { branchCode: data.stockCard.branchCode },
                     } : undefined,
 
-                    Brand: data.stockCard.brandId ? {
+                    brand: data.stockCard.brandId ? {
                         connect: { id: data.stockCard.brandId },
                     } : undefined,
 
@@ -255,7 +255,7 @@ export class StockCardService {
                     data.categoryItem.map((categoryItem) =>
                         prisma.stockCardCategoryItem.create({
                             data: {
-                                category: {
+                                stockCardCategory: {
                                     connect: { id: categoryItem.categoryId }
                                 },
                                 stockCard: { connect: { id: stockCardId } },
@@ -356,37 +356,37 @@ export class StockCardService {
             return prisma.stockCard.findUnique({
                 where: { id },
                 include: {
-                    Branch: true,
-                    Company: true,
-                    Barcodes: true,
-                    Brand: true,
-                    StockCardAttributeItems: {
+                    branch: true,
+                    company: true,
+                    barcodes: true,
+                    brand: true,
+                    stockCardAttributeItems: {
                         include: {
                             attribute: true,
                         }
                     },
-                    StockCardEFatura: true,
-                    StockCardManufacturer: true,
-                    StockCardMarketNames: true,
-                    StockCardPriceLists: {
+                    stockCardEFatura: true,
+                    stockCardManufacturer: true,
+                    stockCardMarketNames: true,
+                    stockCardPriceLists: {
                         include: {
                             priceList: true,
                         }
                     },
-                    StockCardWarehouse: {
+                    stockCardWarehouse: {
                         include: {
                             warehouse: true,
                         }
                     },
-                    TaxRates: true,
-                    Categories: {
+                    taxRates: true,
+                    stockCardCategoryItem: {
                         include: {
-                            category: true,
+                            stockCardCategory: true,
                         }
                     },
                 }
             });
-        }, { timeout: 3000 });
+        }, { timeout: 30000 });
 
         return result;
     });
@@ -485,7 +485,7 @@ export class StockCardService {
                         });
                     })
                 );
-                
+
                 if (data.attributes) {
                     await Promise.all(
                         data.attributes.map(async (attribute) => {
@@ -544,7 +544,7 @@ export class StockCardService {
                     );
                 }
 
-                 // Mevcut CategoryItem'leri al
+                // Mevcut CategoryItem'leri al
                 const existingCategoryItems = await prisma.stockCardCategoryItem.findMany({
                     where: { stockCardId: stockCardId },
                     select: { id: true, categoryId: true },
@@ -576,7 +576,7 @@ export class StockCardService {
                     categoryItemsToCreate.map(async (categoryId) => {
                         await prisma.stockCardCategoryItem.create({
                             data: {
-                                category: { connect: { id: categoryId } },
+                                stockCardCategory: { connect: { id: categoryId } },
                                 stockCard: { connect: { id: stockCardId } },
                             },
                         });
@@ -726,37 +726,89 @@ export class StockCardService {
         }
     }
 
+    async deleteManyStockCardsWithRelations(ids: string[]): Promise<boolean> {
+        try {
+            return await prisma.$transaction(async (prisma) => {
+
+                await prisma.stockCardBarcode.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardAttributeItems.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardCategoryItem.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardPriceListItems.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardTaxRate.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardWarehouse.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardEFatura.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardManufacturer.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCardMarketNames.deleteMany({
+                    where: { stockCardId: { in: ids } },
+                });
+
+                await prisma.stockCard.deleteMany({
+                    where: { id: { in: ids } },
+                });
+
+                return true;
+            });
+        } catch (error) {
+            logger.error("Error deleting many StockCards with relations:", error);
+            throw new Error("Could not delete many StockCards with relations");
+        }
+    }
+
     async getStockCardsWithRelationsById(id: string): Promise<StockCard | null> {
         try {
             return await prisma.stockCard.findUnique({
                 where: { id },
                 include: {
-                    Branch: true,
-                    Company: true,
-                    Barcodes: true,
-                    Brand: true,
-                    StockCardAttributeItems: {
+                    branch: true,
+                    company: true,
+                    barcodes: true,
+                    brand: true,
+                    stockCardAttributeItems: {
                         include: {
                             attribute: true,
                         }
                     },
-                    StockCardEFatura: true,
-                    StockCardManufacturer: true,
-                    StockCardMarketNames: true,
-                    StockCardPriceLists: {
+                    stockCardEFatura: true,
+                    stockCardManufacturer: true,
+                    stockCardMarketNames: true,
+                    stockCardPriceLists: {
                         include: {
                             priceList: true,
                         }
                     },
-                    StockCardWarehouse: {
+                    stockCardWarehouse: {
                         include: {
                             warehouse: true,
                         }
                     },
-                    TaxRates: true,
-                    Categories: {
+                    taxRates: true,
+                    stockCardCategoryItem: {
                         include: {
-                            category: true,
+                            stockCardCategory: true,
                         }
                     },
                 }
@@ -784,55 +836,52 @@ export class StockCardService {
         }
     }
 
-    async getAllStockCardsWithRelations(): Promise<StockCard[]> {
-        try {
-            const stockCards = await prisma.stockCard.findMany({
-                include: {
-                    Branch: true,
-                    Company: true,
-                    Barcodes: true,
-                    Brand: true,
-                    StockCardAttributeItems: {
-                        include: {
-                            attribute: true,
-                        }
-                    },
-                    StockCardEFatura: true,
-                    StockCardManufacturer: true,
-                    StockCardMarketNames: true,
-                    StockCardPriceLists: {
-                        include: {
-                            priceList: true,
-                        }
-                    },
-                    StockCardWarehouse: {
-                        include: {
-                            warehouse: true,
-                        }
-                    },
-                    TaxRates: true,
-                    Categories: {
-                        include: {
-                            category: true,
-                        }
-                    },
-                }
-            });
+    getAllStockCardsWithRelations = asyncHandler(async (): Promise<StockCard[]> => {
 
-            for (const stockCard of stockCards) {
-                for (const categoryItem of stockCard.Categories) {
-                    (categoryItem as any).parentCategories = await this.getParentCategories(categoryItem.categoryId);
-                }
+        const stockCards = await prisma.stockCard.findMany({
+            include: {
+                barcodes: true,
+                brand: true,
+                stockCardAttributeItems: {
+                    include: {
+                        attribute: true,
+                    }
+                },
+                stockCardEFatura: true,
+                stockCardManufacturer: {
+                    include: {
+                        brand: true,
+                        current: true,
+                    }
+                },
+                stockCardMarketNames: true,
+                stockCardPriceLists: {
+                    include: {
+                        priceList: true,
+                    }
+                },
+                stockCardWarehouse: {
+                    include: {
+                        warehouse: true,
+                    }
+                },
+                taxRates: true,
+                stockCardCategoryItem: {
+                    include: {
+                        stockCardCategory: true,
+                    }
+                },
             }
+        });
 
-
-            return stockCards;
-
-        } catch (error) {
-            logger.error("Error finding all StockCards with relations:", error);
-            throw new Error("Could not find all StockCards with relations");
+        for (const stockCard of stockCards) {
+            for (const categoryItem of stockCard.stockCardCategoryItem) {
+                (categoryItem as any).parentCategories = await this.getParentCategories(categoryItem.categoryId);
+            }
         }
-    }
+
+        return stockCards;
+    });
 }
 
 export default StockCardService;

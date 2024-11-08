@@ -15,7 +15,6 @@ export const CurrentController = {
             currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
             currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
             currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-            currentReportGroupItem?: Prisma.CurrentReportGroupItemCreateNestedManyWithoutCurrentInput;
             currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
             currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
         };
@@ -30,7 +29,6 @@ export const CurrentController = {
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
                 currentFinancial: data.currentFinancial,
-                currentReportGroupItem: data.currentReportGroupItem,
                 currentRisk: data.currentRisk,
                 currentOfficials: data.currentOfficials,
             };
@@ -52,7 +50,6 @@ export const CurrentController = {
             currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
             currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
             currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
-            currentReportGroupItem?: Prisma.CurrentReportGroupItemUpdateManyWithoutCurrentNestedInput;
             currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
             currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
         };
@@ -67,7 +64,6 @@ export const CurrentController = {
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
                 currentFinancial: data.currentFinancial,
-                currentReportGroupItem: data.currentReportGroupItem,
                 currentRisk: data.currentRisk,
                 currentOfficials: data.currentOfficials,
             };
@@ -79,7 +75,7 @@ export const CurrentController = {
             ctx.set.status = 500;
             return { error: "Error updating current", details: error.message };
         }
-        
+
     },
 
     deleteCurrent: async (ctx: Context) => {
