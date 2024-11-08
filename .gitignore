@@ -69,6 +69,4 @@ coverage
 # Ignore prisma extension file
 prisma/prismabox
 prisma/docs
-
-# Ignore responses files
 responses
