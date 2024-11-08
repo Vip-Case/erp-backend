@@ -197,7 +197,7 @@ model StockCard {
   brand   Brand?   @relation(fields: [brandId], references: [id])
 
   barcodes                StockCardBarcode[]
-  categories              StockCardCategoryItem[]
+  stockCardCategoryItem   StockCardCategoryItem[]
   stockCardPriceLists     StockCardPriceListItems[]
   taxRates                StockCardTaxRate[]
   variations              StockCardVariation[]
@@ -257,7 +257,7 @@ model Brand {
 
 model StockCardPriceList {
   id            String  @id @default(cuid())
-  priceListName String  @db.VarChar(100)
+  priceListName String  @unique @db.VarChar(100)
   currency      String  @db.VarChar(3)
   isVatIncluded Boolean @default(true)
   isActive      Boolean @default(true)
@@ -304,15 +304,15 @@ model StockCardCategory {
   parentCategoryId String?
   parentCategory   StockCardCategory?      @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
   childCategories  StockCardCategory[]     @relation("CategoryHierarchy")
-  sategoryItems    StockCardCategoryItem[]
+  categoryItems    StockCardCategoryItem[]
 }
 
 model StockCardCategoryItem {
-  id          String            @id @default(cuid())
-  stockCardId String
-  categoryId  String
-  category    StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  stockCard   StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  id                String            @id @default(cuid())
+  stockCardId       String
+  categoryId        String
+  stockCardCategory StockCardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  stockCard         StockCard         @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
 }
 
 model StockCardTaxRate {
