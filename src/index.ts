@@ -23,6 +23,7 @@ import BrandRoutes from './api/routes/v1/brandRoutes';
 import { CustomError } from './utils/CustomError';
 import logger from './utils/logger';
 import { Prisma } from '@prisma/client';
+import exportRoutes from './api/routes/v1/exportRoutes';
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
   .use(cors({
@@ -57,9 +58,10 @@ const app = new Elysia()
         { name: "Roles", description: "Role operations" }, // Role'lar için tag
         { name: "Invoices", description: "Invoice operations" }, // Invoice'lar için
         { name: "Receipts", description: "Receipt operations" }, // Receipt'lar için
-        { name: "Imports", description: "Import operations" }, // Import'lar için
         { name: "Brands", description: "Brand operations" }, // Brand'ler için
         { name: "Vaults", description: "Vaults operations" }, // Banks'lar için
+        { name: "Imports", description: "Import operations" }, // Import'lar için
+        { name: "Exports", description: "Export operations" }, // Export'lar için
       ]
     },
   }))
@@ -127,9 +129,10 @@ UserRoutes(app);
 RoleRoutes(app);
 InvoiceRoutes(app);
 ReceiptRoutes(app);
-importRoutes(app);
 VaultRoutes(app);
 BrandRoutes(app);
+importRoutes(app);
+exportRoutes(app);
 
 // Uygulama belirtilen portta dinlemeye başlıyor
 app.listen(appConfig.port, () => {

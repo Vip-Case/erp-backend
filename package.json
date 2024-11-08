@@ -26,6 +26,7 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "elysia": "^1.1.23",
+    "exceljs": "^4.4.0",
     "formidable": "^3.5.2",
     "mongoose": "^8.6.4",
     "pg": "^8.13.0",

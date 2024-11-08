@@ -6,7 +6,6 @@ import {
     CurrentCategoryItem,
     CurrentFinancial,
     CurrentOfficials,
-    CurrentReportGroupItem,
     CurrentRisk,
     Prisma,
     StockCardPriceList
@@ -32,7 +31,6 @@ export class currentService {
         currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
         currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-        currentReportGroupItem?: Prisma.CurrentReportGroupItemCreateNestedManyWithoutCurrentInput;
         currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
         currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
                  
@@ -46,7 +44,6 @@ export class currentService {
                     CurrentBranch: data.currentBranch,
                     CurrentCategoryItem: data.currentCategoryItem,
                     CurrentFinancial: data.currentFinancial,
-                    CurrentReportGroupItem: data.currentReportGroupItem,
                     CurrentRisk: data.currentRisk,
                     CurrentOfficials: data.currentOfficials
 
@@ -78,7 +75,6 @@ export class currentService {
         currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
         currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
-        currentReportGroupItem?: Prisma.CurrentReportGroupItemUpdateManyWithoutCurrentNestedInput;
         currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
         currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
         
@@ -93,7 +89,6 @@ export class currentService {
                     CurrentBranch: data.currentBranch,
                     CurrentCategoryItem: data.currentCategoryItem,
                     CurrentFinancial: data.currentFinancial,
-                    CurrentReportGroupItem: data.currentReportGroupItem,
                     CurrentRisk: data.currentRisk,
                     CurrentOfficials: data.currentOfficials
 
@@ -116,7 +111,6 @@ export class currentService {
                 await prisma.currentBranch.deleteMany({where: {currentCode: id}});
                 await prisma.currentCategoryItem.deleteMany({where: {currentCode: id}});
                 await prisma.currentFinancial.deleteMany({where: {currentCode: id}});
-                await prisma.currentReportGroupItem.deleteMany({where: {currentCode: id}});
                 await prisma.currentRisk.deleteMany({where: {currentCode: id}});
                 await prisma.currentOfficials.deleteMany({where: {currentCode: id}});
                 
@@ -170,7 +164,6 @@ export class currentService {
         currentAdress?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
         currentCategoryItem?: CurrentCategoryItem[];
-        currentReportGroupItem?: CurrentReportGroupItem[];
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
@@ -300,19 +293,6 @@ export class currentService {
                     );
                 }
 
-                if (data.currentReportGroupItem) {
-                    await Promise.all(
-                        data.currentReportGroupItem.map((currentReportGroupItem) =>
-                            prisma.currentReportGroupItem.create({
-                                data: {
-                                    group: { connect: { id: currentReportGroupItem.groupId } },
-                                    current: { connect: { currentCode: currentReportGroupItem.currentCode } }
-                                }
-                            })
-                        )
-                    );
-                }
-
 
             });
         } catch (error) {
@@ -327,7 +307,6 @@ export class currentService {
         currentAdress?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
         currentCategoryItem?: CurrentCategoryItem[];
-        currentReportGroupItem?: CurrentReportGroupItem[];
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
@@ -410,17 +389,6 @@ export class currentService {
                         )
                     );
                 }
-
-                if (data.currentReportGroupItem) {
-                    await Promise.all(
-                        data.currentReportGroupItem.map((currentReportGroupItem) =>
-                            prisma.currentReportGroupItem.update({
-                                where: { id: currentReportGroupItem.id },
-                                data: currentReportGroupItem
-                            })
-                        )
-                    );
-                }
                 
             });
         } catch (error) {
@@ -444,11 +412,7 @@ export class currentService {
                 await prisma.currentCategoryItem.deleteMany({
                     where: { current: { id } }
                 });
-                
-                await prisma.currentReportGroupItem.deleteMany({
-                    where: { current: { id } }
-                });
-                
+               
                 await prisma.currentFinancial.deleteMany({
                     where: { current: { id } }
                 });

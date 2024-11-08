@@ -205,7 +205,7 @@ model StockCard {
   InvoiceDetail           InvoiceDetail[]
   StockCardWarehouse      StockCardWarehouse[]
   ReceiptDetail           ReceiptDetail[]
-  StockCardEFatura        StockCardEFatura[]
+  StockCardEFatura         StockCardEFatura[]
   StockCardManufacturer   StockCardManufacturer[]
   StockCardAttributeItems StockCardAttributeItems[]
   StockCardMarketNames    StockCardMarketNames[]
@@ -229,7 +229,7 @@ model StockCardManufacturer {
   productCode String   @db.VarChar(100)
   productName String   @db.VarChar(150)
   barcode     String   @unique @db.VarChar(100)
-  brandId     String   @db.VarChar(100)
+  brandId     String?   @db.VarChar(100)
   stockCardId String
   currentId   String
   createdAt   DateTime @default(now())
@@ -239,7 +239,7 @@ model StockCardManufacturer {
 
   stockCard StockCard @relation(fields: [stockCardId], references: [id])
   current   Current   @relation(fields: [currentId], references: [id])
-  brand     Brand     @relation(fields: [brandId], references: [id])
+  brand     Brand?     @relation(fields: [brandId], references: [id])
 }
 
 model Brand {
