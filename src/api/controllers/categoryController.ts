@@ -82,6 +82,17 @@ export const CategoryController = {
             ctx.set.status = 500;
             return { error: "Error fetching categories with filters", details: error.message };
         }
+    },
+
+    getAllCategoriesWithParentCategories: async (ctx: Context) => {
+        try {
+            const categories = await categoryService.getAllCategoriesWithParentCategories();
+            ctx.set.status = 200;
+            return categories;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching categories", details: error.message };
+        }
     }
 }
 

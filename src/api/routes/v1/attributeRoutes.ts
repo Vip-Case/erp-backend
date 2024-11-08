@@ -1,6 +1,5 @@
 import { Elysia } from 'elysia';
 import AttributeController from '../../controllers/attributeController';
-import { StockCardAttributePlain } from '../../../../prisma/prismabox/StockCardAttribute';
 
 export const AttributeRoutes = (app: Elysia) => {
     app.group("/attributes", (app) =>

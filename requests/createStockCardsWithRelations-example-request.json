@@ -1,0 +1,53 @@
+{
+    "stockCard": {
+        "productCode": "REMA/Ip-11/SIYAH",
+        "productName": "REMA İphone 11 Siyah",
+        "unit": "Adet",
+        "shortDescription": "Short description of the product",
+        "description": "Detailed description of the product",
+        "productType": "BasitUrun",
+        "gtip": "1234567890",
+        "pluCode": "PLU123",
+        "desi": 0,
+        "adetBoleni": 10,
+        "siraNo": "12AD",
+        "raf": "A-1",
+        "karMarji": 10,
+        "riskQuantities": 50,
+        "stockStatus": true,
+        "hasExpirationDate": true,
+        "allowNegativeStock": false,
+        "maliyetFiyat": 0.5,
+        "maliyetDoviz": "USD",
+        "brandId": "cm2sy32k8000gh36ajm9sv773"
+    },
+    "attributes": [
+        { "attributeId": "cm2sy3qj7000hh36ar91zh6fp" }
+    ],
+    "barcodes": [
+        { "barcode": "1234567893169" },
+        { "barcode": "9876543213169" }
+    ],
+    "categoryItem": [
+        { "categoryId": "cm2sy5724000ih36adhom44a2" }
+    ],
+    "priceListItems": [
+        { "priceListId": "cm2sr5wiv0007h36a5p90fad8", "price": 89.99 },
+        { "priceListId": "cm2sr5wit0004h36abn4pb2d5", "price": 0.38 },
+        { "priceListId": "cm2sr5wit0005h36aud6r15fo", "price": 0.50 },
+        { "priceListId": "cm2sr5wiu0006h36ah14l9dpm", "price": 1 }
+    ],
+    "stockCardWarehouse": [
+        { "id": "cm2spstpk00001v82vwu05u38", "quantity": 150 }
+    ],
+    "eFatura": [
+        { "productCode": "REMA-Ip-11", "productName": "REMA İphone 11", "stockCardPriceListId": "cm2sr5wiv0007h36a5p90fad8" }
+    ],
+    "manufacturers": [
+        { "productCode": "EGE/Ip-11/SIYAH", "productName": "EGE Kılıf", "barcode": "1234567893132", "brandId": "cm2sydu8d000jh36anvtkdkg7", "currentId": "cm2syiwzo000kh36a378sdfy4" }
+    ],
+    "marketNames": [
+        { "marketName": "Ege" },
+        { "marketName": "Rema" }
+    ]
+}

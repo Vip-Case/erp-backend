@@ -1,7 +1,6 @@
-
 import CurrentService from '../../services/concrete/currentService';
 import { Context } from 'elysia';
-import { Current } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 // Service Initialization
 const currentService = new CurrentService();
@@ -9,9 +8,31 @@ const currentService = new CurrentService();
 export const CurrentController = {
 
     createCurrent: async (ctx: Context) => {
-        const currentData: Current = ctx.body as Current;
+        const data = ctx.body as {
+            current: Prisma.CurrentCreateInput;
+            priceListId: string;
+            currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
+            currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
+            currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
+            currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
+            currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
+            currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
+        };
+
         try {
-            const newCurrent = await currentService.createCurrent(currentData);
+            const createData = {
+                current: {
+                    ...data.current
+                },
+                priceListId: data.priceListId,
+                currentAddress: data.currentAddress,
+                currentBranch: data.currentBranch,
+                currentCategoryItem: data.currentCategoryItem,
+                currentFinancial: data.currentFinancial,
+                currentRisk: data.currentRisk,
+                currentOfficials: data.currentOfficials,
+            };
+            const newCurrent = await currentService.createCurrent(createData);
             ctx.set.status = 200;
             return newCurrent;
         } catch (error: any) {
@@ -22,23 +43,47 @@ export const CurrentController = {
 
     updateCurrent: async (ctx: Context) => {
         const { id } = ctx.params;
-        const currentData: Partial<Current> = ctx.body as Partial<Current>;
+        const data = ctx.body as {
+            current: Prisma.CurrentUpdateInput;
+            priceListId: string;
+            currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
+            currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
+            currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
+            currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
+            currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
+            currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
+        };
+
         try {
-            const current = await currentService.updateCurrent(id, currentData);
+            const updateData = {
+                current: {
+                    ...data.current
+                },
+                priceListId: data.priceListId,
+                currentAddress: data.currentAddress,
+                currentBranch: data.currentBranch,
+                currentCategoryItem: data.currentCategoryItem,
+                currentFinancial: data.currentFinancial,
+                currentRisk: data.currentRisk,
+                currentOfficials: data.currentOfficials,
+            };
+
+            const updatedCurrent = await currentService.updateCurrent(id, updateData);
             ctx.set.status = 200;
-            return current;
+            return updatedCurrent;
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error updating current", details: error.message };
         }
+
     },
 
     deleteCurrent: async (ctx: Context) => {
         const { id } = ctx.params;
         try {
-            const current = await currentService.deleteCurrent(id);
+            const deleted = await currentService.deleteCurrentWithRelations(id);
             ctx.set.status = 200;
-            return current;
+            return { success: deleted, message: "true" };
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error deleting current", details: error.message };
@@ -72,7 +117,8 @@ export const CurrentController = {
     },
 
     getCurrentsWithFilters: async (ctx: Context) => {
-        const filters = ctx.query as Partial<Current>;
+        const filters = ctx.query as Partial<Prisma.CurrentWhereInput>;
+
         try {
             const currents = await currentService.getCurrentsWithFilters(filters);
             ctx.set.status = 200;
@@ -82,7 +128,6 @@ export const CurrentController = {
             return { error: "Error fetching currents", details: error.message };
         }
     }
-
 }
 
 export default CurrentController;

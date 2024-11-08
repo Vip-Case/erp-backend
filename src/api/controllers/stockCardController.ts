@@ -8,7 +8,7 @@ const stockCardService = new StockCardService();
 const StockCardController = {
     // StockCard'ı oluşturan API
     createStockCard: async (ctx: Context) => {
-        const body = ctx.body as { stockCard: StockCard, warehouseIds: string[] | null};
+        const body = ctx.body as { stockCard: StockCard, warehouseIds: string[] | null };
         const stockCardData: StockCard = body.stockCard;
         const warehouseData: string[] = body.warehouseIds !== null ? body.warehouseIds : [];
 
@@ -114,6 +114,18 @@ const StockCardController = {
             const deletedStockCard = await stockCardService.deleteStockCardsWithRelations(id);
             ctx.set.status = 200;
             return deletedStockCard;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    deleteManyStockCardsWithRelations: async (ctx: Context) => {
+        try {
+            const body = ctx.body as any;
+            const deletedStockCards = await stockCardService.deleteManyStockCardsWithRelations(body.ids);
+            ctx.set.status = 200;
+            return deletedStockCards;
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching stock cards", details: error.message };
