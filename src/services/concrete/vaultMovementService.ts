@@ -6,7 +6,7 @@ import logger from "../../utils/logger";
 
 export class VaultMovementService {
     private vaultMovementRepository: BaseRepository<VaultMovement>;
-    
+
     constructor() {
         this.vaultMovementRepository = new BaseRepository<VaultMovement>(prisma.vaultMovement);
     }
@@ -24,20 +24,19 @@ export class VaultMovementService {
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
-
-                    Vault: vaultMovement.vaultId ? {
+                    vault: vaultMovement.vaultId ? {
                         connect: {
                             id: vaultMovement.vaultId
                         }
                     } : undefined,
-                    
-                    Invoice: vaultMovement.invoiceId ? {
+
+                    invoice: vaultMovement.invoiceId ? {
                         connect: {
                             id: vaultMovement.invoiceId
                         }
                     } : undefined,
 
-                    Receipt: vaultMovement.receiptId ? {
+                    receipt: vaultMovement.receiptId ? {
                         connect: {
                             id: vaultMovement.receiptId
                         }
@@ -55,7 +54,7 @@ export class VaultMovementService {
     async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
         try {
             return await prisma.vaultMovement.update({
-                where: {id},
+                where: { id },
                 data: {
                     vaultId: vaultMovement.vaultId,
                     invoiceId: vaultMovement.invoiceId,
@@ -72,7 +71,7 @@ export class VaultMovementService {
                             id: vaultMovement.vaultId
                         }
                     } : undefined,
-                    
+
                     Invoice: vaultMovement.invoiceId ? {
                         connect: {
                             id: vaultMovement.invoiceId

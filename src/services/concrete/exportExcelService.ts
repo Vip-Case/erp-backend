@@ -6,28 +6,28 @@ import prisma from '../../config/prisma';
 async function getStockCardsWithRelations() {
     const stockCards = await prisma.stockCard.findMany({
         include: {
-            Company: true,
-            Branch: true,
-            Brand: true,
-            Categories: {
+            company: true,
+            branch: true,
+            brand: true,
+            stockCardCategoryItem: {
                 include: {
-                    category: true,
+                    stockCardCategory: true,
                 },
             },
-            TaxRates: true,
-            StockCardMarketNames: true,
-            Barcodes: true,
-            StockCardPriceLists: {
+            taxRates: true,
+            stockCardMarketNames: true,
+            barcodes: true,
+            stockCardPriceLists: {
                 include: {
                     priceList: true
                 }
             },
-            StockCardAttributeItems: {
+            stockCardAttributeItems: {
                 include: {
                     attribute: true
                 }
             },
-            StockCardWarehouse: {
+            stockCardWarehouse: {
                 include: {
                     warehouse: true
                 }
@@ -44,7 +44,7 @@ export async function exportStockCardsToExcel() {
     await prisma.$disconnect();
     await prisma.$connect();
     const stockCards = await getStockCardsWithRelations();
-    console.log('Çekilen veri sayısı:', stockCards.length); 
+    console.log('Çekilen veri sayısı:', stockCards.length);
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('StockCards');
 
@@ -93,9 +93,9 @@ export async function exportStockCardsToExcel() {
             unit: stockCard.unit || '',
             shortDescription: stockCard.shortDescription || '',
             description: stockCard.description || '',
-            companyCode: stockCard.Company?.companyCode || '',
-            branchCode: stockCard.Branch?.branchCode || '',
-            brandId: stockCard.Brand?.id || '',
+            companyCode: stockCard.company?.companyCode || '',
+            branchCode: stockCard.branch?.branchCode || '',
+            brandId: stockCard.brand?.id || '',
             productType: stockCard.productType || '',
             gtip: stockCard.gtip || '',
             pluCode: stockCard.pluCode || '',
@@ -110,46 +110,38 @@ export async function exportStockCardsToExcel() {
             stockStatus: stockCard.stockStatus ? 'Active' : 'Inactive',
             hasExpirationDate: stockCard.hasExpirationDate ? 'Yes' : 'No',
             allowNegativeStock: stockCard.allowNegativeStock ? 'Yes' : 'No',
-            
+
             // Tüm category id'leri virgülle ayırarak ekleyelim
-            categoryIds: stockCard.Categories?.map(catItem => catItem.category.id).join(', ') || '',
+            categoryIds: stockCard.stockCardCategoryItem?.map(catItem => catItem.stockCardCategory.id).join(', ') || '',
 
             // Vergi bilgilerini ekleme (ilk vergi adı ve oranını virgülle ayırarak ekler)
-            taxName: stockCard.TaxRates.map(taxRate => taxRate.taxName).join(', ') || '',
-            taxRate: stockCard.TaxRates.map(taxRate => taxRate.taxRate).join(', ') || '',
+            taxName: stockCard.taxRates.map(taxRate => taxRate.taxName).join(', ') || '',
+            taxRate: stockCard.taxRates.map(taxRate => taxRate.taxRate).join(', ') || '',
 
             // Tüm market adlarını virgülle ayırarak ekleyelim
-            marketNames: stockCard.StockCardMarketNames.map(market => market.marketName).join(', ') || '',
+            marketNames: stockCard.stockCardMarketNames.map(market => market.marketName).join(', ') || '',
 
             // Tüm barkodları virgülle ayırarak ekleyelim
-            barcodes: stockCard.Barcodes.map(bc => bc.barcode.toString()).join(', ') || '',
+            barcodes: stockCard.barcodes.map(bc => bc.barcode.toString()).join(', ') || '',
 
             // Fiyat listesi ve fiyat bilgilerini ekleme
-            priceListId: stockCard.StockCardPriceLists?.[0]?.priceList?.id || '',
-            price: stockCard.StockCardPriceLists?.[0]?.price ? parseFloat(stockCard.StockCardPriceLists[0].price.toString()) : '',
+            priceListId: stockCard.stockCardPriceLists?.[0]?.priceList?.id || '',
+            price: stockCard.stockCardPriceLists?.[0]?.price ? parseFloat(stockCard.stockCardPriceLists[0].price.toString()) : '',
 
             // Özellik id'sini ekleme
-            attributeId: stockCard.StockCardAttributeItems?.[0]?.attribute?.id || '',
+            attributeId: stockCard.stockCardAttributeItems?.[0]?.attribute?.id || '',
 
             // Depo ve miktar bilgilerini ekleme
-            warehouseId: stockCard.StockCardWarehouse?.[0]?.warehouse?.id || '',
-            quantity: stockCard.StockCardWarehouse?.[0]?.quantity ? parseFloat(stockCard.StockCardWarehouse[0].quantity.toString()) : ''
+            warehouseId: stockCard.stockCardWarehouse?.[0]?.warehouse?.id || '',
+            quantity: stockCard.stockCardWarehouse?.[0]?.quantity ? parseFloat(stockCard.stockCardWarehouse[0].quantity.toString()) : ''
         }).commit();
-        
+
     });
 
     // Dosyayı kaydediyoruz
-    const filePath = path.join('C:', 'Users', 'amine', 'Desktop', 'StockCards.xlsx');
+    const filePath = path.join('..', 'StockCards.xlsx');
     await workbook.xlsx.writeFile(filePath)
-    .then(() => console.log(`Excel dosyası başarıyla oluşturuldu: ${filePath}`))
-    .catch(error => console.error('Dosya yazma hatası:', error));
+        .then(() => console.log(`Excel dosyası başarıyla oluşturuldu: ${filePath}`))
+        .catch(error => console.error('Dosya yazma hatası:', error));
     console.log(`Excel dosyası başarıyla oluşturuldu: ${filePath}`);
 }
-
-exportStockCardsToExcel()
-    .catch(error => {
-        console.error('Excel dosyası oluşturulurken bir hata oluştu:', error);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });

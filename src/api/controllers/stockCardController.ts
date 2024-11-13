@@ -96,7 +96,7 @@ const StockCardController = {
         const { id } = ctx.params;
         try {
             const body = ctx.body as any;
-
+            console.log(body);
             // Servisi çağırarak StockCard ve ilişkilerini güncelliyoruz
             const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body);
             ctx.set.status = 200;
@@ -155,7 +155,7 @@ const StockCardController = {
             ctx.set.status = 500;
             return { error: "Error fetching stock cards", details: error.message };
         }
-    }
+    },
 }
 
 export default StockCardController;

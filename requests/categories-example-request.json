@@ -1,0 +1,5 @@
+{
+    "categoryName": "Kaydedilecek Kategori Adı",
+    "categoryCode": "Kaydedilecek Kategori Kodu",
+    "parentCategoryId": "Bir Üst Kategori Id'si"
+}

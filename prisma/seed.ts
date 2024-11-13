@@ -109,7 +109,7 @@ async function main() {
         data: {
             priceListName: "E-Ticaret",
             currency: "TRY",
-            isVatIncluded: false,
+            isVatIncluded: true,
             isActive: true,
         },
     });
@@ -2217,10 +2217,14 @@ async function main() {
                     {
                         priceListId: priceList1.id,
                         price: 10,
+                        barcode: "856952346696",
+                        vatRate: 20,
                     },
                     {
                         priceListId: priceList2.id,
                         price: 20,
+                        barcode: "856952346595",
+                        vatRate: 20,
                     },
                 ],
             },
@@ -2384,6 +2388,8 @@ async function main() {
 
         },
     });
+
+
 }
 
 main()

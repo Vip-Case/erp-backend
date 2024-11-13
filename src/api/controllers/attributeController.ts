@@ -20,6 +20,19 @@ export const AttributeController = {
         }
     },
 
+    createManyAttributes: async (ctx: Context) => {
+        const attributesData: StockCardAttribute[] = ctx.body as StockCardAttribute[];
+        console.log(attributesData);
+        try {
+            const attributes = await attributeService.createManyAttribute(attributesData);
+            ctx.set.status = 200;
+            return attributes;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error creating multiple attributes", details: error.message };
+        }
+    },
+
     updateAttribute: async (ctx: Context) => {
         const { id } = ctx.params;
         const attributeData: Partial<StockCardAttribute> = ctx.body as Partial<StockCardAttribute>;

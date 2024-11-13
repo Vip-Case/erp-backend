@@ -265,44 +265,44 @@ export const importExcelService = async (file: File) => {
                         stockStatus: stockCardData.stockStatus,
                         hasExpirationDate: stockCardData.hasExpirationDate,
                         allowNegativeStock: stockCardData.allowNegativeStock,
-                        Company: stockCardData.companyCode ? {
+                        company: stockCardData.companyCode ? {
                             connect: { companyCode: stockCardData.companyCode }
                         } : undefined,
-                        Branch: stockCardData.branchCode ? {
+                        branch: stockCardData.branchCode ? {
                             connect: { branchCode: stockCardData.branchCode }
                         } : undefined,
-                        Brand: stockCardData.brandId ? {
+                        brand: stockCardData.brandId ? {
                             connect: { id: stockCardData.brandId }
                         } : undefined,
                         // İlişkili Kategori
-                        Categories: stockCardData.categoryId ? {
+                        stockCardCategoryItem: stockCardData.categoryId ? {
                             create: [{
-                                category: {
+                                stockCardCategory: {
                                     connect: { id: stockCardData.categoryId }
                                 }
                             }]
                         } : undefined,
                         // İlişkili Vergi Bilgileri
-                        TaxRates: stockCardData.taxName && stockCardData.taxRate ? {
+                        taxRates: stockCardData.taxName && stockCardData.taxRate ? {
                             create: [{
                                 taxName: stockCardData.taxName,
                                 taxRate: stockCardData.taxRate
                             }]
                         } : undefined,
                         // İlişkili Market İsimleri
-                        StockCardMarketNames: stockCardData.marketName ? {
+                        stockCardMarketNames: stockCardData.marketName ? {
                             create: [{
                                 marketName: stockCardData.marketName
                             }]
                         } : undefined,
                         // İlişkili Barkodlar
-                        Barcodes: stockCardData.barcode ? {
+                        barcodes: stockCardData.barcode ? {
                             create: [{
                                 barcode: stockCardData.barcode
                             }]
                         } : undefined,
                         // İlişkili Fiyat Listesi
-                        StockCardPriceLists: stockCardData.priceListId ? {
+                        stockCardPriceLists: stockCardData.priceListId ? {
                             create: [{
                                 priceList: {
                                     connect: { id: stockCardData.priceListId }
@@ -311,7 +311,7 @@ export const importExcelService = async (file: File) => {
                             }]
                         } : undefined,
                         // İlişkili Özellikler
-                        StockCardAttributeItems: stockCardData.attributeId ? {
+                        stockCardAttributeItems: stockCardData.attributeId ? {
                             create: [{
                                 attribute: {
                                     connect: { id: stockCardData.attributeId }
@@ -319,7 +319,7 @@ export const importExcelService = async (file: File) => {
                             }]
                         } : undefined,
                         // İlişkili Depolar
-                        StockCardWarehouse: stockCardData.warehouseId && stockCardData.quantity ? {
+                        stockCardWarehouse: stockCardData.warehouseId && stockCardData.quantity ? {
                             create: [{
                                 warehouse: {
                                     connect: { id: stockCardData.warehouseId }
@@ -337,7 +337,7 @@ export const importExcelService = async (file: File) => {
             }
         }
 
-        
+
         const currentsService = new currentService();
 
         // Verileri işliyoruz
