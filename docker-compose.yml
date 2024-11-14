@@ -2,7 +2,7 @@ name: erp-backend
 
 services:
   app:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: erp-backend
@@ -15,7 +15,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=915307dedd66bANEA
       - DB_NAME=erp_db
-      - DATABASE_URL="postgresql://postgres:915307dedd66bANEA@postgres:5432/erp_db?schema=public"
+      - DATABASE_URL="postgresql://postgres:xderensa3@localhost:5432/erp_db?schema=public"
     depends_on:
       - postgres
     develop:
@@ -35,7 +35,7 @@ services:
     environment:
       POSTGRES_DB: erp_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 915307dedd66bANEA
+      POSTGRES_PASSWORD: xderensa3
     ports:
       - "5432:5432"
     volumes:
