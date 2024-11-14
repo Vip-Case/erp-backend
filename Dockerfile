@@ -1,4 +1,4 @@
-FROM oven/bun:1
+FROM oven/bun
 WORKDIR /app
 COPY package.json bun.lockb .env ./
 RUN bun install --frozen-lockfile
