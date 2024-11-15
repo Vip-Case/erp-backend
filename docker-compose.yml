@@ -3,6 +3,7 @@ name: erp-backend
 services:
   app:
     build:
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: erp-backend
@@ -49,3 +50,4 @@ services:
 
 volumes:
   postgres_data:
+
