@@ -2,22 +2,28 @@ name: erp-backend
 
 services:
   app:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: erp-backend
     ports:
-      - "3000:3000"
+      - "1303:1303"
     environment:
       - NODE_ENV=development
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=915307dedd66bANEA
+      - DB_PASSWORD=xderensa
       - DB_NAME=erp_db
-      - DATABASE_URL="postgresql://postgres:915307dedd66bANEA@postgres:5432/erp_db?schema=public"
+      - DATABASE_URL=postgresql://postgres:xderensa@postgres:5432/erp_db?schema=public
     depends_on:
       - postgres
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "/wait-for-it.sh postgres:5432 -- bunx prisma migrate dev --name init && bun seed && bun dev",
+      ]
     develop:
       watch:
         - action: sync
@@ -35,7 +41,7 @@ services:
     environment:
       POSTGRES_DB: erp_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 915307dedd66bANEA
+      POSTGRES_PASSWORD: xderensa
     ports:
       - "5432:5432"
     volumes:

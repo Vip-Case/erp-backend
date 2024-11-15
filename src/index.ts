@@ -24,6 +24,8 @@ import logger from './utils/logger';
 import { Prisma } from '@prisma/client';
 import exportRoutes from './api/routes/v1/exportRoutes';
 import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
+import dotenv from 'dotenv';
+dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
   .use(cors({
@@ -133,10 +135,5 @@ BrandRoutes(app);
 importRoutes(app);
 exportRoutes(app);
 ManufacturerRoutes(app);
-
-// Uygulama belirtilen portta dinlemeye başlıyor
-app.listen(appConfig.port, () => {
-  console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
-});
 
 export default app;
