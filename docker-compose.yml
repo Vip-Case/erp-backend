@@ -22,7 +22,7 @@ services:
       [
         "/bin/sh",
         "-c",
-        "/wait-for-it.sh postgres:5432 -- bunx prisma migrate dev --name init && bun seed && bun dev",
+        "/wait-for-it.sh postgres:5432 -- bunx prisma migrate dev --name init && bun destroy && bun seed && bun dev",
       ]
     develop:
       watch:

@@ -10,7 +10,7 @@ export class CurrentMovementService {
     constructor() {
         this.currentMovementRepository = new BaseRepository<CurrentMovement>(prisma.currentMovement);
     }
-        
+
     async createCurrentMovement(currentMovement: any): Promise<CurrentMovement> {
         try {
             const createdCurrentMovement = await prisma.currentMovement.create({
@@ -22,7 +22,7 @@ export class CurrentMovementService {
                     balanceAmount: currentMovement.balanceAmount,
                     movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
-                    
+
                     current: currentMovement.currentCode ? {
                         connect: {
                             id: currentMovement.currentCode
@@ -60,7 +60,7 @@ export class CurrentMovementService {
     async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>): Promise<CurrentMovement> {
         try {
             return await prisma.currentMovement.update({
-                where:  {id},
+                where: { id },
                 data: {
                     dueDate: currentMovement.dueDate,
                     description: currentMovement.description,
@@ -96,7 +96,7 @@ export class CurrentMovementService {
                         }
                     } : undefined,
                 } as Prisma.CurrentMovementUpdateInput,
-                });
+            });
         } catch (error) {
             logger.error(`Error updating current movement with id ${id}`, error);
             throw error;
@@ -126,6 +126,19 @@ export class CurrentMovementService {
             return await this.currentMovementRepository.findAll();
         } catch (error) {
             logger.error("Error fetching all current movements", error);
+            throw error;
+        }
+    }
+
+    async getAllCurrentMovementsWithCurrents(): Promise<CurrentMovement[]> {
+        try {
+            return await prisma.currentMovement.findMany({
+                include: {
+                    current: true,
+                }
+            });
+        } catch (error) {
+            logger.error("Error fetching all current movements with currents", error);
             throw error;
         }
     }

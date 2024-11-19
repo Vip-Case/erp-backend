@@ -25,6 +25,7 @@ import { Prisma } from '@prisma/client';
 import exportRoutes from './api/routes/v1/exportRoutes';
 import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
 import dotenv from 'dotenv';
+import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
 dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -135,5 +136,6 @@ BrandRoutes(app);
 importRoutes(app);
 exportRoutes(app);
 ManufacturerRoutes(app);
+CurrentCategoryRoutes(app);
 
 export default app;

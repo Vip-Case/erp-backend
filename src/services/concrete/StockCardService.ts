@@ -740,7 +740,7 @@ export class StockCardService {
                 });
 
                 return true;
-            });
+            }, { timeout: 3000 });
         } catch (error) {
             logger.error("Error deleting many StockCards with relations:", error);
             throw new Error("Could not delete many StockCards with relations");
