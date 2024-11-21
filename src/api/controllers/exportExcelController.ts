@@ -9,8 +9,8 @@ const timeoutPromise = (ms: any) => new Promise(resolve => setTimeout(resolve, m
 
 export const exportExcelController = async (context: any) => {
     try {
-         //await exportStockCardsToExcel(); // Dosyanın oluşturulmasını sağlar
-         // Excel dosyasını oluştur
+        //await exportStockCardsToExcel(); // Dosyanın oluşturulmasını sağlar
+        // Excel dosyasını oluştur
         await Promise.race([
             exportStockCardsToExcel(),
             timeoutPromise(500) // 10 saniye zaman aşımı

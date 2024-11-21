@@ -9,8 +9,8 @@ export const InvoiceRelations = {
 };
 
 export class InvoiceService {
-    private invoiceRepository = new BaseRepository<Invoice> (prisma.invoice);
-    private invoiceDetailRepository = new BaseRepository<InvoiceDetail> (prisma.invoiceDetail);
+    private invoiceRepository = new BaseRepository<Invoice>(prisma.invoice);
+    private invoiceDetailRepository = new BaseRepository<InvoiceDetail>(prisma.invoiceDetail);
 
     async getAllInvoices(): Promise<Invoice[]> {
         return this.invoiceRepository.findAll();
@@ -85,7 +85,7 @@ export class InvoiceService {
     async updateInvoice(id: string, invoice: Partial<Invoice>): Promise<Invoice> {
         try {
             return await prisma.invoice.update({
-                where: {id},
+                where: { id },
                 data: {
                     invoiceNo: invoice.invoiceNo,
                     gibInvoiceNo: invoice.gibInvoiceNo,
@@ -186,14 +186,12 @@ export class InvoiceService {
         }
     }
 
-    async getAllInvoicesWithRelations(): Promise<Invoice[]> {
-        return this.invoiceRepository.findAll(
-            {
-                include: {
-                    InvoiceDetail: true
-                }
+    async getAllInvoicesWithRelations(): Promise<any[]> {
+        return await prisma.invoice.findMany({
+            include: {
+                invoiceDetail: true
             }
-        );
+        });
     }
 
     async getInvoiceWithRelationsById(id: string): Promise<Invoice | null> {
