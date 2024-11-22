@@ -20,12 +20,12 @@ import importRoutes from './api/routes/v1/importExcelRoutes';
 import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
 import { CustomError } from './utils/CustomError';
-import logger from './utils/logger';
 import { Prisma } from '@prisma/client';
 import exportRoutes from './api/routes/v1/exportRoutes';
 import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
 import dotenv from 'dotenv';
 import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
+import loggerWithCaller from './utils/logger';
 dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -96,13 +96,20 @@ const app = new Elysia()
     }
 
     // Hataları loglayın
-    logger.error('Hata oluştu:', {
-      message: error.message,
-      stack: error.stack,
-      code: (error as any).code,
-      meta: (error as any).meta,
-    });
-
+    loggerWithCaller.error(
+      {
+        message: error.message,
+        stack: error.stack,
+        code: (error as any).code,
+        meta: (error as any).meta,
+        prisma: error instanceof Prisma.PrismaClientKnownRequestError ? {
+          clientVersion: error.clientVersion,
+          errorCode: error.code,
+          meta: error.meta,
+        } : undefined,
+      },
+      'Hata oluştu'
+    );
     // Yanıtı ayarlayın ve gönderin
     set.status = statusCode;
 

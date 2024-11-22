@@ -33,6 +33,7 @@
     "mongoose": "^8.6.4",
     "pg": "^8.13.0",
     "pino": "^9.4.0",
+    "pino-caller": "^3.4.0",
     "pino-multi-stream": "^6.0.0",
     "pino-pretty": "^11.2.2",
     "prisma": "^5.22.0",

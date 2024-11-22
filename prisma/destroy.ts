@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../src/config/prisma';
 
-const prisma = new PrismaClient();
 
 async function main() {
     // Delete dependent records of Current
