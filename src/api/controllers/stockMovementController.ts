@@ -71,10 +71,31 @@ export const StockMovementController = {
         }
     },
 
-    getStockMovementsWithFilters: async (ctx: Context) => {
-        const filters = ctx.query as any;
+    getAllOrderStockMovements: async (ctx: Context) => {
         try {
-            const stockMovements = await stockMovementService.getStockMovementsWithFilters(filters);
+            const stockMovements = await stockMovementService.getAllOrderStockMovements();
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
+    },
+
+    getAllSalesStockMovements: async (ctx: Context) => {
+        try {
+            const stockMovements = await stockMovementService.getAllSalesStockMovements();
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
+    },
+
+    getAllPurchaseStockMovements: async (ctx: Context) => {
+        try {
+            const stockMovements = await stockMovementService.getAllPurchaseStockMovements();
             ctx.set.status = 200;
             return stockMovements;
         } catch (error: any) {

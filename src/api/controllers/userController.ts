@@ -2,11 +2,26 @@
 import UserService from '../../services/concrete/userService';
 import { Context } from 'elysia';
 import { User } from '@prisma/client';
+import prisma from '../../config/prisma';
 
 // Service Initialization
 const userService = new UserService();
 
 export const UserController = {
+
+    assignRolesToUser: async (ctx: Context) => {
+        const { userId, roleIds } = ctx.body as { userId: string, roleIds: string[] };
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                roles: {
+                    connect: roleIds.map((id: string) => ({ id })),
+                },
+            },
+        });
+        ctx.set.status = 200;
+        return user;
+    },
 
     createUser: async (ctx: Context) => {
         const userData: User = ctx.body as User;

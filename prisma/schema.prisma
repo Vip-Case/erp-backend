@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-generator docs {
-  provider = "node node_modules/prisma-docs-generator"
-}
-
-generator prismabox {
-  provider                    = "prismabox"
-  typeboxImportVariableName   = "t"
-  typeboxImportDependencyName = "elysia"
-  inputModel                  = true
-  additionalProperties        = true
-}
-
 enum AddressType {
   Fatura
   Sevk
@@ -151,16 +139,29 @@ enum VaultDocumentType {
   Official //Resmi
 }
 
-model Role {
-  id          String   @id @default(cuid())
-  roleName    String   @unique @db.VarChar(50)
-  description String   @db.VarChar(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  roles     Role[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  user User[]
+model Role {
+  id          String       @id @default(cuid())
+  roleName    String       @unique
+  description String?
+  users       User[]
+  permissions Permission[]
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  roles       Role[]
 }
 
 model StockCard {
@@ -413,7 +414,6 @@ model Company {
 
   branch          Branch[]
   warehouse       Warehouse[]
-  user            User[]
   stockCard       StockCard[]
   currentMovement CurrentMovement[]
   invoice         Invoice[]
@@ -438,7 +438,6 @@ model Branch {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  user            User[]
   warehouse       BranchWarehouse[]
   stockCard       StockCard[]
   stockMovement   StockMovement[]
@@ -470,7 +469,6 @@ model Warehouse {
   company Company @relation(fields: [companyCode], references: [companyCode])
 
   branch         BranchWarehouse[]
-  user           User[]
   stockMovements StockMovement[]   @relation("StockMovementWarehouse")
   outMovements   StockMovement[]   @relation("StockMovementOutWarehouse")
 
@@ -715,29 +713,6 @@ model CurrentCategoryItem {
   categoryId  String
   category    CurrentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   current     Current         @relation(fields: [currentCode], references: [currentCode], onDelete: Cascade)
-}
-
-model User {
-  id          String   @id @default(cuid())
-  username    String   @unique @db.VarChar(50)
-  password    String   @db.VarChar(100)
-  email       String   @unique @db.VarChar(100)
-  firstName   String   @db.VarChar(50)
-  lastName    String   @db.VarChar(50)
-  phone       String   @db.VarChar(50)
-  address     String   @db.VarChar(250)
-  isActive    Boolean  @default(true)
-  companyCode String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  company Company @relation(fields: [companyCode], references: [companyCode])
-
-  branch    Branch[]
-  warehouse Warehouse[]
-  role      Role[]
 }
 
 model Invoice {

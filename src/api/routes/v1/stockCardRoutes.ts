@@ -15,6 +15,7 @@ export const StockCardRoutes = (app: Elysia) => {
             .delete("/deleteManyStockCardsWithRelations", StockCardController.deleteManyStockCardsWithRelations, { tags: ["Stock Cards"] })
             .get("/stockCardsWithRelations", StockCardController.getAllStockCardsWithRelations, { tags: ["Stock Cards"] })
             .get("/stockCardsWithRelations/:id", StockCardController.getStockCardsWithRelationsById, { tags: ["Stock Cards"] })
+            .get("/search", StockCardController.searchStockCards, { tags: ["Stock Cards"] })
     );
 };
 

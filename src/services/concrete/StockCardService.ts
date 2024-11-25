@@ -16,6 +16,15 @@ import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { asyncHandler } from '../../utils/asyncHandler';
 
+interface SearchCriteria {
+    query?: string; // Genel bir arama için
+    productCode?: string;
+    productName?: string;
+    barcodes?: string;
+    marketNames?: string;
+    priceListBarcode?: string;
+}
+
 export class StockCardService {
 
 
@@ -851,6 +860,111 @@ export class StockCardService {
 
         return stockCards;
     });
+
+
+
+    searchStockCards = asyncHandler(async (criteria: SearchCriteria) => {
+        const where: Prisma.StockCardWhereInput = {
+            OR: [],
+        };
+
+        if (!where.OR) {
+            where.OR = [];
+        }
+
+        // Eğer belirli kriterler sağlanmışsa, bunları ekle
+        if (criteria.productCode) {
+            where.OR.push({
+                productCode: { contains: criteria.productCode, mode: 'insensitive' },
+            });
+        }
+
+        if (criteria.productName) {
+            where.OR.push({
+                productName: { contains: criteria.productName, mode: 'insensitive' },
+            });
+        }
+
+        if (criteria.barcodes) {
+            where.OR.push({
+                barcodes: {
+                    some: { barcode: { contains: criteria.barcodes, mode: 'insensitive' } },
+                },
+            });
+        }
+
+        if (criteria.marketNames) {
+            where.OR.push({
+                stockCardMarketNames: {
+                    some: { marketName: { contains: criteria.marketNames, mode: 'insensitive' } },
+                },
+            });
+        }
+
+        if (criteria.priceListBarcode) {
+            where.OR.push({
+                stockCardPriceLists: {
+                    some: { barcode: { contains: criteria.priceListBarcode, mode: 'insensitive' } },
+                },
+            });
+        }
+
+        // Eğer hiçbir kriter belirtilmemişse, genel query'yi tüm alanlarda ara
+        if (where.OR.length === 0 && criteria.query) {
+            where.OR.push(
+                { productCode: { contains: criteria.query, mode: 'insensitive' } },
+                { productName: { contains: criteria.query, mode: 'insensitive' } },
+                { barcodes: { some: { barcode: { contains: criteria.query, mode: 'insensitive' } } } },
+                { stockCardMarketNames: { some: { marketName: { contains: criteria.query, mode: 'insensitive' } } } },
+                { stockCardPriceLists: { some: { barcode: { contains: criteria.query, mode: 'insensitive' } } } }
+            );
+        }
+
+        // Eğer hem spesifik kriterler hem genel bir query yoksa, hata döndür
+        if (where.OR.length === 0) {
+            throw new Error('En az bir arama kriteri veya genel bir sorgu belirtmelisiniz.');
+        }
+
+        const stockCards = await prisma.stockCard.findMany({
+            where,
+            include: {
+                barcodes: true,
+                brand: true,
+                stockCardAttributeItems: {
+                    include: {
+                        attribute: true,
+                    },
+                },
+                stockCardEFatura: true,
+                stockCardManufacturer: {
+                    include: {
+                        brand: true,
+                        current: true,
+                    },
+                },
+                stockCardMarketNames: true,
+                stockCardPriceLists: {
+                    include: {
+                        priceList: true,
+                    },
+                },
+                stockCardWarehouse: {
+                    include: {
+                        warehouse: true,
+                    },
+                },
+                taxRates: true,
+                stockCardCategoryItem: {
+                    include: {
+                        stockCardCategory: true,
+                    },
+                },
+            },
+        });
+
+        return stockCards;
+    });
+
 
 }
 
