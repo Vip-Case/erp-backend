@@ -15,28 +15,26 @@ export class VaultMovementService {
         try {
             const createdVaultMovement = await prisma.vaultMovement.create({
                 data: {
-                    vaultId: vaultMovement.vaultId,
-                    invoiceId: vaultMovement.invoiceId,
-                    receiptId: vaultMovement.receiptId,
                     description: vaultMovement.description,
                     entering: vaultMovement.entering,
                     emerging: vaultMovement.emerging,
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
+
                     vault: vaultMovement.vaultId ? {
                         connect: {
                             id: vaultMovement.vaultId
                         }
                     } : undefined,
 
-                    invoice: vaultMovement.invoiceId ? {
+                    invoice: vaultMovement?.invoiceId ? {
                         connect: {
                             id: vaultMovement.invoiceId
                         }
                     } : undefined,
 
-                    receipt: vaultMovement.receiptId ? {
+                    receipt: vaultMovement?.receiptId ? {
                         connect: {
                             id: vaultMovement.receiptId
                         }
