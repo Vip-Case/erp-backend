@@ -2,6 +2,7 @@
 import VaultMovementService from '../../services/concrete/vaultMovementService';
 import { Context } from 'elysia';
 import { VaultMovement } from '@prisma/client';
+import { get } from 'http';
 
 // Service Initialization
 const vaultMovementService = new VaultMovementService();
@@ -57,6 +58,18 @@ export const VaultMovementController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching vaultMovement", details: error.message };
+        }
+    },
+
+    getVaultMovementsByVaultId: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const vaultMovements = await vaultMovementService.getVaultMovementsByVaultId(id);
+            ctx.set.status = 200;
+            return vaultMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching vaultMovements", details: error.message };
         }
     },
 

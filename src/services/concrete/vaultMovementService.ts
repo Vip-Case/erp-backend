@@ -110,9 +110,27 @@ export class VaultMovementService {
         }
     }
 
+    async getVaultMovementsByVaultId(vaultId: string): Promise<VaultMovement[]> {
+        try {
+            return await prisma.vaultMovement.findMany({
+                where: { vaultId: vaultId },
+                include: {
+                    vault: true
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching vaultMovements with vaultId ${vaultId}`, error);
+            throw error;
+        }
+    }
+
     async getAllVaultMovements(): Promise<VaultMovement[]> {
         try {
-            return await this.vaultMovementRepository.findAll();
+            return await prisma.vaultMovement.findMany({
+                include: {
+                    vault: true
+                }
+            });
         } catch (error) {
             logger.error("Error fetching all vaultMovements", error);
             throw error;

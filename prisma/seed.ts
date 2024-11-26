@@ -2388,6 +2388,112 @@ async function main() {
         },
     });
 
+    // Kasa ekleme
+    const vault1 = await prisma.vault.create({
+        data: {
+            vaultName: "Dolar Kasası",
+            branch: {
+                connect: { branchCode: "B1" },
+            },
+            balance: 1000,
+            currency: "USD",
+        },
+    });
+
+    const vault1Id = vault1.id;
+
+    // Kasa ekleme
+    const vault2 = await prisma.vault.create({
+        data: {
+            vaultName: "TL Kasası",
+            branch: {
+                connect: { branchCode: "B1" },
+            },
+            balance: 36000,
+            currency: "TRY",
+        },
+    });
+
+    const vault2Id = vault2.id;
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Alacak Tahsilatı",
+            emerging: 0,
+            entering: 1000,
+            vaultDirection: "Introduction",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault1Id },
+            },
+        },
+    });
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Borç Tahsilatı",
+            emerging: 250,
+            entering: 0,
+            vaultDirection: "Exit",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault1Id },
+            },
+        },
+    });
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Alacak Tahsilatı",
+            emerging: 0,
+            entering: 50000,
+            vaultDirection: "Introduction",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault2Id },
+            },
+        },
+    });
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Borç Tahsilatı",
+            emerging: 15000,
+            entering: 0,
+            vaultDirection: "Exit",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault2Id },
+            },
+        },
+    });
+
+    // Kasa Bakiye Güncelleme
+    await prisma.vault.update({
+        where: { id: vault1Id },
+        data: {
+            balance: 750,
+        },
+    });
+
+    // Kasa Bakiye Güncelleme
+    await prisma.vault.update({
+        where: { id: vault2Id },
+        data: {
+            balance: 35000,
+        },
+    });
+
+
+
 
 }
 

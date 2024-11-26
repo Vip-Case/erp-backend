@@ -26,6 +26,7 @@ import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
 import dotenv from 'dotenv';
 import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
 import loggerWithCaller from './utils/logger';
+import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -139,6 +140,7 @@ RoleRoutes(app);
 InvoiceRoutes(app);
 ReceiptRoutes(app);
 VaultRoutes(app);
+VaultMovementRoutes(app);
 BrandRoutes(app);
 importRoutes(app);
 exportRoutes(app);

@@ -43,6 +43,8 @@ async function main() {
     await prisma.role.deleteMany({});
     await prisma.brand.deleteMany({});
     await prisma.currentCategory.deleteMany({});
+    await prisma.vaultMovement.deleteMany({});
+    await prisma.vault.deleteMany({});
 }
 
 main()
