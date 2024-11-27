@@ -17,7 +17,6 @@ export class BankService {
             const createdBank = await prisma.bank.create({
                 data: {
                     bankName: bank.bankName,
-                    branchCode: bank.branchCode,
                     balance: bank.balance,
                     currency: bank.currency,
 
@@ -40,7 +39,6 @@ export class BankService {
                 where: { id },
                 data: {
                     bankName: bank.bankName,
-                    branchCode: bank.branchCode,
                     balance: bank.balance,
                     currency: bank.currency,
 
@@ -77,9 +75,16 @@ export class BankService {
         }
     }
 
-    async deleteBank(id: string): Promise<boolean> {
+    async deleteBank(id: string): Promise<any> {
         try {
-            return await this.bankRepository.delete(id);
+            const result = await this.bankRepository.delete(id);
+            const result2 = await prisma.bankMovement.deleteMany({
+                where: {
+                    bankId: id,
+                },
+            });
+
+            return result && result2;
         } catch (error) {
             logger.error(`Error deleting bank with id ${id}`, error);
             throw error;

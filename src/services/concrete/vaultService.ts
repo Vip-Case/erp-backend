@@ -17,7 +17,6 @@ export class VaultService {
             const createdVault = await prisma.vault.create({
                 data: {
                     vaultName: vault.vaultName,
-                    branchCode: vault.branchCode,
                     balance: vault.balance,
                     currency: vault.currency,
 
@@ -40,7 +39,6 @@ export class VaultService {
                 where: { id },
                 data: {
                     vaultName: vault.vaultName,
-                    branchCode: vault.branchCode,
                     balance: vault.balance,
                     currency: vault.currency,
 
@@ -77,9 +75,16 @@ export class VaultService {
         }
     }
 
-    async deleteVault(id: string): Promise<boolean> {
+    async deleteVault(id: string): Promise<any> {
         try {
-            return await this.vaultRepository.delete(id);
+            const result = await this.vaultRepository.delete(id);
+            const result2 = await prisma.vaultMovement.deleteMany({
+                where: {
+                    vaultId: id,
+                },
+            });
+
+            return result && result2;
         } catch (error) {
             logger.error(`Error deleting vault with id ${id}`, error);
             throw error;

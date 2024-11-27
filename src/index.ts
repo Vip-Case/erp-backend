@@ -29,6 +29,8 @@ import loggerWithCaller from './utils/logger';
 import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 import BankRoutes from './api/routes/v1/bankRoutes';
 import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
+import PosRoutes from './api/routes/v1/posRoutes';
+import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
 dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -72,7 +74,7 @@ const app = new Elysia()
     },
   }))
   .get("/", () => "Elysia is running!") // Ana route tanımlanıyor
-  .onError(({ error, set }) => {
+  .onError(async ({ error, set, request }) => {
     // Varsayılan hata yanıtı
     let statusCode = 500;
     let message = 'Beklenmeyen bir hata oluştu.';
@@ -98,9 +100,16 @@ const app = new Elysia()
       message = error.message;
     }
 
+    // İstekten gelen body'yi alın
+    const body = await request.json().catch(() => null);
+
     // Hataları loglayın
     loggerWithCaller.error(
       {
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        body: body,
         message: error.message,
         stack: error.stack,
         code: (error as any).code,
@@ -150,4 +159,7 @@ ManufacturerRoutes(app);
 CurrentCategoryRoutes(app);
 BankRoutes(app);
 BankMovementRoutes(app);
+PosRoutes(app);
+PosMovementRoutes(app);
+
 export default app;
