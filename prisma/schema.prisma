@@ -48,6 +48,13 @@ enum StokManagementType {
   Maliyet
   Konsinye
   Teshir
+  AlisFaturasi
+  SatisFaturasi
+}
+
+enum GCCode {
+  Giris
+  Cikis
 }
 
 enum CurrentMovementType {
@@ -161,6 +168,30 @@ model Role {
   updatedBy   String?
 
   user User[]
+  permission Permission[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  groupId     String?
+  permissionName String @unique @db.VarChar(50)
+  description String @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  role Role[]
+  user User[]
+  group       PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
+}
+
+model PermissionGroup {
+  id          String       @id @default(cuid())
+  groupName   String       @unique @db.VarChar(50)
+  description String?      @db.VarChar(100)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  permissions Permission[] @relation("PermissionToGroup")
 }
 
 model StockCard {
@@ -209,6 +240,7 @@ model StockCard {
   stockCardManufacturer   StockCardManufacturer[]
   stockCardAttributeItems StockCardAttributeItems[]
   stockCardMarketNames    StockCardMarketNames[]
+  orderItems              OrderItem[]
 }
 
 model StockCardEFatura {
@@ -362,7 +394,7 @@ model StockMovement {
   invoiceType      InvoiceType?
   movementType     StokManagementType
   documentNo       String?
-  gcCode           String?
+  gcCode           GCCode?
   type             String?
   description      String?
   quantity         Decimal?           @db.Decimal(15, 4)
@@ -736,6 +768,7 @@ model User {
   branch    Branch[]
   warehouse Warehouse[]
   role      Role[]
+  permission Permission[]
 }
 
 model Invoice {
@@ -771,7 +804,7 @@ model Invoice {
 
   current   Current?            @relation(fields: [currentCode], references: [currentCode])
   company   Company?            @relation(fields: [companyCode], references: [companyCode])
-  branch    Branch              @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
+  branch    Branch?              @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
   warehouse Warehouse?          @relation(fields: [warehouseCode], references: [warehouseCode])
   priceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
   outBranch Branch?             @relation("InvoiceOutBranch", fields: [outBranchCode], references: [branchCode])
@@ -779,7 +812,6 @@ model Invoice {
   invoiceDetail   InvoiceDetail[]
   stockMovement   StockMovement[]
   currentMovement CurrentMovement[]
-
   vaultMovement VaultMovement[]
 }
 
@@ -818,7 +850,7 @@ model VaultMovement {
   id                String            @id @default(cuid())
   vaultId           String
   invoiceId         String
-  receiptId         String
+  receiptId         String?
   description       String
   entering          Decimal           @db.Decimal(15, 2)
   emerging          Decimal           @db.Decimal(15, 2)
@@ -828,5 +860,73 @@ model VaultMovement {
 
   vault   Vault   @relation(fields: [vaultId], references: [id])
   invoice Invoice @relation(fields: [invoiceId], references: [id])
-  receipt Receipt @relation(fields: [receiptId], references: [id])
+  receipt Receipt? @relation(fields: [receiptId], references: [id])
+}
+
+model Order {
+  id                      String   @id @default(cuid())
+  platformOrderId         String       // Platformdan gelen sipariş ID'si (Hepsiburada: "id", Trendyol: "orderNumber", WooCommerce: "id")
+  platform                String       // Siparişin hangi platformdan geldiğini belirtir (hepsiburada, trendyol, woocommerce)
+  customerId              String
+  status                  String
+  currency                String
+  orderDate               DateTime
+  deliveryType            String?
+  cargoCompany            String?
+  shippingAddressId       String?      // Kargo adresi
+  billingAddressId        String?     // Fatura adresi
+  timeSlot                DateTime?
+  totalPrice              Float
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+  shippingAddress         OrderInvoiceAddress? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddress          OrderInvoiceAddress? @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  items                   OrderItem[]  // Sipariş ürünleri ile ilişki
+  cargos                  OrderCargo[]      // Kargo bilgileri ile ilişki
+}
+
+model OrderInvoiceAddress {
+  id                  String   @id @default(uuid()) // Benzersiz adres ID'si
+  address             String   // Adres  
+  city                String   // Şehir
+  district            String   // İlçe
+  postalCode          String   // Posta kodu
+  country             String   // Ülke
+  fullName            String   // Adres sahibi adı
+  email               String?
+  paymentMethod       String?   
+  transactionId       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  shippingOrders      Order[] @relation("ShippingAddress") // Shipping Address ilişkisi
+  billingOrders       Order[] @relation("BillingAddress")  // Billing Address ilişkisi
+}
+
+model OrderCargo {
+  id                  String   @id @default(uuid()) // Benzersiz kargo ID'si
+  name                String   // Kargo şirketi adı (ör. HepsiJet, Yurtiçi Kargo)
+  shortName           String
+  trackingNumber      String  // Kargo takip numarası
+  orderId             String   // Sipariş ID'si
+  deliveredAt         DateTime? // Teslimat tarihi
+  deliveryNote        String?   // Teslimat notu
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  order               Order    @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
+}
+
+model OrderItem {
+  id             String   @id @default(cuid()) // Benzersiz ürün ID'si
+  orderId        String   // Sipariş ID'si
+  stockCardId    String   // StockCard ile ilişki
+  quantity       Int      // Ürün miktarı
+  unitPrice      Decimal  @db.Decimal(15, 4) // Ürün birim fiyatı
+  totalPrice     Decimal  @db.Decimal(15, 4) // Ürün toplam fiyatı
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  order          Order     @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
+  stockCard      StockCard @relation(fields: [stockCardId], references: [id]) // StockCard ile ilişki
 }

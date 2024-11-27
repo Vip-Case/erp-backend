@@ -1,39 +1,36 @@
 import { exportStockCardsToExcel } from '../../services/concrete/exportExcelService';
 import fs from 'fs';
-import { Context } from 'elysia';
-import prisma from '../../config/prisma';
-
-// Zaman aşımı fonksiyonu
-const timeoutPromise = (ms: any) => new Promise(resolve => setTimeout(resolve, ms));
-
 
 export const exportExcelController = async (context: any) => {
     try {
-         //await exportStockCardsToExcel(); // Dosyanın oluşturulmasını sağlar
-         // Excel dosyasını oluştur
-        await Promise.race([
-            exportStockCardsToExcel(),
-            timeoutPromise(500) // 10 saniye zaman aşımı
-        ]);
+        console.log("Excel dosyası oluşturulmaya başlandı.");
 
-        // Önce dosyanın mevcut olduğundan emin olun
-        const filePath = 'StockCards.xlsx';
+        const { filePath } = await exportStockCardsToExcel();
+
         if (!fs.existsSync(filePath)) {
-            return new Response('Excel dosyası bulunamadı.', { status: 404 });
+            console.error("Dosya mevcut değil:", filePath);
+            return new Response(JSON.stringify({ error: "Excel dosyası bulunamadı." }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' },
+            });
         }
 
-        // Dosyayı okuyun ve yanıt olarak döndürün
         const fileBuffer = fs.readFileSync(filePath);
+
+        console.log("Dosya başarıyla oluşturuldu ve tarayıcıya gönderiliyor.");
+
         return new Response(fileBuffer, {
+            status: 200,
             headers: {
-                'Content-Disposition': 'attachment; filename="StockCards.xlsx"',
+                'Content-Disposition': 'attachment; filename="stokCard.xlsx"',
                 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             },
         });
     } catch (error) {
         console.error("Hata oluştu:", error);
-        return new Response('Excel dosyası oluşturulamadı.', { status: 500 });
+        return new Response(JSON.stringify({ error: "Excel dosyası oluşturulamadı." }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
-}
-
-
+};

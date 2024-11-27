@@ -25,7 +25,7 @@ const currentRelations = {
 export class currentService {
     async createCurrent(data: {
         current: Prisma.CurrentCreateInput;
-        priceListId: string;
+        priceListName: string;
         currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
         currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
@@ -35,10 +35,21 @@ export class currentService {
 
     }): Promise<Current> {
         try {
+            // priceListName ile id'yi buluyoruz
+            const priceList = await prisma.stockCardPriceList.findUnique({
+                where: { priceListName: data.priceListName }
+            });
+
+            if (!priceList) {
+                throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
+            }
+
             const newCurrent = await prisma.current.create({
                 data: {
                     ...data.current,
-                    priceList: data.priceListId ? { connect: { id: data.priceListId } } : {},
+                    priceList: {
+                        connect: { id: priceList.id } // Bulunan id ile bağlantı sağlanıyor
+                    },
                     currentAddress: data.currentAddress,
                     currentBranch: data.currentBranch,
                     currentCategoryItem: data.currentCategoryItem,
@@ -70,7 +81,7 @@ export class currentService {
 
     async updateCurrent(id: string, data: {
         current: Prisma.CurrentUpdateInput;
-        priceListId: string;
+        priceListName: string;
         currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
         currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
@@ -80,11 +91,25 @@ export class currentService {
 
     }): Promise<Current> {
         try {
+            let priceListConnect = {};
+
+            if (data.priceListName) {
+                const priceList = await prisma.stockCardPriceList.findUnique({
+                    where: { priceListName: data.priceListName }
+                });
+
+                if (!priceList) {
+                    throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
+                }
+
+                priceListConnect = { connect: { id: priceList.id } };
+            }
             const updatedCurrent = await prisma.current.update({
+                
                 where: { id },
                 data: {
                     ...data.current,
-                    priceList: data.priceListId ? { connect: { id: data.priceListId } } : {},
+                    priceList: priceListConnect,
                     currentAddress: data.currentAddress,
                     currentBranch: data.currentBranch,
                     currentCategoryItem: data.currentCategoryItem,

@@ -16,13 +16,11 @@ export class VaultService {
             const createdVault = await prisma.vault.create({
                 data: {
                     vaultName: vault.vaultName,
-                    branchCode: vault.branchCode,
                     balance: vault.balance,
                     currency: vault.currency,
-
-                    branch: vault.branchCode ? {
-                        connect: { branchCode: vault.branchCode },
-                    } :  {},
+                    branch: {
+                        connect: { branchCode: vault.branchCode }, // Sadece ilişki kullanılıyor
+                    },
 
                 } as Prisma.VaultCreateInput,
             });
@@ -39,13 +37,11 @@ export class VaultService {
                 where: {id},
                 data: {
                     vaultName: vault.vaultName,
-                    branchCode: vault.branchCode,
                     balance: vault.balance,
                     currency: vault.currency,
-
-                    branch: vault.branchCode ? {
-                        connect: { branchCode: vault.branchCode },
-                    } :  {},
+                    branch: {
+                        connect: { branchCode: vault.branchCode }, // Sadece ilişki kullanılıyor
+                    },
 
                 } as Prisma.VaultUpdateInput,
             });

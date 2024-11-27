@@ -15,34 +15,31 @@ export class VaultMovementService {
         try {
             const createdVaultMovement = await prisma.vaultMovement.create({
                 data: {
-                    vaultId: vaultMovement.vaultId,
-                    invoiceId: vaultMovement.invoiceId,
-                    receiptId: vaultMovement.receiptId,
                     description: vaultMovement.description,
                     entering: vaultMovement.entering,
                     emerging: vaultMovement.emerging,
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
-
-                    Vault: vaultMovement.vaultId ? {
+    
+                    // İlişkiler
+                    vault: {
                         connect: {
-                            id: vaultMovement.vaultId
-                        }
-                    } : undefined,
-                    
-                    Invoice: vaultMovement.invoiceId ? {
+                            id: vaultMovement.vaultId,
+                        },
+                    },
+                    invoice: {
                         connect: {
-                            id: vaultMovement.invoiceId
+                            id: vaultMovement.invoiceId, // Invoice ilişkisi
+                        },
+                    },
+                    receipt: vaultMovement.receiptId
+                        ? {
+                            connect: {
+                                id: vaultMovement.receiptId,
+                            },
                         }
-                    } : undefined,
-
-                    Receipt: vaultMovement.receiptId ? {
-                        connect: {
-                            id: vaultMovement.receiptId
-                        }
-                    } : undefined
-
+                        : undefined,
                 } as Prisma.VaultMovementCreateInput,
             });
             return createdVaultMovement;
@@ -51,40 +48,38 @@ export class VaultMovementService {
             throw error;
         }
     }
+    
 
     async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
         try {
             return await prisma.vaultMovement.update({
-                where: {id},
+                where: { id },
                 data: {
-                    vaultId: vaultMovement.vaultId,
-                    invoiceId: vaultMovement.invoiceId,
-                    receiptId: vaultMovement.receiptId,
                     description: vaultMovement.description,
                     entering: vaultMovement.entering,
                     emerging: vaultMovement.emerging,
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
-
-                    Vault: vaultMovement.vaultId ? {
+    
+                    // İlişkiler
+                    vault: {
                         connect: {
-                            id: vaultMovement.vaultId
-                        }
-                    } : undefined,
-                    
-                    Invoice: vaultMovement.invoiceId ? {
+                            id: vaultMovement.vaultId,
+                        },
+                    },
+                    invoice: {
                         connect: {
-                            id: vaultMovement.invoiceId
+                            id: vaultMovement.invoiceId, // Invoice ilişkisi
+                        },
+                    },
+                    receipt: vaultMovement.receiptId
+                        ? {
+                            connect: {
+                                id: vaultMovement.receiptId,
+                            },
                         }
-                    } : undefined,
-
-                    Receipt: vaultMovement.receiptId ? {
-                        connect: {
-                            id: vaultMovement.receiptId
-                        }
-                    } : undefined
-
+                        : undefined,
                 } as Prisma.VaultMovementUpdateInput,
             });
         } catch (error) {
@@ -92,6 +87,7 @@ export class VaultMovementService {
             throw error;
         }
     }
+    
 
     async deleteVaultMovement(id: string): Promise<boolean> {
         try {
