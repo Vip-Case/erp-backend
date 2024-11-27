@@ -2492,6 +2492,171 @@ async function main() {
         },
     });
 
+    // Fatura ekleme
+    const invoice1 = await prisma.invoice.create({
+        data: {
+            invoiceNo: "F1",
+            gibInvoiceNo: "GIB1",
+            invoiceDate: new Date(),
+            invoiceType: "Purchase",
+            documentType: "Invoice",
+            currentCode: "C1",
+            companyCode: "C1",
+            branchCode: "B1",
+            warehouseCode: "W1",
+            description: "Description 1",
+            genelIskontoTutar: 0,
+            genelIskontoOran: 0,
+            paymentDate: new Date(),
+            paymentDay: 30,
+            priceListId: priceList1.id,
+            totalAmount: 1000,
+            totalVat: 200,
+            totalDiscount: 0,
+            totalNet: 1200,
+            totalPaid: 1200,
+            totalDebt: 0,
+            totalBalance: 0,
+
+        },
+    });
+
+    // Fatura detay ekleme
+    await prisma.invoiceDetail.create({
+        data: {
+            invoiceId: invoice1.id,
+            productCode: "SC1",
+            quantity: 10,
+            unitPrice: 100,
+            totalPrice: 1000,
+            vatRate: 20,
+            discount: 0,
+            netPrice: 1200,
+        },
+    });
+
+    // Fatura ekleme
+    const invoice2 = await prisma.invoice.create({
+        data: {
+            invoiceNo: "F2",
+            gibInvoiceNo: "GIB2",
+            invoiceDate: new Date(),
+            invoiceType: "Sales",
+            documentType: "Invoice",
+            currentCode: "C1",
+            companyCode: "C1",
+            branchCode: "B1",
+            warehouseCode: "W1",
+            description: "Description 2",
+            genelIskontoTutar: 0,
+            genelIskontoOran: 0,
+            paymentDate: new Date(),
+            paymentDay: 30,
+            priceListId: priceList1.id,
+            totalAmount: 1000,
+            totalVat: 200,
+            totalDiscount: 0,
+            totalNet: 1200,
+            totalPaid: 1200,
+            totalDebt: 0,
+            totalBalance: 0,
+        },
+    });
+
+    // Fatura detay ekleme
+    await prisma.invoiceDetail.create({
+        data: {
+            invoiceId: invoice2.id,
+            productCode: "SC2",
+            quantity: 10,
+            unitPrice: 100,
+            totalPrice: 1000,
+            vatRate: 20,
+            discount: 0,
+            netPrice: 1200,
+        },
+    });
+
+    // Stok Hareketi ekleme
+    await prisma.stockMovement.create({
+        data: {
+            productCode: "SC1",
+            warehouseCode: "W1",
+            branchCode: "B1",
+            currentCode: "C1",
+            documentType: "Invoice",
+            invoiceType: "Purchase",
+            movementType: "Devir",
+            documentNo: "F1",
+            gcCode: "G",
+            type: "Giris",
+            description: "Description 1",
+            quantity: 10,
+            unitPrice: 100,
+            totalPrice: 1000,
+            unitOfMeasure: "Adet",
+            priceListId: priceList1.id,
+        },
+    });
+
+    // Cari Hareket ekleme
+    await prisma.currentMovement.create({
+        data: {
+            currentCode: "C1",
+            dueDate: new Date(),
+            description: "Description 1",
+            debtAmount: 1000, // Alacak
+            creditAmount: 0, // Borç
+            balanceAmount: 1000,
+            priceListId: priceList1.id,
+            movementType: "Alacak",
+            documentType: "Fatura",
+            documentNo: "F1",
+            companyCode: "C1",
+            branchCode: "B1",
+        },
+    });
+
+    // Cari Hareket ekleme
+    await prisma.currentMovement.create({
+        data: {
+            currentCode: "C1",
+            dueDate: new Date(),
+            description: "Description 1",
+            debtAmount: 0, // Alacak
+            creditAmount: 1000, // Borç
+            balanceAmount: 0, // Bakiye
+            priceListId: priceList1.id,
+            movementType: "Borc",
+            documentType: "Fatura",
+            documentNo: "F1",
+            companyCode: "C1",
+            branchCode: "B1",
+        },
+    });
+
+    // Kasa Hareketi ekleme
+
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Alacak Tahsilatı",
+            emerging: 0,
+            entering: 1000,
+            vaultDirection: "Introduction",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            invoice: {
+                connect: { id: invoice1.id },
+            },
+            vault: {
+                connect: { id: vault1Id },
+            },
+        },
+    });
+
+
+
+
 
 
 

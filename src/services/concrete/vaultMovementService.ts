@@ -3,7 +3,7 @@ import prisma from "../../config/prisma";
 import { Prisma, VaultMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
-
+import VaultService from "./vaultService";
 export class VaultMovementService {
     private vaultMovementRepository: BaseRepository<VaultMovement>;
 
@@ -42,6 +42,9 @@ export class VaultMovementService {
 
                 } as Prisma.VaultMovementCreateInput,
             });
+
+            VaultService.updateVaultBalance(vaultMovement.vaultId, vaultMovement.entering, vaultMovement.emerging);
+
             return createdVaultMovement;
         } catch (error) {
             logger.error("Error creating vaultMovement", error);

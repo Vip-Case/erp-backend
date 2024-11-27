@@ -132,6 +132,7 @@ enum VaultType {
   ExitReceipt //Çıkış Fişi
   PaymentToBank //Bankaya Ödeme
   PreciousMetalExchange //Değerli Kıymet Bozdurma
+  ReceivedVirement //Alınan Virman
 }
 
 enum VaultDocumentType {
@@ -424,6 +425,8 @@ model Branch {
   receipt       Receipt[]
   currentBranch CurrentBranch[]
   vault         Vault[]
+
+  Bank Bank[]
 }
 
 model Warehouse {
@@ -498,6 +501,8 @@ model Receipt {
   receiptDetail       ReceiptDetail[]
 
   vaultMovement VaultMovement[]
+
+  BankMovement BankMovement[]
 }
 
 model ReceiptDetail {
@@ -734,6 +739,8 @@ model Invoice {
   currentMovement CurrentMovement[]
 
   vaultMovement VaultMovement[]
+
+  BankMovement BankMovement[]
 }
 
 model InvoiceDetail {
@@ -773,13 +780,42 @@ model VaultMovement {
   invoiceId         String?
   receiptId         String?
   description       String
-  entering          Decimal           @db.Decimal(15, 2)
-  emerging          Decimal           @db.Decimal(15, 2)
+  entering          Decimal           @db.Decimal(15, 2) //giriş
+  emerging          Decimal           @db.Decimal(15, 2) //çıkış
   vaultDirection    VaultDirection
   vaultType         VaultType
   vaultDocumentType VaultDocumentType
 
   vault   Vault    @relation(fields: [vaultId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  receipt Receipt? @relation(fields: [receiptId], references: [id])
+}
+
+model Bank {
+  id         String  @id @default(cuid())
+  bankName   String  @db.VarChar(50)
+  branchCode String
+  balance    Decimal @db.Decimal(15, 2)
+  currency   String
+
+  branch Branch @relation(fields: [branchCode], references: [branchCode])
+
+  bankMovement BankMovement[]
+}
+
+model BankMovement {
+  id               String            @id @default(cuid())
+  bankId           String
+  invoiceId        String?
+  receiptId        String?
+  description      String
+  entering         Decimal           @db.Decimal(15, 2)
+  emerging         Decimal           @db.Decimal(15, 2)
+  bankDirection    VaultDirection
+  bankType         VaultType
+  bankDocumentType VaultDocumentType
+
+  bank    Bank     @relation(fields: [bankId], references: [id])
   invoice Invoice? @relation(fields: [invoiceId], references: [id])
   receipt Receipt? @relation(fields: [receiptId], references: [id])
 }

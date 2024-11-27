@@ -1,0 +1,11 @@
+{
+    "vaultId": "Seçilen kasa id",
+    "invoiceId": null,
+    "receiptId": null,
+    "description": "Açıklama",
+    "entering": "Miktar",
+    "emerging": "Bu kısım sabir 0 gidecek",
+    "vaultDirection": "Giriş ise Introduction Çıkış ise Exit, Alınan Virman ise ReceivedVirement",
+    "vaultType": "Giriş Tipi",
+    "vaultDocumentType": "Evrak Tipi"
+}

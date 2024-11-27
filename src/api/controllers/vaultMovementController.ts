@@ -2,7 +2,6 @@
 import VaultMovementService from '../../services/concrete/vaultMovementService';
 import { Context } from 'elysia';
 import { VaultMovement } from '@prisma/client';
-import { get } from 'http';
 
 // Service Initialization
 const vaultMovementService = new VaultMovementService();

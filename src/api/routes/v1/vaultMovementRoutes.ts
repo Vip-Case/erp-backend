@@ -6,7 +6,7 @@ export const VaultMovementRoutes = (app: Elysia) => {
         app.get("/", VaultMovementController.getAllVaultMovements, { tags: ["VaultMovements"] })
             .post("/", VaultMovementController.createVaultMovement, { tags: ["VaultMovements"] })
             .get("/:id", VaultMovementController.getVaultMovementById, { tags: ["VaultMovements"] })
-            .get("/vault/:id", VaultMovementController.getVaultMovementsByVaultId, { tags: ["VaultMovements"] })
+            .get("/bank/:id", VaultMovementController.getVaultMovementsByVaultId, { tags: ["VaultMovements"] })
             .put("/:id", VaultMovementController.updateVaultMovement, { tags: ["VaultMovements"] })
             .delete("/:id", VaultMovementController.deleteVaultMovement, { tags: ["VaultMovements"] })
     );
