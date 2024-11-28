@@ -1,36 +1,36 @@
 import { Elysia } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
-import { appConfig } from './config/app';
-import { cors } from '@elysiajs/cors'
+import { cors } from '@elysiajs/cors';
+import { CustomError } from './utils/CustomError';
+import { Prisma } from '@prisma/client';
+import dotenv from 'dotenv';
+import loggerWithCaller from './utils/logger';
+
+import CurrentMovementRoutes from './api/routes/v1/currentMovementRoutes';
+import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
+import StockMovementRoutes from './api/routes/v1/stockMovementRoutes';
+import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
+import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
+import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
+import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
 import StockCardRoutes from './api/routes/v1/stockCardRoutes';
 import PriceListRoutes from './api/routes/v1/priceListRoutes';
 import AttributeRoutes from './api/routes/v1/attributeRoutes';
-import StockMovementRoutes from './api/routes/v1/stockMovementRoutes';
-import CompanyRoutes from './api/routes/v1/companyRoutes';
 import WarehouseRoutes from './api/routes/v1/warehouseRoutes';
-import BranchRoutes from './api/routes/v1/branchRoutes';
-import CurrentRoutes from './api/routes/v1/currentRoutes';
-import CurrentMovementRoutes from './api/routes/v1/currentMovementRoutes';
-import UserRoutes from './api/routes/v1/userRoutes';
-import RoleRoutes from './api/routes/v1/roleRoutes';
-import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
-import CategoryRoutes from './api/routes/v1/categoryRoutes';
-import ReceiptRoutes from './api/routes/v1/receiptRoutes';
 import importRoutes from './api/routes/v1/importExcelRoutes';
+import CategoryRoutes from './api/routes/v1/categoryRoutes';
+import CompanyRoutes from './api/routes/v1/companyRoutes';
+import CurrentRoutes from './api/routes/v1/currentRoutes';
+import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
+import ReceiptRoutes from './api/routes/v1/receiptRoutes';
+import BranchRoutes from './api/routes/v1/branchRoutes';
+import exportRoutes from './api/routes/v1/exportRoutes';
 import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
-import { CustomError } from './utils/CustomError';
-import { Prisma } from '@prisma/client';
-import exportRoutes from './api/routes/v1/exportRoutes';
-import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
-import dotenv from 'dotenv';
-import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
-import loggerWithCaller from './utils/logger';
-import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 import BankRoutes from './api/routes/v1/bankRoutes';
-import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
+import UserRoutes from './api/routes/v1/userRoutes';
+import RoleRoutes from './api/routes/v1/roleRoutes';
 import PosRoutes from './api/routes/v1/posRoutes';
-import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
 dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
