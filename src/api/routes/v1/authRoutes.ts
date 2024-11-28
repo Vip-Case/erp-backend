@@ -26,8 +26,10 @@ export const authRoutes = (app: Elysia) => {
     if (middlewareResult.status !== 200) {
       return middlewareResult; // Middleware kontrolü başarısızsa, sonucu dön
     }
-  
+
     return { status: 200, message: `Hoş geldiniz, ${ctx.request.user.username} (User)` };
   });
-  
+
 };
+
+export default authRoutes;

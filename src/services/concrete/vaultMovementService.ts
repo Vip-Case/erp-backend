@@ -23,19 +23,12 @@ export class VaultMovementService {
                     vaultDocumentType: vaultMovement.vaultDocumentType,
 
                     vault: vaultMovement.vaultId ? {
+                        connect: {
+                            id: vaultMovement.vaultId
+                        }
+                    } : undefined,
 
-                        // İlişkiler
-                        vault: {
-                            connect: {
-                                id: vaultMovement.vaultId
-                            }
-                        } : undefined,
-
-                        invoice: vaultMovement?.invoiceId ? {
-                            id: vaultMovement.vaultId,
-                        },
-                    },
-                    invoice: {
+                    invoice: vaultMovement?.invoiceId ? {
                         connect: {
                             id: vaultMovement.invoiceId
                         }
@@ -44,16 +37,9 @@ export class VaultMovementService {
                     receipt: vaultMovement?.receiptId ? {
                         connect: {
                             id: vaultMovement.receiptId
-                            id: vaultMovement.invoiceId, // Invoice ilişkisi
-                        },
-                    },
-                    receipt: vaultMovement.receiptId
-                        ? {
-                            connect: {
-                                id: vaultMovement.receiptId,
-                            },
                         }
-                        : undefined,
+                    } : undefined
+
                 } as Prisma.VaultMovementCreateInput,
             });
 
@@ -66,13 +52,14 @@ export class VaultMovementService {
         }
     }
 
-
     async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
         try {
             return await prisma.vaultMovement.update({
                 where: { id },
-                where: { id },
                 data: {
+                    vaultId: vaultMovement.vaultId,
+                    invoiceId: vaultMovement.invoiceId,
+                    receiptId: vaultMovement.receiptId,
                     description: vaultMovement.description,
                     entering: vaultMovement.entering,
                     emerging: vaultMovement.emerging,
@@ -80,24 +67,24 @@ export class VaultMovementService {
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
 
-                    // İlişkiler
-                    vault: {
+                    Vault: vaultMovement.vaultId ? {
                         connect: {
-                            id: vaultMovement.vaultId,
-                        },
-                    },
-                    invoice: {
-                        connect: {
-                            id: vaultMovement.invoiceId, // Invoice ilişkisi
-                        },
-                    },
-                    receipt: vaultMovement.receiptId
-                        ? {
-                            connect: {
-                                id: vaultMovement.receiptId,
-                            },
+                            id: vaultMovement.vaultId
                         }
-                        : undefined,
+                    } : undefined,
+
+                    Invoice: vaultMovement.invoiceId ? {
+                        connect: {
+                            id: vaultMovement.invoiceId
+                        }
+                    } : undefined,
+
+                    Receipt: vaultMovement.receiptId ? {
+                        connect: {
+                            id: vaultMovement.receiptId
+                        }
+                    } : undefined
+
                 } as Prisma.VaultMovementUpdateInput,
             });
         } catch (error) {
@@ -105,7 +92,6 @@ export class VaultMovementService {
             throw error;
         }
     }
-
 
     async deleteVaultMovement(id: string): Promise<boolean> {
         try {

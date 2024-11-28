@@ -31,6 +31,8 @@ import BankRoutes from './api/routes/v1/bankRoutes';
 import UserRoutes from './api/routes/v1/userRoutes';
 import RoleRoutes from './api/routes/v1/roleRoutes';
 import PosRoutes from './api/routes/v1/posRoutes';
+import OrderRoutes from './api/routes/v1/orderRoutes';
+import authRoutes from './api/routes/v1/authRoutes';
 dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()

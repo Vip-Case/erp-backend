@@ -502,30 +502,6 @@ export class InvoiceService {
         }
     }
 
-
-    async getAllInvoicesWithRelations(): Promise<Invoice[]> {
-        return this.invoiceRepository.findAll(
-            {
-                include: {
-                    invoiceDetail: true
-                }
-
-    async getAllInvoicesWithRelations(): Promise<any[]> {
-                    return await prisma.invoice.findMany({
-                        include: {
-                            invoiceDetail: true
-                        }
-                    });
-                }
-
-    async getInvoiceWithRelationsById(id: string): Promise<Invoice | null> {
-                    return this.invoiceRepository.findByIdWithOptions(id, {
-                        include: {
-                            invoiceDetail: true
-                        }
-                    });
-                }
-
-            }
+}
 
 export default InvoiceService;

@@ -516,37 +516,32 @@ export const importExcelService = async (file: File) => {
                         hasExpirationDate: stockCardData.hasExpirationDate,
                         allowNegativeStock: stockCardData.allowNegativeStock,
                         company: stockCardData.companyCode ? {
-                            company: stockCardData.companyCode ? {
-                                connect: { companyCode: stockCardData.companyCode }
-                            } : undefined,
-                            branch: stockCardData.branchCode ? {
-                                branch: stockCardData.branchCode ? {
-                                    connect: { branchCode: stockCardData.branchCode }
-                                } : undefined,
-                                // İlişkili Vergi Bilgileri
-                                taxRates: stockCardData.taxName && stockCardData.taxRate ? {
-                                    taxRates: stockCardData.taxName && stockCardData.taxRate ? {
-                                        create: [{
-                                            taxName: stockCardData.taxName,
-                                            taxRate: stockCardData.taxRate
-                                        }]
-                                    } : undefined,
-                                    // İlişkili Market İsimleri
-                                    stockCardMarketNames: stockCardData.marketName ? {
-                                        stockCardMarketNames: stockCardData.marketName ? {
-                                            create: [{
-                                                marketName: stockCardData.marketName
-                                            }]
-                                        } : undefined,
-                                        // İlişkili Barkodlar
-                                        barcodes: stockCardData.barcode ? {
-                                            barcodes: stockCardData.barcode ? {
-                                                create: [{
-                                                    barcode: stockCardData.barcode
-                                                }]
-                                            } : undefined
-                                        },
-                                    });
+                            connect: { companyCode: stockCardData.companyCode }
+                        } : undefined,
+                        branch: stockCardData.branchCode ? {
+                            connect: { branchCode: stockCardData.branchCode }
+                        } : undefined,
+                        // İlişkili Vergi Bilgileri
+                        taxRates: stockCardData.taxName && stockCardData.taxRate ? {
+                            create: [{
+                                taxName: stockCardData.taxName,
+                                taxRate: stockCardData.taxRate
+                            }]
+                        } : undefined,
+                        // İlişkili Market İsimleri
+                        stockCardMarketNames: stockCardData.marketName ? {
+                            create: [{
+                                marketName: stockCardData.marketName
+                            }]
+                        } : undefined,
+                        // İlişkili Barkodlar
+                        barcodes: stockCardData.barcode ? {
+                            create: [{
+                                barcode: stockCardData.barcode
+                            }]
+                        } : undefined
+                    },
+                });
                 console.log(`StockCard başarıyla oluşturuldu - ProductCode: ${stockCardData.productCode}`);
 
                 // Brand ilişkilendirme
