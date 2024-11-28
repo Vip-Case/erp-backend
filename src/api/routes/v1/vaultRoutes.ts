@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import VaultController from '../../controllers/vaultController';
+import { VaultPlain } from '../../../../prisma/prismabox/Vault';
 
 export const VaultRoutes = (app: Elysia) => {
     app.group("/vaults", (app) =>

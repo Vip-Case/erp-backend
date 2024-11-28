@@ -7,6 +7,7 @@ const invoiceService = new InvoiceService();
 
 const InvoiceController = {
     // API to create an invoice
+    
     createInvoice: async (ctx: Context) => { 
         const invoiceData = ctx.body as Invoice;
         try {
@@ -76,11 +77,13 @@ const InvoiceController = {
 
     // API to create an invoice with relations
     createInvoiceWithRelations: async (ctx: Context) => {
-        const data = ctx.body as { invoice: Invoice, invoiceDetails: InvoiceDetail[] };
+        const data = ctx.body as { invoice: Invoice, invoiceDetails: InvoiceDetail[], vaultId?: string };
         const invoiceData = data.invoice as Invoice;
         const invoiceDetails = data.invoiceDetails as InvoiceDetail[];
+        const vaultId = data.vaultId;
+
         try {
-            const invoice = await invoiceService.createInvoiceWithRelations(invoiceData, invoiceDetails);
+            const invoice = await invoiceService.createInvoiceWithRelations(invoiceData, invoiceDetails, vaultId);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -91,19 +94,43 @@ const InvoiceController = {
 
     // API to update an invoice with relations
     updateInvoiceWithRelations: async (ctx: Context) => {
-        const { id } = ctx.params;
-        const data = ctx.body as { invoice: Partial<Invoice>, invoiceDetails: InvoiceDetail[] };
-        const invoiceData = data.invoice as Partial<Invoice>;
-        const invoiceDetails = data.invoiceDetails as InvoiceDetail[];
         try {
-            const invoice = await invoiceService.updateInvoiceWithRelations(id, invoiceData, invoiceDetails);
-            ctx.set.status = 200;
-            return invoice;
+            // `ctx.body` içeriğini al
+            const { invoice, invoiceDetails, vaultId } = ctx.body as {
+                invoice: Partial<Invoice>;
+                invoiceDetails: InvoiceDetail[];
+                vaultId?: string;
+            };
+    
+            // Gerekli kontrolleri yap
+            if (!invoice?.id) {
+                ctx.set.status = 400; // Bad Request
+                return { error: "`invoice.id` is required for updating." };
+            }
+    
+            if (!invoiceDetails || !Array.isArray(invoiceDetails)) {
+                ctx.set.status = 400; // Bad Request
+                return { error: "`invoiceDetails` must be an array and cannot be undefined." };
+            }
+    
+            // Güncelleme işlemini çağır
+            const updatedInvoice = await invoiceService.updateInvoiceWithRelations(
+                invoice.id,
+                invoice,
+                invoiceDetails,
+                vaultId
+            );
+    
+            ctx.set.status = 200; // Success
+            return updatedInvoice;
         } catch (error: any) {
-            ctx.set.status = 500;
+            console.error("Error updating invoice with relations:", error);
+            ctx.set.status = 500; // Internal Server Error
             return { error: "Error updating invoice with relations", details: error.message };
         }
     },
+    
+    
 
     // API to delete an invoice with relations
     deleteInvoiceWithRelations: async (ctx: Context) => {

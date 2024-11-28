@@ -4,7 +4,7 @@ import CurrentController from '../../controllers/currentController';
 
 export const CurrentRoutes = (app: Elysia) => {
     app.group("/currents", (app) =>
-        app.get("/", CurrentController.getAllCurrents, { tags: ["Currents"] })
+        app.get("/", CurrentController.getAllCurrents, { tags: ["Currents"]})
             .post("/", CurrentController.createCurrent, { tags: ["Currents"] })
             .get("/:id", CurrentController.getCurrentById, { tags: ["Currents"] })
             .put("/:id", CurrentController.updateCurrent, { tags: ["Currents"] })

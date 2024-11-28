@@ -1,147 +1,120 @@
-import { PrismaClient } from '@prisma/client';
-import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
+import * as fs from 'fs';
 import * as path from 'path';
 import prisma from '../../config/prisma';
 
-async function getStockCardsWithRelations() {
-    const stockCards = await prisma.stockCard.findMany({
-        include: {
-            company: true,
-            branch: true,
-            brand: true,
-            stockCardCategoryItem: {
-                include: {
-                    stockCardCategory: true,
-                },
-            },
-            taxRates: true,
-            stockCardMarketNames: true,
-            barcodes: true,
-            stockCardPriceLists: {
-                include: {
-                    priceList: true
-                }
-            },
-            stockCardAttributeItems: {
-                include: {
-                    attribute: true
-                }
-            },
-            stockCardWarehouse: {
-                include: {
-                    warehouse: true
-                }
-            }
+async function getAttributesOnly() {
+    // Benzersiz attributeName'leri almak için Set kullanıyoruz
+    const attributes = await prisma.stockCardAttribute.findMany({
+        select: {
+            attributeName: true,
+            value: true,
         },
-        orderBy: {
-            createdAt: 'desc' // En son eklenenler üstte olacak şekilde sıralıyoruz
-        }
     });
-    return stockCards;
+
+    // Unique attributeName'leri filtreliyoruz
+    const uniqueAttributes = Array.from(
+        new Map(attributes.map((attr) => [attr.attributeName, attr])).values()
+    );
+
+    return uniqueAttributes;
+}
+
+async function getPriceLists() {
+    return await prisma.stockCardPriceList.findMany({
+        select: {
+            priceListName: true,
+        },
+    });
 }
 
 export async function exportStockCardsToExcel() {
-    await prisma.$disconnect();
-    await prisma.$connect();
-    const stockCards = await getStockCardsWithRelations();
-    console.log('Çekilen veri sayısı:', stockCards.length);
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('StockCards');
+    const attributes = await getAttributesOnly();
+    const priceLists = await getPriceLists();
 
-    // Sütun başlıklarını tanımlıyoruz
-    worksheet.columns = [
-        { header: 'Product Code', key: 'productCode', width: 20 },
-        { header: 'Product Name', key: 'productName', width: 30 },
-        { header: 'Unit', key: 'unit', width: 10 },
-        { header: 'Short Description', key: 'shortDescription', width: 20 },
-        { header: 'Description', key: 'description', width: 50 },
-        { header: 'Company Code', key: 'companyCode', width: 20 },
-        { header: 'Branch Code', key: 'branchCode', width: 15 },
-        { header: 'Brand Id', key: 'brandId', width: 20 },
-        { header: 'Product Type', key: 'productType', width: 15 },
-        { header: 'GTIP', key: 'gtip', width: 15 },
-        { header: 'PLU Code', key: 'pluCode', width: 15 },
-        { header: 'Desi', key: 'desi', width: 15 },
-        { header: 'Adet Böleni', key: 'adetBoleni', width: 15 },
-        { header: 'Sıra No', key: 'siraNo', width: 15 },
-        { header: 'Raf', key: 'raf', width: 15 },
-        { header: 'Kar Marjı', key: 'karMarji', width: 15 },
-        { header: 'Risk Quantities', key: 'riskQuantities', width: 15 },
-        { header: 'Maliyet', key: 'maliyet', width: 10 },
-        { header: 'Maliyet Döviz', key: 'maliyetDoviz', width: 10 },
-        { header: 'Stock Status', key: 'stockStatus', width: 10 },
-        { header: 'Has Expiration Date', key: 'hasExpirationDate', width: 15 },
-        { header: 'Allow Negative Stock', key: 'allowNegativeStock', width: 15 },
-        { header: 'Category Ids', key: 'categoryIds', width: 30 },
-        { header: 'Tax Name', key: 'taxName', width: 20 },
-        { header: 'Tax Rate', key: 'taxRate', width: 15 },
-        { header: 'Market Names', key: 'marketNames', width: 30 },
-        { header: 'Barcodes', key: 'barcodes', width: 30 },
-        { header: 'Price List Id', key: 'priceListId', width: 30 },
-        { header: 'Price', key: 'price', width: 15 },
-        { header: 'Attribute Id', key: 'attributeId', width: 30 },
-        { header: 'Warehouse Id', key: 'warehouseId', width: 30 },
-        { header: 'Quantity', key: 'quantity', width: 15 }
+    // Başlık satırı oluşturma
+    const headerRow = [
+        'Product Code', 'Product Name', 'Unit', 'Short Description', 'Description',
+        'Company Code', 'Branch Code', 'Brand Name', 'Product Type', 'GTIP', 'PLU Code',
+        'Desi', 'Adet Böleni', 'Sıra No', 'Raf', 'Kar Marjı', 'Risk Quantities',
+        'Maliyet', 'Maliyet Döviz', 'Stock Status', 'Has Expiration Date',
+        'Allow Negative Stock', 'Category Names', 'Tax Name', 'Tax Rate',
+        'Market Names', 'Barcodes', 'Warehouse Name', 'Quantity'
     ];
 
-    // Verileri satırlara ekleyelim
-    stockCards.forEach(stockCard => {
-        console.log(`Excel'e ekleniyor: ${stockCard.productCode}`);
-        worksheet.addRow({
-            productCode: stockCard.productCode || '',
-            productName: stockCard.productName || '',
-            unit: stockCard.unit || '',
-            shortDescription: stockCard.shortDescription || '',
-            description: stockCard.description || '',
-            companyCode: stockCard.company?.companyCode || '',
-            branchCode: stockCard.branch?.branchCode || '',
-            brandId: stockCard.brand?.id || '',
-            productType: stockCard.productType || '',
-            gtip: stockCard.gtip || '',
-            pluCode: stockCard.pluCode || '',
-            desi: stockCard.desi !== undefined && stockCard.desi !== null ? parseFloat(stockCard.desi.toString()) : '',
-            adetBoleni: stockCard.adetBoleni !== undefined && stockCard.adetBoleni !== null ? parseFloat(stockCard.adetBoleni.toString()) : '',
-            siraNo: stockCard.siraNo || '',
-            raf: stockCard.raf || '',
-            karMarji: stockCard.karMarji !== undefined && stockCard.karMarji !== null ? parseFloat(stockCard.karMarji.toString()) : '',
-            riskQuantities: stockCard.riskQuantities !== undefined && stockCard.riskQuantities !== null ? parseFloat(stockCard.riskQuantities.toString()) : '',
-            maliyet: stockCard.maliyet !== undefined && stockCard.maliyet !== null ? parseFloat(stockCard.maliyet.toString()) : '',
-            maliyetDoviz: stockCard.maliyetDoviz || '',
-            stockStatus: stockCard.stockStatus ? 'Active' : 'Inactive',
-            hasExpirationDate: stockCard.hasExpirationDate ? 'Yes' : 'No',
-            allowNegativeStock: stockCard.allowNegativeStock ? 'Yes' : 'No',
-
-            // Tüm category id'leri virgülle ayırarak ekleyelim
-            categoryIds: stockCard.stockCardCategoryItem?.map(catItem => catItem.stockCardCategory.id).join(', ') || '',
-
-            // Vergi bilgilerini ekleme (ilk vergi adı ve oranını virgülle ayırarak ekler)
-            taxName: stockCard.taxRates.map(taxRate => taxRate.taxName).join(', ') || '',
-            taxRate: stockCard.taxRates.map(taxRate => taxRate.taxRate).join(', ') || '',
-
-            // Tüm market adlarını virgülle ayırarak ekleyelim
-            marketNames: stockCard.stockCardMarketNames.map(market => market.marketName).join(', ') || '',
-
-            // Tüm barkodları virgülle ayırarak ekleyelim
-            barcodes: stockCard.barcodes.map(bc => bc.barcode.toString()).join(', ') || '',
-
-            // Fiyat listesi ve fiyat bilgilerini ekleme
-            priceListId: stockCard.stockCardPriceLists?.[0]?.priceList?.id || '',
-            price: stockCard.stockCardPriceLists?.[0]?.price ? parseFloat(stockCard.stockCardPriceLists[0].price.toString()) : '',
-
-            // Özellik id'sini ekleme
-            attributeId: stockCard.stockCardAttributeItems?.[0]?.attribute?.id || '',
-
-            // Depo ve miktar bilgilerini ekleme
-            warehouseId: stockCard.stockCardWarehouse?.[0]?.warehouse?.id || '',
-            quantity: stockCard.stockCardWarehouse?.[0]?.quantity ? parseFloat(stockCard.stockCardWarehouse[0].quantity.toString()) : ''
-        }).commit();
-
+    // Attribute sütunlarını ekliyoruz
+    attributes.forEach((attribute, index) => {
+        headerRow.push(`Attribute Name ${index + 1}`, `Attribute Value ${index + 1}`);
     });
 
-    // Dosyayı kaydediyoruz
-    const filePath = path.join('..', 'StockCards.xlsx');
-    await workbook.xlsx.writeFile(filePath)
-        .then(() => console.log(`Excel dosyası başarıyla oluşturuldu: ${filePath}`))
-        .catch(error => console.error('Dosya yazma hatası:', error));
+    // Price List sütunlarını ekliyoruz
+    priceLists.forEach((priceList, index) => {
+        headerRow.push(`Price List Name ${index + 1}`, `Price ${index + 1}`);
+    });
+
+    // Boş veri satırı oluşturma
+    const emptyRow: Record<string, string> = {};
+    headerRow.forEach((header) => {
+        emptyRow[header] = ''; // Başlıklar için boş veri
+    });
+
+    // Worksheet ve Workbook oluşturma
+    const worksheet = XLSX.utils.json_to_sheet([emptyRow], { header: headerRow });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'StockCard');
+    // Sütun genişliklerini ayarlıyoruz
+    worksheet['!cols'] = [
+        { wch: 15 }, // Product Code
+        { wch: 30 }, // Product Name
+        { wch: 10 }, // Unit
+        { wch: 25 }, // Short Description
+        { wch: 50 }, // Description
+        { wch: 20 }, // Company Code
+        { wch: 15 }, // Branch Code
+        { wch: 20 }, // Brand Name
+        { wch: 15 }, // Product Type
+        { wch: 15 }, // GTIP
+        { wch: 15 }, // PLU Code
+        { wch: 15 }, // Desi
+        { wch: 15 }, // Adet Böleni
+        { wch: 15 }, // Sıra No
+        { wch: 15 }, // Raf
+        { wch: 15 }, // Kar Marjı
+        { wch: 15 }, // Risk Quantities
+        { wch: 10 }, // Maliyet
+        { wch: 15 }, // Maliyet Döviz
+        { wch: 15 }, // Stock Status
+        { wch: 20 }, // Has Expiration Date
+        { wch: 20 }, // Allow Negative Stock
+        { wch: 30 }, // Category Names
+        { wch: 20 }, // Tax Name
+        { wch: 15 }, // Tax Rate
+        { wch: 30 }, // Market Names
+        { wch: 30 }, // Barcodes
+        { wch: 30 }, // Warehouse Name
+        { wch: 15 }, // Quantity
+        // Attribute sütunları için genişlik ayarı
+        ...attributes.map(() => ({ wch: 30 })),
+        ...attributes.map(() => ({ wch: 30 })),
+        // Price List sütunları için genişlik ayarı
+        ...priceLists.map(() => ({ wch: 20 })),
+        ...priceLists.map(() => ({ wch: 15 })),
+    ];
+
+    // Excel dosyasını buffer olarak yazma
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    console.log('Excel buffer başarıyla oluşturuldu.');
+
+    // Geçici dosya kaydetme
+    const filePath = path.join(__dirname, 'temp', 'stokCard.xlsx');
+    const dirPath = path.dirname(filePath);
+
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+    }
+
+    fs.writeFileSync(filePath, excelBuffer);
     console.log(`Excel dosyası başarıyla oluşturuldu: ${filePath}`);
+
+    return { buffer: excelBuffer, filePath };
 }
