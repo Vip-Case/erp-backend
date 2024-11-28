@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
 import { appConfig } from './config/app';
 import { cors } from '@elysiajs/cors'
+import { PrismaClient } from '@prisma/client';
 import StockCardRoutes from './api/routes/v1/stockCardRoutes';
 import PriceListRoutes from './api/routes/v1/priceListRoutes';
 import AttributeRoutes from './api/routes/v1/attributeRoutes';
@@ -27,6 +28,12 @@ import exportRoutes from './api/routes/v1/exportRoutes';
 import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 import OrderRoutes from './api/routes/v1/orderRoutes';
 import { authRoutes } from './api/routes/v1/authRoutes';
+
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
+}
+
+const prisma = new PrismaClient();
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -70,76 +77,50 @@ const app = new Elysia()
     },
   }))
   .get("/", () => "Elysia is running!") // Ana route tanımlanıyor
-  .onError(({ error, set }) => {
-    // Varsayılan hata yanıtı
-    let statusCode = 500;
-    let message = 'Beklenmeyen bir hata oluştu.';
-    let errorCode: string | undefined;
-    let meta: any;
-
-    // Bilinen hata türlerini işleyin
-    if (error instanceof CustomError) {
-      statusCode = error.statusCode;
-      message = error.message;
-      errorCode = error.errorCode;
-      meta = error.meta;
-    } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      statusCode = 400; // Bad Request
-      message = 'Veritabanı hatası oluştu.';
-      errorCode = error.code;
-      meta = error.meta;
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      statusCode = 400;
-      message = 'Doğrulama hatası oluştu.';
-      meta = error.message;
-    } else if (error instanceof Error) {
-      message = error.message;
-    }
-
-    // Hataları loglayın
+  
+  .onError(({ error }) => {
+    const status = error instanceof CustomError ? error.statusCode : 500;
+    const message = error.message || 'Beklenmeyen bir hata oluştu.';
+    
     logger.error('Hata oluştu:', {
-      message: error.message,
-      stack: error.stack,
-      code: (error as any).code,
-      meta: (error as any).meta,
+      message,
+      stack: error.stack || 'Stack trace yok.',
+      code: (error as any)?.code,
     });
-
-    // Yanıtı ayarlayın ve gönderin
-    set.status = statusCode;
-
+  
     return {
-      error: {
-        message,
-        errorCode,
-        meta,
-      },
+      status,
+      error: { message },
     };
   });
 
+  const routes = [
+    StockCardRoutes,
+    PriceListRoutes,
+    AttributeRoutes,
+    StockMovementRoutes,
+    CompanyRoutes,
+    WarehouseRoutes,
+    BranchRoutes,
+    CurrentRoutes,
+    CurrentMovementRoutes,
+    CurrentGroupRoutes,
+    UserRoutes,
+    RoleRoutes,
+    InvoiceRoutes,
+    CategoryRoutes,
+    ReceiptRoutes,
+    VaultRoutes,
+    VaultMovementRoutes,
+    BrandRoutes,
+    importRoutes,
+    exportRoutes,
+    OrderRoutes,
+    authRoutes,
+  ];
 
-// API rotalarını dahil ediyoruz
-StockCardRoutes(app);
-PriceListRoutes(app);
-AttributeRoutes(app);
-StockMovementRoutes(app);
-CompanyRoutes(app);
-BranchRoutes(app);
-WarehouseRoutes(app);
-CategoryRoutes(app);
-CurrentRoutes(app);
-CurrentMovementRoutes(app);
-CurrentGroupRoutes(app);
-UserRoutes(app);
-RoleRoutes(app);
-InvoiceRoutes(app);
-ReceiptRoutes(app);
-VaultRoutes(app);
-VaultMovementRoutes(app);
-BrandRoutes(app);
-importRoutes(app);
-exportRoutes(app);
-OrderRoutes(app);
-authRoutes(app);
+  routes.forEach((route) => app.use(route));
+  
 
 // Uygulama belirtilen portta dinlemeye başlıyor
 app.listen(appConfig.port, () => {

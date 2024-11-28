@@ -16,19 +16,31 @@ export const register = async (ctx: any) => {
       permissions,
     } = ctx.body;
 
-    console.log('Request User in Register:', ctx.request.user);
-    const createdByAdmin = ctx.request.user?.roles.includes('admin');
+    // Kullanıcı Admin mi?
+    const createdByAdmin = ctx.request.user?.isAdmin;
     if (!createdByAdmin) {
       return { status: 403, message: 'Yalnızca adminler kullanıcı oluşturabilir.' };
     }
 
+    // Kullanıcıyı kaydet
     const user = await authService.registerUser(
-      { username, email, password, firstName, lastName, phone, address, companyCode, roleName, 
-        permissionGroups, permissions },
+      {
+        username,
+        email,
+        password,
+        firstName,
+        lastName,
+        phone,
+        address,
+        companyCode,
+        roleName,
+        permissionGroups,
+        permissions,
+      },
       createdByAdmin
     );
 
-    return { status: 201, message: 'Kayıt başarılı!', user };
+    return { status: 201, message: 'Kullanıcı kaydı başarılı!', user };
   } catch (error: any) {
     return { status: 400, message: error.message };
   }
@@ -38,6 +50,7 @@ export const login = async (ctx: any) => {
   try {
     const { email, password } = ctx.body;
 
+    // Kullanıcı giriş yap
     const { token, user } = await authService.loginUser({ email, password });
     return { status: 200, message: 'Giriş başarılı!', token, user };
   } catch (error: any) {

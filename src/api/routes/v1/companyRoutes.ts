@@ -11,6 +11,7 @@ export const CompanyRoutes = (app: Elysia) => {
             .delete("/:id", CompanyController.deleteCompany, { tags: ["Companies"] })
             .get("/filter", CompanyController.getCompaniesWithFilters, { tags: ["Companies"] })
     );
+  return app;
 };
 
 export default CompanyRoutes;

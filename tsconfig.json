@@ -101,5 +101,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true, // JSON modüllerini içe aktarmayı destekler
                                     /* Skip type checking all .d.ts files. */
-  }
+  },
+  "include": ["src", "global.d.ts"] 
 }

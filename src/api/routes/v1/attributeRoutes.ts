@@ -9,6 +9,7 @@ export const AttributeRoutes = (app: Elysia) => {
             .put("/:id", AttributeController.updateAttribute, { tags: ["Attributes"] })
             .delete("/:id", AttributeController.deleteAttribute, { tags: ["Attributes"] })
     );
+  return app;
 };
 
 export default AttributeRoutes;

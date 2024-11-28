@@ -10,6 +10,7 @@ export const StockMovementRoutes = (app: Elysia) => {
             .delete("/:id", StockMovementController.deleteStockMovement, { tags: ["Stock Movements"] })
             .get("/filter", StockMovementController.getStockMovementsWithFilters, { tags: ["Stock Movements"] })
     );
+  return app;
 };
 
 export default StockMovementRoutes;

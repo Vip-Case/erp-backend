@@ -10,6 +10,7 @@ export const VaultRoutes = (app: Elysia) => {
             .put("/:id", VaultController.updateVault, { tags: ["Vaults"] })
             .delete("/:id", VaultController.deleteVault, { tags: ["Vaults"] })
     );
+  return app;
 };
 
 export default VaultRoutes;

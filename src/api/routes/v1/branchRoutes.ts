@@ -11,6 +11,7 @@ export const BranchRoutes = (app: Elysia) => {
             .delete("/:id", BranchController.deleteBranch, { tags: ["Branches"] })
             .get("/filter", BranchController.getBranchesWithFilters, { tags: ["Branches"] })
     );
+  return app;
 };
 
 export default BranchRoutes;

@@ -11,6 +11,7 @@ export const CategoryRoutes = (app: Elysia) => {
             .get("/filter", CategoryController.getCategoriesWithFilters, { tags: ["Categories"] })
             .get("/withParents", CategoryController.getAllCategoriesWithParentCategories, { tags: ["Categories"] })
     );
+  return app;
 };
 
 export default CategoryRoutes;

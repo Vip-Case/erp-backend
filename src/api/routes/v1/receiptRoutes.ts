@@ -16,6 +16,7 @@ export const ReceiptRoutes = (app: Elysia) => {
             .get("/ReceiptsWithRelations", ReceiptController.getAllReceiptsWithRelations, { tags: ["Receipts"] })
             .get("/ReceiptsWithRelations/:id", ReceiptController.getReceiptWithRelationsById, { tags: ["Receipts"] })
     );
+  return app;
 };
 
 export default ReceiptRoutes;

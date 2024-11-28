@@ -1,7 +1,6 @@
 
 import { Elysia } from 'elysia';
 import CurrentGroupController from '../../controllers/currentGroupController';
-import { CurrentReportGroupPlain } from '../../../../prisma/prismabox/CurrentReportGroup';
 
 export const CurrentGroupRoutes = (app: Elysia) => {
     app.group("/currentGroups", (app) =>
@@ -12,6 +11,7 @@ export const CurrentGroupRoutes = (app: Elysia) => {
             .delete("/:id", CurrentGroupController.deleteCurrentGroup, { tags: ["Current Groups"] })
             .get("/filter", CurrentGroupController.getCurrentGroupsWithFilters, { tags: ["Current Groups"] })   
     );
+    return app;
 };
 
 export default CurrentGroupRoutes;

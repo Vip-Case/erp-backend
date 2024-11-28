@@ -9,6 +9,7 @@ export const VaultMovementRoutes = (app: Elysia) => {
             .put("/:id", VaultMovementController.updateVaultMovement, { tags: ["VaultMovements"] })
             .delete("/:id", VaultMovementController.deleteVaultMovement, { tags: ["VaultMovements"] })
     );
+  return app;
 };
 
 export default VaultMovementRoutes;

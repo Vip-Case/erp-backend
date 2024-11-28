@@ -11,6 +11,7 @@ export const CurrentRoutes = (app: Elysia) => {
             .delete("/:id", CurrentController.deleteCurrent, { tags: ["Currents"] })
             .get("/filter", CurrentController.getCurrentsWithFilters, { tags: ["Currents"] })
     );
+  return app;
 };
 
 export default CurrentRoutes;
