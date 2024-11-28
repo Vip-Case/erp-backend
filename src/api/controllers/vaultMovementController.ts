@@ -60,6 +60,18 @@ export const VaultMovementController = {
         }
     },
 
+    getVaultMovementsByVaultId: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const vaultMovements = await vaultMovementService.getVaultMovementsByVaultId(id);
+            ctx.set.status = 200;
+            return vaultMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching vaultMovements", details: error.message };
+        }
+    },
+
     getAllVaultMovements: async (ctx: Context) => {
         try {
             const vaultMovements = await vaultMovementService.getAllVaultMovements();

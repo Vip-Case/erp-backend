@@ -110,7 +110,7 @@ async function main() {
         data: {
             priceListName: "E-Ticaret",
             currency: "TRY",
-            isVatIncluded: false,
+            isVatIncluded: true,
             isActive: true,
         },
     });
@@ -2110,7 +2110,7 @@ async function main() {
             value: "Value 4",
         },
     });
-    
+
     // Stock Card Attribute ekleme
     const attribute3value2 = await prisma.stockCardAttribute.create({
         data: {
@@ -2250,10 +2250,14 @@ async function main() {
                     {
                         priceListId: priceList1.id,
                         price: 10,
+                        barcode: "856952346696",
+                        vatRate: 20,
                     },
                     {
                         priceListId: priceList2.id,
                         price: 20,
+                        barcode: "856952346595",
+                        vatRate: 20,
                     },
                 ],
             },
@@ -2419,93 +2423,366 @@ async function main() {
     });
 
     // Varsayılan izinler
-  const createPermission = await prisma.permission.upsert({
-    where: { permissionName: 'create' },
-    update: {},
-    create: {
-      permissionName: 'create',
-      description: 'Create data',
-    },
-  });
+    const createPermission = await prisma.permission.upsert({
+        where: { permissionName: 'create' },
+        update: {},
+        create: {
+            permissionName: 'create',
+            description: 'Create data',
+        },
+    });
 
-  const readPermission = await prisma.permission.upsert({
-    where: { permissionName: 'read' },
-    update: {},
-    create: {
-      permissionName: 'read',
-      description: 'Read data',
-    },
-  });
+    const readPermission = await prisma.permission.upsert({
+        where: { permissionName: 'read' },
+        update: {},
+        create: {
+            permissionName: 'read',
+            description: 'Read data',
+        },
+    });
 
-  const updatePermission = await prisma.permission.upsert({
-    where: { permissionName: 'update' },
-    update: {},
-    create: {
-      permissionName: 'update',
-      description: 'Update data',
-    },
-  });
+    const updatePermission = await prisma.permission.upsert({
+        where: { permissionName: 'update' },
+        update: {},
+        create: {
+            permissionName: 'update',
+            description: 'Update data',
+        },
+    });
 
-  const deletePermission = await prisma.permission.upsert({
-    where: { permissionName: 'delete' },
-    update: {},
-    create: {
-      permissionName: 'delete',
-      description: 'Delete data',
-    },
-  });
+    const deletePermission = await prisma.permission.upsert({
+        where: { permissionName: 'delete' },
+        update: {},
+        create: {
+            permissionName: 'delete',
+            description: 'Delete data',
+        },
+    });
 
-  // Varsayılan roller
-  const adminRole = await prisma.role.upsert({
-    where: { roleName: 'admin' },
-    update: {},
-    create: {
-      roleName: 'admin',
-      description: 'Admin role with full access',
-      permission: {
-        connect: [
-          { id: createPermission.id },
-          { id: readPermission.id },
-          { id: updatePermission.id },
-          { id: deletePermission.id },
-        ],
-      },
-    },
-  });
+    // Varsayılan roller
+    const adminRole = await prisma.role.upsert({
+        where: { roleName: 'admin' },
+        update: {},
+        create: {
+            roleName: 'admin',
+            description: 'Admin role with full access',
+            permission: {
+                connect: [
+                    { id: createPermission.id },
+                    { id: readPermission.id },
+                    { id: updatePermission.id },
+                    { id: deletePermission.id },
+                ],
+            },
+        },
+    });
 
-  const userRole = await prisma.role.upsert({
-    where: { roleName: 'user' },
-    update: {},
-    create: {
-      roleName: 'user',
-      description: 'Standard user role with limited access',
-      permission: {
-        connect: [
-          { id: readPermission.id },
-        ],
-      },
-    },
-  });
+    const userRole = await prisma.role.upsert({
+        where: { roleName: 'user' },
+        update: {},
+        create: {
+            roleName: 'user',
+            description: 'Standard user role with limited access',
+            permission: {
+                connect: [
+                    { id: readPermission.id },
+                ],
+            },
+        },
+    });
 
-  
-  const hashedPassword = await bcrypt.hash('admin_password', 10);
 
-  // Admin rolüyle kullanıcı ekleyin
-  await prisma.user.create({
-    data: {
-      username: 'admin_user',
-      email: 'admin@example.com',
-      password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
-      phone: '123456789',
-      address: 'Admin Address',
-      companyCode: 'C1',
-      role: {
-        connect: { roleName: 'admin' } // admin rolüyle bağlanıyor
-      },
-    },
-  });
+    const hashedPassword = await bcrypt.hash('admin_password', 10);
+
+    // Admin rolüyle kullanıcı ekleyin
+    await prisma.user.create({
+        data: {
+            username: 'admin_user',
+            email: 'admin@example.com',
+            password: hashedPassword,
+            firstName: 'Admin',
+            lastName: 'User',
+            phone: '123456789',
+            address: 'Admin Address',
+            companyCode: 'C1',
+            role: {
+                connect: { roleName: 'admin' } // admin rolüyle bağlanıyor
+            },
+        },
+    });
+
+
+    // Kasa ekleme
+    const vault1 = await prisma.vault.create({
+        data: {
+            vaultName: "Dolar Kasası",
+            branch: {
+                connect: { branchCode: "B1" },
+            },
+            balance: 1000,
+            currency: "USD",
+        },
+    });
+
+    const vault1Id = vault1.id;
+
+    // Kasa ekleme
+    const vault2 = await prisma.vault.create({
+        data: {
+            vaultName: "TL Kasası",
+            branch: {
+                connect: { branchCode: "B1" },
+            },
+            balance: 36000,
+            currency: "TRY",
+        },
+    });
+
+    const vault2Id = vault2.id;
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Alacak Tahsilatı",
+            emerging: 0,
+            entering: 1000,
+            vaultDirection: "Introduction",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault1Id },
+            },
+        },
+    });
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Borç Tahsilatı",
+            emerging: 250,
+            entering: 0,
+            vaultDirection: "Exit",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault1Id },
+            },
+        },
+    });
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Alacak Tahsilatı",
+            emerging: 0,
+            entering: 50000,
+            vaultDirection: "Introduction",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault2Id },
+            },
+        },
+    });
+
+    // Kasa Hareketi ekleme
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Borç Tahsilatı",
+            emerging: 15000,
+            entering: 0,
+            vaultDirection: "Exit",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            vault: {
+                connect: { id: vault2Id },
+            },
+        },
+    });
+
+    // Kasa Bakiye Güncelleme
+    await prisma.vault.update({
+        where: { id: vault1Id },
+        data: {
+            balance: 750,
+        },
+    });
+
+    // Kasa Bakiye Güncelleme
+    await prisma.vault.update({
+        where: { id: vault2Id },
+        data: {
+            balance: 35000,
+        },
+    });
+
+    // Fatura ekleme
+    const invoice1 = await prisma.invoice.create({
+        data: {
+            invoiceNo: "F1",
+            gibInvoiceNo: "GIB1",
+            invoiceDate: new Date(),
+            invoiceType: "Purchase",
+            documentType: "Invoice",
+            currentCode: "C1",
+            companyCode: "C1",
+            branchCode: "B1",
+            warehouseCode: "W1",
+            description: "Description 1",
+            genelIskontoTutar: 0,
+            genelIskontoOran: 0,
+            paymentDate: new Date(),
+            paymentDay: 30,
+            priceListId: priceList1.id,
+            totalAmount: 1000,
+            totalVat: 200,
+            totalDiscount: 0,
+            totalNet: 1200,
+            totalPaid: 1200,
+            totalDebt: 0,
+            totalBalance: 0,
+
+        },
+    });
+
+    // Fatura detay ekleme
+    await prisma.invoiceDetail.create({
+        data: {
+            invoiceId: invoice1.id,
+            productCode: "SC1",
+            quantity: 10,
+            unitPrice: 100,
+            totalPrice: 1000,
+            vatRate: 20,
+            discount: 0,
+            netPrice: 1200,
+        },
+    });
+
+    // Fatura ekleme
+    const invoice2 = await prisma.invoice.create({
+        data: {
+            invoiceNo: "F2",
+            gibInvoiceNo: "GIB2",
+            invoiceDate: new Date(),
+            invoiceType: "Sales",
+            documentType: "Invoice",
+            currentCode: "C1",
+            companyCode: "C1",
+            branchCode: "B1",
+            warehouseCode: "W1",
+            description: "Description 2",
+            genelIskontoTutar: 0,
+            genelIskontoOran: 0,
+            paymentDate: new Date(),
+            paymentDay: 30,
+            priceListId: priceList1.id,
+            totalAmount: 1000,
+            totalVat: 200,
+            totalDiscount: 0,
+            totalNet: 1200,
+            totalPaid: 1200,
+            totalDebt: 0,
+            totalBalance: 0,
+        },
+    });
+
+    // Fatura detay ekleme
+    await prisma.invoiceDetail.create({
+        data: {
+            invoiceId: invoice2.id,
+            productCode: "SC2",
+            quantity: 10,
+            unitPrice: 100,
+            totalPrice: 1000,
+            vatRate: 20,
+            discount: 0,
+            netPrice: 1200,
+        },
+    });
+
+    // Stok Hareketi ekleme
+    await prisma.stockMovement.create({
+        data: {
+            productCode: "SC1",
+            warehouseCode: "W1",
+            branchCode: "B1",
+            currentCode: "C1",
+            documentType: "Invoice",
+            invoiceType: "Purchase",
+            movementType: "Devir",
+            documentNo: "F1",
+            gcCode: "G",
+            type: "Giris",
+            description: "Description 1",
+            quantity: 10,
+            unitPrice: 100,
+            totalPrice: 1000,
+            unitOfMeasure: "Adet",
+            priceListId: priceList1.id,
+        },
+    });
+
+    // Cari Hareket ekleme
+    await prisma.currentMovement.create({
+        data: {
+            currentCode: "C1",
+            dueDate: new Date(),
+            description: "Description 1",
+            debtAmount: 1000, // Alacak
+            creditAmount: 0, // Borç
+            balanceAmount: 1000,
+            priceListId: priceList1.id,
+            movementType: "Alacak",
+            documentType: "Fatura",
+            documentNo: "F1",
+            companyCode: "C1",
+            branchCode: "B1",
+        },
+    });
+
+    // Cari Hareket ekleme
+    await prisma.currentMovement.create({
+        data: {
+            currentCode: "C1",
+            dueDate: new Date(),
+            description: "Description 1",
+            debtAmount: 0, // Alacak
+            creditAmount: 1000, // Borç
+            balanceAmount: 0, // Bakiye
+            priceListId: priceList1.id,
+            movementType: "Borc",
+            documentType: "Fatura",
+            documentNo: "F1",
+            companyCode: "C1",
+            branchCode: "B1",
+        },
+    });
+
+    // Kasa Hareketi ekleme
+
+    await prisma.vaultMovement.create({
+        data: {
+            description: "Alacak Tahsilatı",
+            emerging: 0,
+            entering: 1000,
+            vaultDirection: "Introduction",
+            vaultType: "DebtTransfer",
+            vaultDocumentType: "General",
+            invoice: {
+                connect: { id: invoice1.id },
+            },
+            vault: {
+                connect: { id: vault1Id },
+            },
+        },
+    });
+
+
+
+
+
+
 
 }
 

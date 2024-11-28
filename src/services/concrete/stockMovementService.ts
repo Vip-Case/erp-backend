@@ -67,7 +67,7 @@ export class StockMovementService {
             logger.error("Error creating stock movement", error);
             throw error;
         }
-    }    
+    }
 
 
     async updateStockMovement(id: string, stockMovementData: Partial<StockMovement>): Promise<StockMovement> {
@@ -155,11 +155,41 @@ export class StockMovementService {
         }
     }
 
-    async getStockMovementsWithFilters(filter: any): Promise<StockMovement[] | null> {
+    async getAllOrderStockMovements(): Promise<StockMovement[]> {
         try {
-            return await this.stockMovementRepository.findWithFilters(filter);
+            return await prisma.stockMovement.findMany({
+                where: {
+                    documentType: "Order"
+                }
+            });
         } catch (error) {
-            logger.error("Error fetching stock movements with filters", error);
+            logger.error("Error fetching all order stock movements", error);
+            throw error;
+        }
+    }
+
+    async getAllSalesStockMovements(): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    invoiceType: "Sales"
+                }
+            });
+        } catch (error) {
+            logger.error("Error fetching all sales stock movements", error);
+            throw error;
+        }
+    }
+
+    async getAllPurchaseStockMovements(): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    invoiceType: "Purchase"
+                }
+            });
+        } catch (error) {
+            logger.error("Error fetching all purchase stock movements", error);
             throw error;
         }
     }

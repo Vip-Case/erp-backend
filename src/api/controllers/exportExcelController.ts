@@ -3,6 +3,15 @@ import fs from 'fs';
 
 export const exportExcelController = async (context: any) => {
     try {
+        //await exportStockCardsToExcel(); // Dosyanın oluşturulmasını sağlar
+        // Excel dosyasını oluştur
+        await Promise.race([
+            exportStockCardsToExcel(),
+            timeoutPromise(500) // 10 saniye zaman aşımı
+        ]);
+
+        // Önce dosyanın mevcut olduğundan emin olun
+        const filePath = 'StockCards.xlsx';
         console.log("Excel dosyası oluşturulmaya başlandı.");
 
         const { filePath } = await exportStockCardsToExcel();

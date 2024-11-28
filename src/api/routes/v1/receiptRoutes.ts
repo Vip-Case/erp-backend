@@ -1,7 +1,6 @@
 
 import { Elysia } from 'elysia';
 import ReceiptController from '../../controllers/receiptController';
-import { ReceiptPlain } from '../../../../prisma/prismabox/Receipt';
 
 export const ReceiptRoutes = (app: Elysia) => {
     app.group("/receipts", (app) =>

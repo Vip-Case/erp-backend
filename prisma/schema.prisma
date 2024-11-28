@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-generator docs {
-  provider = "node node_modules/prisma-docs-generator"
-}
-
-generator prismabox {
-  provider                    = "prismabox"
-  typeboxImportVariableName   = "t"
-  typeboxImportDependencyName = "elysia"
-  inputModel                  = true
-  additionalProperties        = true
-}
-
 enum AddressType {
   Fatura
   Sevk
@@ -147,9 +135,14 @@ enum VaultType {
   CompanyCreditCardDeposit //Firma Kredi Kartına Para Yatırma
   CurrencyExchange //Döviz Bozdurma
   LoanPayment //Kredi Ödemesi
+  LoanWithdrawal //Kredi Çekme
   ExitReceipt //Çıkış Fişi
   PaymentToBank //Bankaya Ödeme
   PreciousMetalExchange //Değerli Kıymet Bozdurma
+  ReceivedVirement //Alınan Virman
+  OutgoingVirement //Gönderilen Virman
+  InGoingVirement //Gelen Virman
+  POSWithdrawals //POS'tan Para Çekme
 }
 
 enum VaultDocumentType {
@@ -167,29 +160,29 @@ model Role {
   createdBy   String?
   updatedBy   String?
 
-  user User[]
+  user       User[]
   permission Permission[]
 }
 
 model Permission {
-  id          String   @id @default(cuid())
-  groupId     String?
-  permissionName String @unique @db.VarChar(50)
-  description String @db.VarChar(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  groupId        String?
+  permissionName String   @unique @db.VarChar(50)
+  description    String   @db.VarChar(100)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  role Role[]
-  user User[]
-  group       PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
+  role  Role[]
+  user  User[]
+  group PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
 }
 
 model PermissionGroup {
-  id          String       @id @default(cuid())
-  groupName   String       @unique @db.VarChar(50)
-  description String?      @db.VarChar(100)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id          String   @id @default(cuid())
+  groupName   String   @unique @db.VarChar(50)
+  description String?  @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   permissions Permission[] @relation("PermissionToGroup")
 }
@@ -261,7 +254,7 @@ model StockCardManufacturer {
   productCode String   @db.VarChar(100)
   productName String   @db.VarChar(150)
   barcode     String   @unique @db.VarChar(100)
-  brandId     String?   @db.VarChar(100)
+  brandId     String?  @db.VarChar(100)
   stockCardId String
   currentId   String
   createdAt   DateTime @default(now())
@@ -271,7 +264,7 @@ model StockCardManufacturer {
 
   stockCard StockCard @relation(fields: [stockCardId], references: [id])
   current   Current   @relation(fields: [currentId], references: [id])
-  brand     Brand?     @relation(fields: [brandId], references: [id])
+  brand     Brand?    @relation(fields: [brandId], references: [id])
 }
 
 model Brand {
@@ -302,10 +295,12 @@ model StockCardPriceList {
 }
 
 model StockCardPriceListItems {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   priceListId String
   stockCardId String
-  price       Decimal @db.Decimal(15, 4)
+  price       Decimal  @db.Decimal(15, 4)
+  vatRate     Decimal? @db.Decimal(15, 4)
+  barcode     String?  @db.VarChar(100)
 
   stockCard StockCard          @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   priceList StockCardPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
@@ -443,7 +438,6 @@ model Company {
 
   branch          Branch[]
   warehouse       Warehouse[]
-  user            User[]
   stockCard       StockCard[]
   currentMovement CurrentMovement[]
   invoice         Invoice[]
@@ -468,7 +462,6 @@ model Branch {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  user            User[]
   warehouse       BranchWarehouse[]
   stockCard       StockCard[]
   stockMovement   StockMovement[]
@@ -479,6 +472,10 @@ model Branch {
   receipt       Receipt[]
   currentBranch CurrentBranch[]
   vault         Vault[]
+
+  Bank Bank[]
+
+  Pos Pos[]
 }
 
 model Warehouse {
@@ -500,7 +497,6 @@ model Warehouse {
   company Company @relation(fields: [companyCode], references: [companyCode])
 
   branch         BranchWarehouse[]
-  user           User[]
   stockMovements StockMovement[]   @relation("StockMovementWarehouse")
   outMovements   StockMovement[]   @relation("StockMovementOutWarehouse")
 
@@ -554,6 +550,10 @@ model Receipt {
   receiptDetail       ReceiptDetail[]
 
   vaultMovement VaultMovement[]
+
+  BankMovement BankMovement[]
+
+  PosMovement PosMovement[]
 }
 
 model ReceiptDetail {
@@ -765,9 +765,9 @@ model User {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  branch    Branch[]
-  warehouse Warehouse[]
-  role      Role[]
+  branch     Branch[]
+  warehouse  Warehouse[]
+  role       Role[]
   permission Permission[]
 }
 
@@ -804,7 +804,7 @@ model Invoice {
 
   current   Current?            @relation(fields: [currentCode], references: [currentCode])
   company   Company?            @relation(fields: [companyCode], references: [companyCode])
-  branch    Branch?              @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
+  branch    Branch?             @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
   warehouse Warehouse?          @relation(fields: [warehouseCode], references: [warehouseCode])
   priceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
   outBranch Branch?             @relation("InvoiceOutBranch", fields: [outBranchCode], references: [branchCode])
@@ -812,7 +812,13 @@ model Invoice {
   invoiceDetail   InvoiceDetail[]
   stockMovement   StockMovement[]
   currentMovement CurrentMovement[]
+  vaultMovement   VaultMovement[]
+
   vaultMovement VaultMovement[]
+
+  BankMovement BankMovement[]
+
+  PosMovement PosMovement[]
 }
 
 model InvoiceDetail {
@@ -839,7 +845,7 @@ model Vault {
   vaultName  String  @db.VarChar(50)
   branchCode String
   balance    Decimal @db.Decimal(15, 2)
-  currency   Decimal @db.Decimal(10, 6)
+  currency   String
 
   branch Branch @relation(fields: [branchCode], references: [branchCode])
 
@@ -849,84 +855,142 @@ model Vault {
 model VaultMovement {
   id                String            @id @default(cuid())
   vaultId           String
-  invoiceId         String
-  receiptId         String?
+  invoiceId         String?
+  receiptId         String??
   description       String
-  entering          Decimal           @db.Decimal(15, 2)
-  emerging          Decimal           @db.Decimal(15, 2)
+  entering          Decimal           @db.Decimal(15, 2) //giriş
+  emerging          Decimal           @db.Decimal(15, 2) //çıkış
   vaultDirection    VaultDirection
   vaultType         VaultType
   vaultDocumentType VaultDocumentType
 
-  vault   Vault   @relation(fields: [vaultId], references: [id])
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  vault   Vault    @relation(fields: [vaultId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
   receipt Receipt? @relation(fields: [receiptId], references: [id])
 }
 
+model Bank {
+  id         String  @id @default(cuid())
+  bankName   String  @db.VarChar(50)
+  branchCode String
+  balance    Decimal @db.Decimal(15, 2)
+  currency   String
+
+  branch Branch @relation(fields: [branchCode], references: [branchCode])
+
+  bankMovement BankMovement[]
+}
+
+model BankMovement {
+  id               String            @id @default(cuid())
+  bankId           String
+  invoiceId        String?
+  receiptId        String?
+  description      String
+  entering         Decimal           @db.Decimal(15, 2)
+  emerging         Decimal           @db.Decimal(15, 2)
+  bankDirection    VaultDirection
+  bankType         VaultType
+  bankDocumentType VaultDocumentType
+
+  bank    Bank     @relation(fields: [bankId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  receipt Receipt? @relation(fields: [receiptId], references: [id])
+}
+
+model Pos {
+  id         String  @id @default(cuid())
+  posName    String  @db.VarChar(50)
+  branchCode String
+  balance    Decimal @db.Decimal(15, 2)
+  currency   String
+
+  branch Branch @relation(fields: [branchCode], references: [branchCode])
+
+  posMovement PosMovement[]
+}
+
+model PosMovement {
+  id              String            @id @default(cuid())
+  posId           String
+  invoiceId       String?
+  receiptId       String?
+  description     String
+  entering        Decimal           @db.Decimal(15, 2)
+  emerging        Decimal           @db.Decimal(15, 2)
+  posDirection    VaultDirection
+  posType         VaultType
+  posDocumentType VaultDocumentType
+
+  pos     Pos      @relation(fields: [posId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  receipt Receipt?? @relation(fields: [receiptId], references: [id])
+}
+
 model Order {
-  id                      String   @id @default(cuid())
-  platformOrderId         String       // Platformdan gelen sipariş ID'si (Hepsiburada: "id", Trendyol: "orderNumber", WooCommerce: "id")
-  platform                String       // Siparişin hangi platformdan geldiğini belirtir (hepsiburada, trendyol, woocommerce)
-  customerId              String
-  status                  String
-  currency                String
-  orderDate               DateTime
-  deliveryType            String?
-  cargoCompany            String?
-  shippingAddressId       String?      // Kargo adresi
-  billingAddressId        String?     // Fatura adresi
-  timeSlot                DateTime?
-  totalPrice              Float
-  createdAt               DateTime     @default(now())
-  updatedAt               DateTime     @updatedAt
-  shippingAddress         OrderInvoiceAddress? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
-  billingAddress          OrderInvoiceAddress? @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  items                   OrderItem[]  // Sipariş ürünleri ile ilişki
-  cargos                  OrderCargo[]      // Kargo bilgileri ile ilişki
+  id                String               @id @default(cuid())
+  platformOrderId   String // Platformdan gelen sipariş ID'si (Hepsiburada: "id", Trendyol: "orderNumber", WooCommerce: "id")
+  platform          String // Siparişin hangi platformdan geldiğini belirtir (hepsiburada, trendyol, woocommerce)
+  customerId        String
+  status            String
+  currency          String
+  orderDate         DateTime
+  deliveryType      String?
+  cargoCompany      String?
+  shippingAddressId String? // Kargo adresi
+  billingAddressId  String? // Fatura adresi
+  timeSlot          DateTime?
+  totalPrice        Float
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  shippingAddress   OrderInvoiceAddress? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddress    OrderInvoiceAddress? @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  items             OrderItem[] // Sipariş ürünleri ile ilişki
+  cargos            OrderCargo[] // Kargo bilgileri ile ilişki
 }
 
 model OrderInvoiceAddress {
-  id                  String   @id @default(uuid()) // Benzersiz adres ID'si
-  address             String   // Adres  
-  city                String   // Şehir
-  district            String   // İlçe
-  postalCode          String   // Posta kodu
-  country             String   // Ülke
-  fullName            String   // Adres sahibi adı
-  email               String?
-  paymentMethod       String?   
-  transactionId       String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id            String   @id @default(uuid()) // Benzersiz adres ID'si
+  address       String // Adres  
+  city          String // Şehir
+  district      String // İlçe
+  postalCode    String // Posta kodu
+  country       String // Ülke
+  fullName      String // Adres sahibi adı
+  email         String?
+  paymentMethod String?
+  transactionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  shippingOrders      Order[] @relation("ShippingAddress") // Shipping Address ilişkisi
-  billingOrders       Order[] @relation("BillingAddress")  // Billing Address ilişkisi
+  shippingOrders Order[] @relation("ShippingAddress") // Shipping Address ilişkisi
+  billingOrders  Order[] @relation("BillingAddress") // Billing Address ilişkisi
 }
 
 model OrderCargo {
-  id                  String   @id @default(uuid()) // Benzersiz kargo ID'si
-  name                String   // Kargo şirketi adı (ör. HepsiJet, Yurtiçi Kargo)
-  shortName           String
-  trackingNumber      String  // Kargo takip numarası
-  orderId             String   // Sipariş ID'si
-  deliveredAt         DateTime? // Teslimat tarihi
-  deliveryNote        String?   // Teslimat notu
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  order               Order    @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
+  id             String    @id @default(uuid()) // Benzersiz kargo ID'si
+  name           String // Kargo şirketi adı (ör. HepsiJet, Yurtiçi Kargo)
+  shortName      String
+  trackingNumber String // Kargo takip numarası
+  orderId        String // Sipariş ID'si
+  deliveredAt    DateTime? // Teslimat tarihi
+  deliveryNote   String? // Teslimat notu
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
 }
 
 model OrderItem {
-  id             String   @id @default(cuid()) // Benzersiz ürün ID'si
-  orderId        String   // Sipariş ID'si
-  stockCardId    String   // StockCard ile ilişki
-  quantity       Int      // Ürün miktarı
-  unitPrice      Decimal  @db.Decimal(15, 4) // Ürün birim fiyatı
-  totalPrice     Decimal  @db.Decimal(15, 4) // Ürün toplam fiyatı
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(cuid()) // Benzersiz ürün ID'si
+  orderId     String // Sipariş ID'si
+  stockCardId String // StockCard ile ilişki
+  quantity    Int // Ürün miktarı
+  unitPrice   Decimal  @db.Decimal(15, 4) // Ürün birim fiyatı
+  totalPrice  Decimal  @db.Decimal(15, 4) // Ürün toplam fiyatı
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  order          Order     @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
-  stockCard      StockCard @relation(fields: [stockCardId], references: [id]) // StockCard ile ilişki
+  order     Order     @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
+  stockCard StockCard @relation(fields: [stockCardId], references: [id]) // StockCard ile ilişki
 }

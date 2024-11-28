@@ -11,7 +11,6 @@ import WarehouseRoutes from './api/routes/v1/warehouseRoutes';
 import BranchRoutes from './api/routes/v1/branchRoutes';
 import CurrentRoutes from './api/routes/v1/currentRoutes';
 import CurrentMovementRoutes from './api/routes/v1/currentMovementRoutes';
-import CurrentGroupRoutes from './api/routes/v1/currentGroupRoutes';
 import UserRoutes from './api/routes/v1/userRoutes';
 import RoleRoutes from './api/routes/v1/roleRoutes';
 import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
@@ -21,13 +20,22 @@ import importRoutes from './api/routes/v1/importExcelRoutes';
 import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
 import { CustomError } from './utils/CustomError';
-import logger from './utils/logger';
 import { Prisma } from '@prisma/client';
 import exportRoutes from './api/routes/v1/exportRoutes';
 import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 import OrderRoutes from './api/routes/v1/orderRoutes';
 import { authRoutes } from './api/routes/v1/authRoutes';
 
+import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
+import dotenv from 'dotenv';
+import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
+import loggerWithCaller from './utils/logger';
+import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
+import BankRoutes from './api/routes/v1/bankRoutes';
+import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
+import PosRoutes from './api/routes/v1/posRoutes';
+import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
+dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
   .use(cors({
@@ -70,7 +78,7 @@ const app = new Elysia()
     },
   }))
   .get("/", () => "Elysia is running!") // Ana route tanımlanıyor
-  .onError(({ error, set }) => {
+  .onError(async ({ error, set, request }) => {
     // Varsayılan hata yanıtı
     let statusCode = 500;
     let message = 'Beklenmeyen bir hata oluştu.';
@@ -96,14 +104,28 @@ const app = new Elysia()
       message = error.message;
     }
 
-    // Hataları loglayın
-    logger.error('Hata oluştu:', {
-      message: error.message,
-      stack: error.stack,
-      code: (error as any).code,
-      meta: (error as any).meta,
-    });
+    // İstekten gelen body'yi alın
+    const body = await request.json().catch(() => null);
 
+    // Hataları loglayın
+    loggerWithCaller.error(
+      {
+        method: request.method,
+        url: request.url,
+        headers: request.headers,
+        body: body,
+        message: error.message,
+        stack: error.stack,
+        code: (error as any).code,
+        meta: (error as any).meta,
+        prisma: error instanceof Prisma.PrismaClientKnownRequestError ? {
+          clientVersion: error.clientVersion,
+          errorCode: error.code,
+          meta: error.meta,
+        } : undefined,
+      },
+      'Hata oluştu'
+    );
     // Yanıtı ayarlayın ve gönderin
     set.status = statusCode;
 
@@ -128,22 +150,23 @@ WarehouseRoutes(app);
 CategoryRoutes(app);
 CurrentRoutes(app);
 CurrentMovementRoutes(app);
-CurrentGroupRoutes(app);
 UserRoutes(app);
 RoleRoutes(app);
 InvoiceRoutes(app);
 ReceiptRoutes(app);
 VaultRoutes(app);
 VaultMovementRoutes(app);
+VaultMovementRoutes(app);
 BrandRoutes(app);
 importRoutes(app);
 exportRoutes(app);
 OrderRoutes(app);
 authRoutes(app);
-
-// Uygulama belirtilen portta dinlemeye başlıyor
-app.listen(appConfig.port, () => {
-  console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
-});
+ManufacturerRoutes(app);
+CurrentCategoryRoutes(app);
+BankRoutes(app);
+BankMovementRoutes(app);
+PosRoutes(app);
+PosMovementRoutes(app);
 
 export default app;

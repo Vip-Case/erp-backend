@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../src/config/prisma';
 
-const prisma = new PrismaClient();
 
 async function main() {
     // Delete dependent records of Current
@@ -38,12 +37,13 @@ async function main() {
     await prisma.stockCardCategory.deleteMany({});
     await prisma.warehouse.deleteMany({});
     await prisma.branchWarehouse.deleteMany({});
-    await prisma.branch.deleteMany({});
-    await prisma.company.deleteMany({});
-    await prisma.user.deleteMany({});
-    await prisma.role.deleteMany({});
     await prisma.brand.deleteMany({});
     await prisma.currentCategory.deleteMany({});
+    await prisma.vaultMovement.deleteMany({});
+    await prisma.vault.deleteMany({});
+
+    await prisma.branch.deleteMany({});
+    await prisma.company.deleteMany({});
 }
 
 main()

@@ -2,6 +2,10 @@ import StockCardService from '../../services/concrete/StockCardService';
 import { Context } from 'elysia';
 import { StockCard, StockCardAttribute, StockCardBarcode, StockCardCategoryItem, StockCardPriceListItems, StockCardTaxRate, Warehouse } from '@prisma/client';
 
+interface SearchCriteria {
+    search: string;
+}
+
 // Service Initialization
 const stockCardService = new StockCardService();
 
@@ -96,7 +100,7 @@ const StockCardController = {
         const { id } = ctx.params;
         try {
             const body = ctx.body as any;
-
+            console.log(body);
             // Servisi çağırarak StockCard ve ilişkilerini güncelliyoruz
             const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body);
             ctx.set.status = 200;
@@ -149,6 +153,18 @@ const StockCardController = {
     getAllStockCardsWithRelations: async (ctx: Context) => {
         try {
             const stockCards = await stockCardService.getAllStockCardsWithRelations();
+            ctx.set.status = 200;
+            return stockCards;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    searchStockCards: async (ctx: Context) => {
+        const criteria = ctx.query as unknown as SearchCriteria;
+        try {
+            const stockCards = await stockCardService.searchStockCards(criteria);
             ctx.set.status = 200;
             return stockCards;
         } catch (error: any) {
