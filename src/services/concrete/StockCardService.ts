@@ -16,6 +16,15 @@ import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { asyncHandler } from '../../utils/asyncHandler';
 
+interface SearchCriteria {
+    query?: string; // Genel bir arama için
+    productCode?: string;
+    productName?: string;
+    barcodes?: string;
+    marketNames?: string;
+    priceListBarcode?: string;
+}
+
 export class StockCardService {
 
 
@@ -275,6 +284,8 @@ export class StockCardService {
                                 },
                                 stockCard: { connect: { id: stockCardId } },
                                 price: priceListItem.price ?? 0,
+                                vatRate: priceListItem.vatRate ?? 0,
+                                barcode: priceListItem.barcode,
                             }
                         })
                     )
@@ -345,7 +356,7 @@ export class StockCardService {
                         prisma.stockCardWarehouse.create({
                             data: {
                                 stockCard: { connect: { id: stockCardId } },
-                                warehouse: { connect: { id: warehouse.id } },
+                                warehouse: { connect: { id: warehouse.warehouseId } },
                                 quantity: warehouse?.quantity,
                             }
                         })
@@ -391,7 +402,7 @@ export class StockCardService {
         return result;
     });
 
-    async updateStockCardsWithRelations(id: string, data: {
+    updateStockCardsWithRelations = asyncHandler(async (_id: string, data: {
         stockCard: StockCard;
         attributes?: StockCardAttributeItems[];
         barcodes?: StockCardBarcode[];
@@ -402,277 +413,244 @@ export class StockCardService {
         eFatura?: StockCardEFatura[];
         manufacturers?: StockCardManufacturer[];
         marketNames?: StockCardMarketNames[];
+    }) => {
+        const result = await prisma.$transaction(async (prisma) => {
+            // 1. StockCard'ı güncelle
+            const updatedStockCard = await prisma.stockCard.update({
+                where: { id: _id },
+                data: {
+                    productName: data.stockCard.productName,
+                    unit: data.stockCard.unit,
+                    shortDescription: data.stockCard.shortDescription,
+                    description: data.stockCard.description,
+                    productType: data.stockCard.productType,
+                    gtip: data.stockCard.gtip,
+                    pluCode: data.stockCard.pluCode,
+                    desi: data.stockCard.desi,
+                    adetBoleni: data.stockCard.adetBoleni,
+                    siraNo: data.stockCard.siraNo,
+                    raf: data.stockCard.raf,
+                    karMarji: data.stockCard.karMarji,
+                    riskQuantities: data.stockCard.riskQuantities,
+                    stockStatus: data.stockCard.stockStatus,
+                    hasExpirationDate: data.stockCard.hasExpirationDate,
+                    allowNegativeStock: data.stockCard.allowNegativeStock,
+                    maliyet: data.stockCard?.maliyet,
+                    maliyetDoviz: data.stockCard?.maliyetDoviz,
 
-
-    }) {
-        try {
-            const result = await prisma.$transaction(async (prisma) => {
-                console.log(data);
-                const stockCard = await prisma.stockCard.update({
-                    where: { id: data.stockCard.id },
-                    data: {
-                        ...data.stockCard,
-
-                        Company: data.stockCard.companyCode ? {
-                            connect: { companyCode: data.stockCard.companyCode },
-                        } : undefined,
-
-                        Branch: data.stockCard.branchCode ? {
-                            connect: { branchCode: data.stockCard.branchCode },
-                        } : undefined,
-
-                        Brand: data.stockCard.brandId ? {
-                            connect: { id: data.stockCard.brandId },
-                        } : undefined,
-
-                    } as Prisma.StockCardCreateInput,
-                });
-
-
-                const stockCardId = stockCard.id;
-
-                // Veritabanındaki mevcut barkodları al
-                const existingBarcodes = await prisma.stockCardBarcode.findMany({
-                    where: { stockCardId: stockCardId },
-                    select: { barcode: true },
-                });
-
-                // Gelen `data.barcodes` içindeki barkodları listeye dönüştür
-                const newBarcodeValues = data.barcodes ? data.barcodes.map((barcode) => barcode.barcode) : [];
-
-                // Mevcut olup yeni barkod listesinde bulunmayanları sil
-                const barcodesToDelete = existingBarcodes.filter(
-                    (existingBarcode) => !newBarcodeValues.includes(existingBarcode.barcode)
-                );
-
-                await Promise.all(
-                    barcodesToDelete.map(async (barcode) => {
-                        await prisma.stockCardBarcode.delete({
-                            where: { barcode: barcode.barcode },
-                        });
-                    })
-                );
-
-                // Yeni olup mevcut listede olmayan barkodları ekleyin
-                const existingBarcodeValues = existingBarcodes.map((barcode) => barcode.barcode);
-                const barcodesToCreate = newBarcodeValues.filter(
-                    (newBarcode) => !existingBarcodeValues.includes(newBarcode)
-                );
-
-                await Promise.all(
-                    barcodesToCreate.map(async (barcode) => {
-                        await prisma.stockCardBarcode.create({
-                            data: {
-                                barcode: barcode,
-                                stockCard: { connect: { id: stockCardId } },
-                            },
-                        });
-                    })
-                );
-
-                // Attribute işlemleri
-                const existingAttributes = await prisma.stockCardAttributeItems.findMany({
-                    where: { stockCardId: stockCardId },
-                    select: { attributeId: true }
-                });
-                const newAttributeIds = data.attributes ? data.attributes.map((attribute) => attribute.attributeId) : [];
-                const attributesToDelete = existingAttributes.filter((existingAttribute) => !newAttributeIds.includes(existingAttribute.attributeId));
-
-                await Promise.all(
-                    attributesToDelete.map(async (attribute) => {
-                        await prisma.stockCardAttributeItems.delete({
-                            where: { id: attribute.attributeId },
-                        });
-                    })
-                );
-
-                if (data.attributes) {
-                    await Promise.all(
-                        data.attributes.map(async (attribute) => {
-                            const existingAttribute = await prisma.stockCardAttributeItems.findFirst({
-                                where: {
-                                    stockCardId: stockCardId,
-                                    attributeId: attribute.attributeId
-                                },
-                            });
-                            if (!existingAttribute) {
-                                await prisma.stockCardAttributeItems.create({
-                                    data: {
-                                        attribute: { connect: { id: attribute.attributeId } },
-                                        stockCard: { connect: { id: stockCardId } },
-                                    },
-                                });
-                            }
-                        })
-                    );
-                }
-
-                // MarketName işlemleri
-                const existingMarketNames = await prisma.stockCardMarketNames.findMany({
-                    where: { stockCardId: stockCardId },
-                    select: { marketName: true }
-                });
-                const newMarketNames = data.marketNames ? data.marketNames.map((marketName) => marketName.marketName) : [];
-                const marketNamesToDelete = existingMarketNames.filter((existingMarketName) => !newMarketNames.includes(existingMarketName.marketName));
-
-                await Promise.all(
-                    marketNamesToDelete.map(async (marketName) => {
-                        await prisma.stockCardMarketNames.delete({
-                            where: { id: marketName.marketName },
-                        });
-                    })
-                );
-
-                if (data.marketNames) {
-                    await Promise.all(
-                        data.marketNames.map(async (marketName) => {
-                            const existingMarketName = await prisma.stockCardMarketNames.findFirst({
-                                where: {
-                                    stockCardId: stockCardId,
-                                    marketName: marketName.id
-                                },
-                            });
-                            if (!existingMarketName) {
-                                await prisma.stockCardMarketNames.create({
-                                    data: {
-                                        marketName: marketName.id,
-                                        stockCardId: stockCardId,
-                                    },
-                                });
-                            }
-                        })
-                    );
-                }
-
-                // Mevcut CategoryItem'leri al
-                const existingCategoryItems = await prisma.stockCardCategoryItem.findMany({
-                    where: { stockCardId: stockCardId },
-                    select: { id: true, categoryId: true },
-                });
-
-                // Gelen yeni `categoryItem` öğelerini `categoryId` olarak listeye dönüştür
-                const newCategoryIds = data.categoryItem ? data.categoryItem.map((categoryItem) => categoryItem.categoryId) : [];
-
-                // Veritabanında olup yeni listede olmayan `categoryId` öğelerini belirleyip sil
-                const categoryItemsToDelete = existingCategoryItems.filter(
-                    (existingCategoryItem) => !newCategoryIds.includes(existingCategoryItem.categoryId)
-                );
-
-                await Promise.all(
-                    categoryItemsToDelete.map(async (categoryItem) => {
-                        await prisma.stockCardCategoryItem.delete({
-                            where: { id: categoryItem.id }, // `categoryId` yerine `id` kullanarak güvenli silme işlemi yapıyoruz
-                        });
-                    })
-                );
-
-                // Yeni olup veritabanında olmayan `categoryId` öğelerini belirleyip ekle
-                const existingCategoryIds = existingCategoryItems.map((item) => item.categoryId);
-                const categoryItemsToCreate = newCategoryIds.filter(
-                    (categoryId) => !existingCategoryIds.includes(categoryId)
-                );
-
-                await Promise.all(
-                    categoryItemsToCreate.map(async (categoryId) => {
-                        await prisma.stockCardCategoryItem.create({
-                            data: {
-                                stockCardCategory: { connect: { id: categoryId } },
-                                stockCard: { connect: { id: stockCardId } },
-                            },
-                        });
-                    })
-                );
-
-                if (data.priceListItems) {
-                    await Promise.all(
-                        data.priceListItems.map((priceListItem) =>
-                            prisma.stockCardPriceListItems.update({
-                                where: { id: priceListItem.id },
-                                data: {
-                                    priceList: {
-                                        connect: { id: priceListItem.priceListId }
-                                    },
-                                    stockCard: { connect: { id: stockCardId } },
-                                    price: priceListItem.price ?? 0,
-                                }
-                            })
-                        )
-                    );
-                }
-
-                if (data.taxRates) {
-                    await Promise.all(
-                        data.taxRates.map((taxRate) =>
-                            prisma.stockCardTaxRate.update({
-                                where: { id: taxRate.id },
-                                data: {
-                                    taxName: taxRate.taxName ?? "defaultTaxName", // Add this line
-                                    taxRate: taxRate.taxRate,
-                                    stockCard: { connect: { id: stockCardId } },
-                                }
-                            })
-                        )
-                    );
-                }
-
-                if (data.eFatura) {
-                    await Promise.all(
-                        data.eFatura.map((eFatura) =>
-                            prisma.stockCardEFatura.update({
-                                where: { id: eFatura.id },
-                                data: {
-                                    productCode: eFatura.productCode,
-                                    productName: eFatura.productName,
-                                    stockCardId: stockCardId,
-                                }
-                            })
-                        )
-                    );
-                }
-
-                if (data.manufacturers) {
-                    await Promise.all(
-                        data.manufacturers.map((manufacturer) =>
-                            prisma.stockCardManufacturer.update({
-                                where: { id: manufacturer.id },
-                                data: {
-                                    productCode: manufacturer.productCode,
-                                    productName: manufacturer.productName,
-                                    barcode: manufacturer.barcode,
-                                    brandId: manufacturer.brandId,
-                                    currentId: manufacturer.currentId,
-                                    stockCardId: stockCardId,
-                                }
-                            })
-                        )
-                    );
-                }
-
-
-                if (data.stockCardWarehouse) {
-                    await Promise.all(
-                        data.stockCardWarehouse.map((warehouse) =>
-                            prisma.stockCardWarehouse.update({
-                                where: { id: warehouse.id },
-                                data: {
-                                    stockCard: { connect: { id: stockCardId } },
-                                    warehouse: { connect: { id: warehouse.id } },
-                                    quantity: warehouse?.quantity,
-                                }
-                            })
-                        )
-                    );
-                }
-
-                return stockCard;
+                    brand: data.stockCard.brandId ? {
+                        connect: { id: data.stockCard.brandId },
+                    } : undefined,
+                },
             });
 
-            return result;
-        } catch (error) {
-            logger.error("Error update StockCard with relations:", error);
-            throw new Error("Could not update StockCard with relations");
-        }
-    };
+            // 2. İlişkili verileri sil ve yeniden ekle
+
+            // 2.1. Attributes (StockCardAttributeItems)
+            await prisma.stockCardAttributeItems.deleteMany({
+                where: { stockCardId: _id },
+            });
+
+            if (data.attributes && data.attributes.length > 0) {
+                await prisma.stockCardAttributeItems.createMany({
+                    data: data.attributes.map((attr) => ({
+                        stockCardId: _id,
+                        attributeId: attr.attributeId,
+                    })),
+                });
+            }
+
+            // 2.2. Barcodes (StockCardBarcode)
+            await prisma.stockCardBarcode.deleteMany({
+                where: { stockCardId: _id },
+            });
+
+            if (data.barcodes && data.barcodes.length > 0) {
+                await prisma.stockCardBarcode.createMany({
+                    data: data.barcodes.map((barcode) => ({
+                        stockCardId: _id,
+                        barcode: barcode.barcode,
+                    })),
+                });
+            }
+
+            // 2.3. Category Items (StockCardCategoryItem)
+            await prisma.stockCardCategoryItem.deleteMany({
+                where: { stockCardId: _id },
+            });
+
+            if (data.categoryItem && data.categoryItem.length > 0) {
+                await prisma.stockCardCategoryItem.createMany({
+                    data: data.categoryItem.map((category) => ({
+                        stockCardId: _id,
+                        categoryId: category.categoryId,
+                    })),
+                });
+            }
+
+            // 2.4. Market Names (StockCardMarketNames)
+            await prisma.stockCardMarketNames.deleteMany({
+                where: { stockCardId: _id },
+            });
+
+            if (data.marketNames && data.marketNames.length > 0) {
+                await prisma.stockCardMarketNames.createMany({
+                    data: data.marketNames.map((marketName) => ({
+                        stockCardId: _id,
+                        marketName: marketName.marketName,
+                    })),
+                });
+            }
+
+            // 3. İlişkili verileri `id` ile güncelle
+
+            // 3.1. Price List Items (StockCardPriceListItems)
+            if (data.priceListItems && data.priceListItems.length > 0) {
+                const existingItems = await prisma.stockCardPriceListItems.findMany({
+                    where: { stockCardId: _id },
+                });
+
+                const existingItemIds = existingItems.map(item => item.id);
+                const incomingItemIds = data.priceListItems.map(item => item.id);
+
+                for (const item of data.priceListItems) {
+                    if (item.id) {
+                        await prisma.stockCardPriceListItems.upsert({
+                            where: { id: item.id },
+                            update: {
+                                priceListId: item.priceListId,
+                                price: item.price,
+                                vatRate: item.vatRate,
+                                barcode: item.barcode,
+                            },
+                            create: {
+                                stockCardId: _id,
+                                priceListId: item.priceListId,
+                                price: item.price,
+                                vatRate: item.vatRate,
+                                barcode: item.barcode,
+                            },
+                        });
+                    } else {
+                        await prisma.stockCardPriceListItems.create({
+                            data: {
+                                stockCardId: _id,
+                                priceListId: item.priceListId,
+                                price: item.price,
+                                vatRate: item.vatRate,
+                                barcode: item.barcode,
+                            },
+                        });
+                    }
+                }
+
+                // Delete items that are not in the incoming data
+                const itemsToDelete = existingItemIds.filter(id => !incomingItemIds.includes(id));
+                await prisma.stockCardPriceListItems.deleteMany({
+                    where: { id: { in: itemsToDelete } },
+                });
+            }
+
+            // 3.2. StockCardWarehouse
+            if (data.stockCardWarehouse && data.stockCardWarehouse.length > 0) {
+                for (const warehouseItem of data.stockCardWarehouse) {
+                    await prisma.stockCardWarehouse.upsert({
+                        where: { id: warehouseItem.id },
+                        update: {
+                            quantity: warehouseItem.quantity,
+                        },
+                        create: {
+                            id: warehouseItem.id,
+                            stockCardId: _id,
+                            warehouseId: warehouseItem.warehouseId,
+                            quantity: warehouseItem.quantity,
+                        },
+                    });
+                }
+            }
+
+            // 3.3. eFatura (StockCardEFatura)
+            if (data.eFatura && data.eFatura.length > 0) {
+                for (const eFaturaItem of data.eFatura) {
+                    await prisma.stockCardEFatura.upsert({
+                        where: { id: eFaturaItem.id },
+                        update: {
+                            productCode: eFaturaItem.productCode,
+                            productName: eFaturaItem.productName,
+                        },
+                        create: {
+                            id: eFaturaItem.id,
+                            stockCardId: _id,
+                            productCode: eFaturaItem.productCode,
+                            productName: eFaturaItem.productName,
+                        },
+                    });
+                }
+            }
+
+            // 3.4. Manufacturers (StockCardManufacturer)
+            if (data.manufacturers && data.manufacturers.length > 0) {
+                for (const manufacturer of data.manufacturers) {
+                    await prisma.stockCardManufacturer.upsert({
+                        where: { id: manufacturer.id },
+                        update: {
+                            productCode: manufacturer.productCode,
+                            productName: manufacturer.productName,
+                            barcode: manufacturer.barcode,
+                            brandId: manufacturer.brandId,
+                            currentId: manufacturer.currentId,
+                        },
+                        create: {
+                            stockCardId: _id,
+                            productCode: manufacturer.productCode,
+                            productName: manufacturer.productName,
+                            barcode: manufacturer.barcode,
+                            brandId: manufacturer.brandId,
+                            currentId: manufacturer.currentId,
+                        },
+                    });
+                }
+            }
+
+            // 4. Güncellenmiş veriyi döndür
+            return prisma.stockCard.findUnique({
+                where: { id: _id },
+                include: {
+                    branch: true,
+                    company: true,
+                    barcodes: true,
+                    brand: true,
+                    stockCardAttributeItems: {
+                        include: {
+                            attribute: true,
+                        }
+                    },
+                    stockCardEFatura: true,
+                    stockCardManufacturer: true,
+                    stockCardMarketNames: true,
+                    stockCardPriceLists: {
+                        include: {
+                            priceList: true,
+                        }
+                    },
+                    stockCardWarehouse: {
+                        include: {
+                            warehouse: true,
+                        }
+                    },
+                    taxRates: true,
+                    stockCardCategoryItem: {
+                        include: {
+                            stockCardCategory: true,
+                        }
+                    },
+                }
+            });
+        });
+
+        return result;
+    });
+
 
     async deleteStockCardsWithRelations(id: string): Promise<boolean> {
         try {
@@ -771,7 +749,7 @@ export class StockCardService {
                 });
 
                 return true;
-            });
+            }, { timeout: 3000 });
         } catch (error) {
             logger.error("Error deleting many StockCards with relations:", error);
             throw new Error("Could not delete many StockCards with relations");
@@ -882,6 +860,112 @@ export class StockCardService {
 
         return stockCards;
     });
+
+
+
+    searchStockCards = asyncHandler(async (criteria: SearchCriteria) => {
+        const where: Prisma.StockCardWhereInput = {
+            OR: [],
+        };
+
+        if (!where.OR) {
+            where.OR = [];
+        }
+
+        // Eğer belirli kriterler sağlanmışsa, bunları ekle
+        if (criteria.productCode) {
+            where.OR.push({
+                productCode: { contains: criteria.productCode, mode: 'insensitive' },
+            });
+        }
+
+        if (criteria.productName) {
+            where.OR.push({
+                productName: { contains: criteria.productName, mode: 'insensitive' },
+            });
+        }
+
+        if (criteria.barcodes) {
+            where.OR.push({
+                barcodes: {
+                    some: { barcode: { contains: criteria.barcodes, mode: 'insensitive' } },
+                },
+            });
+        }
+
+        if (criteria.marketNames) {
+            where.OR.push({
+                stockCardMarketNames: {
+                    some: { marketName: { contains: criteria.marketNames, mode: 'insensitive' } },
+                },
+            });
+        }
+
+        if (criteria.priceListBarcode) {
+            where.OR.push({
+                stockCardPriceLists: {
+                    some: { barcode: { contains: criteria.priceListBarcode, mode: 'insensitive' } },
+                },
+            });
+        }
+
+        // Eğer hiçbir kriter belirtilmemişse, genel query'yi tüm alanlarda ara
+        if (where.OR.length === 0 && criteria.query) {
+            where.OR.push(
+                { productCode: { contains: criteria.query, mode: 'insensitive' } },
+                { productName: { contains: criteria.query, mode: 'insensitive' } },
+                { barcodes: { some: { barcode: { contains: criteria.query, mode: 'insensitive' } } } },
+                { stockCardMarketNames: { some: { marketName: { contains: criteria.query, mode: 'insensitive' } } } },
+                { stockCardPriceLists: { some: { barcode: { contains: criteria.query, mode: 'insensitive' } } } }
+            );
+        }
+
+        // Eğer hem spesifik kriterler hem genel bir query yoksa, hata döndür
+        if (where.OR.length === 0) {
+            throw new Error('En az bir arama kriteri veya genel bir sorgu belirtmelisiniz.');
+        }
+
+        const stockCards = await prisma.stockCard.findMany({
+            where,
+            include: {
+                barcodes: true,
+                brand: true,
+                stockCardAttributeItems: {
+                    include: {
+                        attribute: true,
+                    },
+                },
+                stockCardEFatura: true,
+                stockCardManufacturer: {
+                    include: {
+                        brand: true,
+                        current: true,
+                    },
+                },
+                stockCardMarketNames: true,
+                stockCardPriceLists: {
+                    include: {
+                        priceList: true,
+                    },
+                },
+                stockCardWarehouse: {
+                    include: {
+                        warehouse: true,
+                    },
+                },
+                taxRates: true,
+                stockCardCategoryItem: {
+                    include: {
+                        stockCardCategory: true,
+                    },
+                },
+            },
+        });
+
+        return stockCards;
+    });
+
+
 }
 
 export default StockCardService;

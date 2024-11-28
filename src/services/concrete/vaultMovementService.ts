@@ -3,10 +3,10 @@ import prisma from "../../config/prisma";
 import { Prisma, VaultMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
-
+import VaultService from "./vaultService";
 export class VaultMovementService {
     private vaultMovementRepository: BaseRepository<VaultMovement>;
-    
+
     constructor() {
         this.vaultMovementRepository = new BaseRepository<VaultMovement>(prisma.vaultMovement);
     }
@@ -21,15 +21,29 @@ export class VaultMovementService {
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
-    
-                    // İlişkiler
-                    vault: {
-                        connect: {
+
+                    vault: vaultMovement.vaultId ? {
+
+                        // İlişkiler
+                        vault: {
+                            connect: {
+                                id: vaultMovement.vaultId
+                            }
+                        } : undefined,
+
+                        invoice: vaultMovement?.invoiceId ? {
                             id: vaultMovement.vaultId,
                         },
                     },
                     invoice: {
                         connect: {
+                            id: vaultMovement.invoiceId
+                        }
+                    } : undefined,
+
+                    receipt: vaultMovement?.receiptId ? {
+                        connect: {
+                            id: vaultMovement.receiptId
                             id: vaultMovement.invoiceId, // Invoice ilişkisi
                         },
                     },
@@ -42,17 +56,21 @@ export class VaultMovementService {
                         : undefined,
                 } as Prisma.VaultMovementCreateInput,
             });
+
+            VaultService.updateVaultBalance(vaultMovement.vaultId, vaultMovement.entering, vaultMovement.emerging);
+
             return createdVaultMovement;
         } catch (error) {
             logger.error("Error creating vaultMovement", error);
             throw error;
         }
     }
-    
+
 
     async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
         try {
             return await prisma.vaultMovement.update({
+                where: { id },
                 where: { id },
                 data: {
                     description: vaultMovement.description,
@@ -61,7 +79,7 @@ export class VaultMovementService {
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
-    
+
                     // İlişkiler
                     vault: {
                         connect: {
@@ -87,7 +105,7 @@ export class VaultMovementService {
             throw error;
         }
     }
-    
+
 
     async deleteVaultMovement(id: string): Promise<boolean> {
         try {
@@ -107,9 +125,27 @@ export class VaultMovementService {
         }
     }
 
+    async getVaultMovementsByVaultId(vaultId: string): Promise<VaultMovement[]> {
+        try {
+            return await prisma.vaultMovement.findMany({
+                where: { vaultId: vaultId },
+                include: {
+                    vault: true
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching vaultMovements with vaultId ${vaultId}`, error);
+            throw error;
+        }
+    }
+
     async getAllVaultMovements(): Promise<VaultMovement[]> {
         try {
-            return await this.vaultMovementRepository.findAll();
+            return await prisma.vaultMovement.findMany({
+                include: {
+                    vault: true
+                }
+            });
         } catch (error) {
             logger.error("Error fetching all vaultMovements", error);
             throw error;

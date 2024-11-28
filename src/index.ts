@@ -12,7 +12,6 @@ import WarehouseRoutes from './api/routes/v1/warehouseRoutes';
 import BranchRoutes from './api/routes/v1/branchRoutes';
 import CurrentRoutes from './api/routes/v1/currentRoutes';
 import CurrentMovementRoutes from './api/routes/v1/currentMovementRoutes';
-import CurrentGroupRoutes from './api/routes/v1/currentGroupRoutes';
 import UserRoutes from './api/routes/v1/userRoutes';
 import RoleRoutes from './api/routes/v1/roleRoutes';
 import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
@@ -22,7 +21,6 @@ import importRoutes from './api/routes/v1/importExcelRoutes';
 import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
 import { CustomError } from './utils/CustomError';
-import logger from './utils/logger';
 import { Prisma } from '@prisma/client';
 import exportRoutes from './api/routes/v1/exportRoutes';
 import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
@@ -35,6 +33,16 @@ if (!process.env.JWT_SECRET) {
 
 const prisma = new PrismaClient();
 
+import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
+import dotenv from 'dotenv';
+import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
+import loggerWithCaller from './utils/logger';
+import BankRoutes from './api/routes/v1/bankRoutes';
+import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
+import PosRoutes from './api/routes/v1/posRoutes';
+import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
+import logger from './utils/logger';
+dotenv.config();
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
   .use(cors({
@@ -104,7 +112,6 @@ const app = new Elysia()
     BranchRoutes,
     CurrentRoutes,
     CurrentMovementRoutes,
-    CurrentGroupRoutes,
     UserRoutes,
     RoleRoutes,
     InvoiceRoutes,

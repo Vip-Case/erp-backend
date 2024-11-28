@@ -9,8 +9,8 @@ export const InvoiceRelations = {
 };
 
 export class InvoiceService {
-    private invoiceRepository = new BaseRepository<Invoice> (prisma.invoice);
-    private invoiceDetailRepository = new BaseRepository<InvoiceDetail> (prisma.invoiceDetail);
+    private invoiceRepository = new BaseRepository<Invoice>(prisma.invoice);
+    private invoiceDetailRepository = new BaseRepository<InvoiceDetail>(prisma.invoiceDetail);
 
     async getAllInvoices(): Promise<Invoice[]> {
         return this.invoiceRepository.findAll();
@@ -85,7 +85,7 @@ export class InvoiceService {
     async updateInvoice(id: string, invoice: Partial<Invoice>): Promise<Invoice> {
         try {
             return await prisma.invoice.update({
-                where: {id},
+                where: { id },
                 data: {
                     invoiceNo: invoice.invoiceNo,
                     gibInvoiceNo: invoice.gibInvoiceNo,
@@ -156,7 +156,7 @@ export class InvoiceService {
         if (!invoice.invoiceNo || invoice.invoiceNo.trim() === "") {
             throw new Error("InvoiceNo is required and cannot be empty.");
         }
-    
+
         try {
             // 1. Ana fatura oluşturuluyor
             const newInvoice = await prisma.invoice.create({
@@ -174,7 +174,7 @@ export class InvoiceService {
                     priceList: invoice.priceListId ? { connect: { id: invoice.priceListId } } : undefined,
                 },
             });
-    
+
             // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
             await prisma.$transaction(async (prisma) => {
                 // Fatura detaylarını ekleme
@@ -184,30 +184,30 @@ export class InvoiceService {
                         invoiceId: newInvoice.id,
                     })),
                 });
-    
+
                 // Alış veya Satış işlemleri
                 if (invoice.invoiceType === "Purchase" || invoice.invoiceType === "Sales") {
                     for (const detail of invoiceDetails) {
                         const { productCode, quantity } = detail;
-    
+
                         // StockCard doğrulama
                         const stockCard = await prisma.stockCard.findUnique({
                             where: { productCode },
                         });
-    
+
                         if (!stockCard) {
                             throw new Error(`StockCard with productCode '${productCode}' does not exist.`);
                         }
-    
+
                         // StockCardWarehouse doğrulama veya oluşturma
                         const warehouse = await prisma.warehouse.findUnique({
                             where: { warehouseCode: invoice.warehouseCode },
                         });
-    
+
                         if (!warehouse) {
                             throw new Error(`Warehouse with code '${invoice.warehouseCode}' does not exist.`);
                         }
-    
+
                         const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
                             where: {
                                 stockCardId_warehouseId: {
@@ -216,7 +216,7 @@ export class InvoiceService {
                                 },
                             },
                         });
-    
+
                         // Stok miktarını güncelleme
                         if (invoice.invoiceType === "Purchase") {
                             if (stockCardWarehouse) {
@@ -238,13 +238,13 @@ export class InvoiceService {
                         } else if (invoice.invoiceType === "Sales") {
                             if (stockCardWarehouse) {
                                 const newQuantity = stockCardWarehouse.quantity.minus(quantity);
-    
+
                                 if (newQuantity.isNegative() && !stockCard.allowNegativeStock) {
                                     throw new Error(
                                         `Insufficient stock for productCode '${productCode}' in warehouse '${invoice.warehouseCode}'.`
                                     );
                                 }
-    
+
                                 await prisma.stockCardWarehouse.update({
                                     where: { id: stockCardWarehouse.id },
                                     data: {
@@ -257,7 +257,7 @@ export class InvoiceService {
                                 );
                             }
                         }
-    
+
                         // StockMovement oluşturma
                         await prisma.stockMovement.create({
                             data: {
@@ -274,7 +274,7 @@ export class InvoiceService {
                             },
                         });
                     }
-    
+
                     // CurrentMovement oluşturma
                     if (invoice.currentCode) {
                         await prisma.currentMovement.create({
@@ -297,15 +297,15 @@ export class InvoiceService {
                             },
                         });
                     }
-    
+
                     // VaultMovement oluşturma
                     if (vaultId) {
                         const vault = await prisma.vault.findUnique({ where: { id: vaultId } });
-    
+
                         if (!vault) {
                             throw new Error(`Vault with ID '${vaultId}' does not exist.`);
                         }
-    
+
                         await prisma.vaultMovement.create({
                             data: {
                                 invoiceId: newInvoice.id,
@@ -327,14 +327,14 @@ export class InvoiceService {
                     }
                 }
             });
-    
+
             return newInvoice;
         } catch (error) {
             logger.error("Error creating invoice with relations:", error);
             throw error;
         }
     }
-    
+
     async updateInvoiceWithRelations(
         id: string,
         invoice: Partial<Invoice>,
@@ -347,13 +347,13 @@ export class InvoiceService {
                 where: { id },
                 select: { invoiceNo: true },
             });
-    
+
             if (!existingInvoice || !existingInvoice.invoiceNo) {
                 throw new Error(`Invoice with ID '${id}' does not exist or has no invoiceNo.`);
             }
-    
+
             const invoiceNo = existingInvoice.invoiceNo;
-    
+
             // 2. İlişkili verileri güncelle
             await prisma.$transaction(async (prisma) => {
                 // 2.1 Mevcut ilişkili `invoiceDetails` silinir ve yeniden eklenir
@@ -364,7 +364,7 @@ export class InvoiceService {
                         invoiceId: id,
                     })),
                 });
-    
+
                 // 2.2 Mevcut `currentMovement` verileri güncellenir veya yeniden oluşturulur
                 await prisma.currentMovement.deleteMany({ where: { documentNo: invoiceNo } });
                 if (invoice.currentCode) {
@@ -382,7 +382,7 @@ export class InvoiceService {
                         },
                     });
                 }
-    
+
                 // 2.3 Mevcut `stockMovement` verileri güncellenir
                 await prisma.stockMovement.deleteMany({ where: { documentNo: invoiceNo } });
                 await Promise.all(
@@ -403,16 +403,16 @@ export class InvoiceService {
                         })
                     )
                 );
-    
+
                 // 2.4 Mevcut `vaultMovement` güncellenir veya yeniden oluşturulur
                 await prisma.vaultMovement.deleteMany({ where: { invoiceId: id } });
                 if (vaultId) {
                     const existingVault = await prisma.vault.findUnique({ where: { id: vaultId } });
-    
+
                     if (!existingVault) {
                         throw new Error(`Vault with ID '${vaultId}' does not exist.`);
                     }
-    
+
                     await prisma.vaultMovement.create({
                         data: {
                             invoiceId: id,
@@ -429,7 +429,7 @@ export class InvoiceService {
                     console.log("No vaultId provided. Skipping VaultMovement creation.");
                 }
             });
-    
+
             // 3. Ana faturayı güncelle
             return await prisma.invoice.update({
                 where: { id },
@@ -441,7 +441,7 @@ export class InvoiceService {
                     documentType: invoice.documentType || undefined,
                     description: invoice.description || undefined,
                     canceledAt: invoice.canceledAt || undefined,
-    
+
                     // İlişkili alanlar
                     priceList: invoice.priceListId
                         ? { connect: { id: invoice.priceListId } }
@@ -468,7 +468,7 @@ export class InvoiceService {
             throw new Error("Failed to update invoice with related data.");
         }
     }
-    
+
     async deleteInvoiceWithRelations(id: string): Promise<boolean> {
         try {
             // 1. Faturayı getir ve `invoiceNo` değerini al
@@ -476,13 +476,13 @@ export class InvoiceService {
                 where: { id },
                 select: { invoiceNo: true },
             });
-    
+
             if (!existingInvoice || !existingInvoice.invoiceNo) {
                 throw new Error(`Invoice with ID '${id}' does not exist or has no invoiceNo.`);
             }
-    
+
             const invoiceNo = existingInvoice.invoiceNo;
-    
+
             // 2. İlişkili verileri `invoiceNo` kullanarak sil
             await prisma.$transaction([
                 prisma.invoiceDetail.deleteMany({ where: { invoiceId: id } }), // Invoice ID ile ilişkili
@@ -490,10 +490,10 @@ export class InvoiceService {
                 prisma.stockMovement.deleteMany({ where: { documentNo: invoiceNo } }), // InvoiceNo ile ilişkili
                 prisma.vaultMovement.deleteMany({ where: { invoiceId: id } }), // Vault hareketleri ID ile ilişkili
             ]);
-    
+
             // 3. Ana faturayı sil
             await prisma.invoice.delete({ where: { id } });
-    
+
             console.log(`Invoice and all related records deleted successfully for invoiceNo: ${invoiceNo}`);
             return true;
         } catch (error) {
@@ -501,26 +501,31 @@ export class InvoiceService {
             throw new Error("Failed to delete invoice and its related records.");
         }
     }
-    
-    
+
+
     async getAllInvoicesWithRelations(): Promise<Invoice[]> {
         return this.invoiceRepository.findAll(
             {
                 include: {
                     invoiceDetail: true
                 }
-            }
-        );
-    }
+
+    async getAllInvoicesWithRelations(): Promise<any[]> {
+                    return await prisma.invoice.findMany({
+                        include: {
+                            invoiceDetail: true
+                        }
+                    });
+                }
 
     async getInvoiceWithRelationsById(id: string): Promise<Invoice | null> {
-        return this.invoiceRepository.findByIdWithOptions(id, {
-            include: {
-                invoiceDetail: true 
-            }
-        });
-    }
+                    return this.invoiceRepository.findByIdWithOptions(id, {
+                        include: {
+                            invoiceDetail: true
+                        }
+                    });
+                }
 
-}
+            }
 
 export default InvoiceService;

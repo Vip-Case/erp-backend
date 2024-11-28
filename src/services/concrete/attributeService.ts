@@ -1,6 +1,6 @@
 
 import prisma from "../../config/prisma";
-import { StockCardAttribute } from "@prisma/client";
+import { Prisma, StockCardAttribute } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
@@ -16,6 +16,17 @@ export class AttributeService {
             return await this.attributeRepository.create(attribute);
         } catch (error) {
             logger.error("Error creating attribute", error);
+            throw error;
+        }
+    }
+
+    async createManyAttribute(attributes: StockCardAttribute[]): Promise<Prisma.BatchPayload> {
+        try {
+            return await prisma.stockCardAttribute.createMany({
+                data: attributes
+            });
+        } catch (error) {
+            logger.error("Error creating multiple attributes", error);
             throw error;
         }
     }
