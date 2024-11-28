@@ -25,6 +25,7 @@ export const CurrentController = {
                     ...data.current
                 },
                 priceListId: data.priceListId,
+                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
@@ -60,6 +61,7 @@ export const CurrentController = {
                     ...data.current
                 },
                 priceListId: data.priceListId,
+                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,

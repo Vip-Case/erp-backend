@@ -266,7 +266,7 @@ export class InvoiceService {
                                 gcCode: invoice.invoiceType === "Purchase" ? "Giris" : "Cikis",
                                 warehouseCode: invoice.warehouseCode!,
                                 branchCode: invoice.branchCode!,
-                                movementType: invoice.invoiceType === "Purchase" ? "AlisFaturasi" : "SatisFaturasi",
+                                movementType: invoice.invoiceType === "Purchase" ? "Devir" : "Devir",
                                 quantity: detail.quantity,
                                 unitPrice: detail.unitPrice,
                                 totalPrice: detail.totalPrice,
@@ -394,7 +394,7 @@ export class InvoiceService {
                                 gcCode: "Giris",
                                 warehouseCode: invoice.warehouseCode!,
                                 branchCode: invoice.branchCode!,
-                                movementType: "AlisFaturasi",
+                                movementType: "Devir",
                                 quantity: detail.quantity,
                                 unitPrice: detail.unitPrice,
                                 totalPrice: detail.totalPrice,
@@ -500,6 +500,22 @@ export class InvoiceService {
             logger.error("Error deleting invoice with relations:", error);
             throw new Error("Failed to delete invoice and its related records.");
         }
+    }
+
+    async getAllInvoicesWithRelations(): Promise<any[]> {
+        return await prisma.invoice.findMany({
+            include: {
+                invoiceDetail: true
+            }
+        });
+    }
+
+    async getInvoiceWithRelationsById(id: string): Promise<Invoice | null> {
+        return this.invoiceRepository.findByIdWithOptions(id, {
+            include: {
+                invoiceDetail: true
+            }
+        });
     }
 
 }
