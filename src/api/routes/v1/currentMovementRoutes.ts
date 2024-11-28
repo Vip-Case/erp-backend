@@ -11,6 +11,7 @@ export const CurrentMovementRoutes = (app: Elysia) => {
             .delete("/:id", CurrentMovementController.deleteCurrentMovement, { tags: ["Current Movements"] })
             .get("/filter", CurrentMovementController.getCurrentMovementsWithFilters, { tags: ["Current Movements"] })
             .get("/withCurrents", CurrentMovementController.getAllCurrentMovementsWithCurrents, { tags: ["Current Movements"] })
+            .get("/byCurrent/:currentId", CurrentMovementController.getAllCurrentMovementsWithCurrentsByCurrentId, { tags: ["Current Movements"] })
     );
 };
 

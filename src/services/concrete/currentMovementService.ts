@@ -143,6 +143,21 @@ export class CurrentMovementService {
         }
     }
 
+    async getAllCurrentMovementsWithCurrentsByCurrentId(currentId: string): Promise<CurrentMovement[]> {
+        try {
+            return await prisma.currentMovement.findMany({
+                where: {
+                    current: {
+                        id: currentId
+                    }
+                }
+            });
+        } catch (error) {
+            logger.error("Error fetching all current movements with currents by current id", error);
+            throw error;
+        }
+    }
+
     async getCurrentMovementsWithFilters(filter: any): Promise<CurrentMovement[] | null> {
         try {
             return await this.currentMovementRepository.findWithFilters(filter);

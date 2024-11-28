@@ -88,6 +88,21 @@ export const CurrentMovementController = {
         }
     },
 
+    getAllCurrentMovementsWithCurrentsByCurrentId: async (ctx: Context) => {
+        const { currentId } = ctx.params;
+        try {
+            const currentMovements = await currentMovementService.getAllCurrentMovementsWithCurrentsByCurrentId(currentId);
+            if (!currentMovements) {
+                return ctx.error(404, 'CurrentMovements not found');
+            }
+            ctx.set.status = 200;
+            return currentMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching currentMovements", details: error.message };
+        }
+    },
+
     getCurrentMovementsWithFilters: async (ctx: Context) => {
         const filters = ctx.query as Partial<CurrentMovement>;
         try {
