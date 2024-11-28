@@ -8,6 +8,11 @@ const prisma = new PrismaClient();
 const ProductType = z.enum(['BasitUrun', 'VaryasyonluUrun', 'DijitalUrun', 'Hizmet']);
 const StockUnits = z.enum(['Adet', 'Kg', 'Lt', 'M', 'M2', 'M3', 'Paket', 'Kutu', 'Koli', 'Ton', 'Dolar', 'Euro', 'TL']);
 
+async function fetchValidPriceLists(): Promise<Set<string>> {
+    const priceLists = await prisma.stockCardPriceList.findMany();
+    return new Set(priceLists.map((pl) => pl.priceListName));
+}
+
 const StockCardSchema = z.object({
     productCode: z.string(),
     productName: z.string(),
@@ -16,32 +21,38 @@ const StockCardSchema = z.object({
     description: z.string().nullable().optional(),
     companyCode: z.string().nullable().optional(),
     branchCode: z.string().nullable().optional(),
-    brandId: z.string().nullable().optional(),
+    brandName: z.string().nullable().optional(),
     productType: ProductType,
     gtip: z.string().nullable().optional(),
     pluCode: z.string().nullable().optional(),
-    desi: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
-    adetBoleni: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    desi: z.union([z.string(), z.number()]).nullable().optional(),
+    adetBoleni: z.union([z.string(), z.number()]).nullable().optional(),
     siraNo: z.string().nullable().optional(),
     raf: z.string().nullable().optional(),
-    karMarji: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
-    riskQuantities: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
-    maliyet: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    karMarji: z.union([z.string(), z.number()]).nullable().optional(),
+    riskQuantities: z.union([z.string(), z.number()]).nullable().optional(),
+    maliyet: z.union([z.string(), z.number()]).nullable().optional(),
     maliyetDoviz: z.string().nullable().optional(),
     stockStatus: z.boolean(),
     hasExpirationDate: z.boolean().optional(),
     allowNegativeStock: z.boolean().optional(),
-    categoryId: z.string().nullable().optional(),
+    categoryName: z.string().nullable().optional(),
     taxName: z.string().nullable().optional(),
-    taxRate: z.union([z.string(), z.number()]).transform((val) => val !== null && val !== undefined ? parseFloat(val as string) : undefined).nullable().optional(),
+    taxRate: z.union([z.string(), z.number()]).nullable().optional(),
     marketName: z.string().nullable().optional(),
-    barcode: z.string().nullable().optional(),
-    priceListId: z.string().nullable().optional(),
+    barcode: z.union([z.string(), z.number()]).nullable().optional(),
+    prices: z.array(
+        z.object({
+            priceListName: z.string(),
+            price: z.number()
+        })
+    ).optional(),
     price: z.union([z.string(), z.number()]).nullable().optional(),
-    attributeId: z.string().nullable().optional(),
-    warehouseId: z.string().nullable().optional(),
-    quantity: z.union([z.string(), z.number()]).nullable().optional()
+    warehouseName: z.string().nullable().optional(),
+    quantity: z.union([z.string(), z.number()]).nullable().optional(),
+    attributes: z.record(z.string(), z.array(z.string())).optional(),
 }).strict();
+
 
 
 const CurrentType = z.enum(['AliciSatici', 'Alici', 'Satici', 'Personel', 'SanalPazar', 'Kurum', 'AnaGrupSirketi',
@@ -71,7 +82,7 @@ const CurrentSchema = z.object({
     kepAddress: z.string().nullable(),
     mersisNo: z.string().nullable(),
     sicilNo: z.string().nullable(),
-    priceListId: z.string().optional(),
+    priceListName: z.string().optional(),
     note: z.string(),
     branchCode: z.string(),
     addressName: z.string(),
@@ -101,8 +112,7 @@ const CurrentSchema = z.object({
     limitKontrol: z.boolean().nullable().optional(),
     acikHesap: z.boolean().nullable().optional(),
     posKullanim: z.boolean().nullable().optional(),
-    categoryId: z.string().nullable().optional(),
-    groupId: z.string().nullable().optional(),
+    categoryName: z.string().nullable().optional()
 });
 
 // Gerekli enumları tanımlayın
@@ -127,7 +137,7 @@ const StockMovementSchema = z.object({
     totalPrice: z.number().nullable().optional(),
     unitOfMeasure: z.string().max(50).nullable().optional(),
     outWarehouseCode: z.string().nullable().optional(),
-    priceListId: z.string().nullable().optional()
+    priceListName: z.string().nullable().optional()
 }).strict();
 
 const CurrentMovementType = z.enum(['Borc', 'Alacak']);
@@ -146,7 +156,7 @@ const CurrentMovementSchema = z.object({
     debtAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
     creditAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
     balanceAmount: z.preprocess((arg) => parseFloat(arg as string), z.number().nullable().optional()),
-    priceListId: z.string().nullable().optional(),
+    priceListName: z.string().nullable().optional(),
     movementType: CurrentMovementType.optional(),
     documentType: CurrentMovementDocumentType.nullable().optional(),
     documentNo: z.string().nullable().optional(),
@@ -164,6 +174,66 @@ function replaceUndefinedWithNull(data: Record<string, any>) {
     );
 }
 
+function convertStockCardData(row: Record<string, any>, validPriceLists: Set<string>) {
+    const attributes: Record<string, string[]> = {};
+    const prices: { priceListName: string; price: number }[] = [];
+
+    // `attributes` işlemi
+    Object.keys(row).forEach((key) => {
+        if (key.startsWith("attributeName")) {
+            const index = key.split(" ")[1];
+            const valueKey = `attributeValue ${index}`;
+            if (row[key] && row[valueKey]) {
+                const attributeName = row[key] as string;
+                const attributeValues = (row[valueKey] as string).split(',').map((val) => val.trim());
+                attributes[attributeName] = attributeValues;
+            }
+        }
+    });
+
+    // `prices` işlemi
+    Object.keys(row).forEach((key) => {
+        if (key.startsWith("priceListName")) {
+            const index = key.split(" ")[1];
+            const priceKey = `price ${index}`;
+            if (row[key] && validPriceLists.has(row[key]) && row[priceKey] != null) {
+                prices.push({
+                    priceListName: row[key],
+                    price: parseFloat(row[priceKey]),
+                });
+            }
+        }
+    });
+
+    // Son olarak orijinal `sanitizedRow` nesnesinden gereksiz olanları silin
+    const sanitizedRow = { ...row };
+    Object.keys(sanitizedRow).forEach((key) => {
+        if (
+            key.startsWith("attributeName") ||
+            key.startsWith("attributeValue") ||
+            key.startsWith("priceListName") ||
+            key.startsWith("price")
+        ) {
+            delete sanitizedRow[key];
+        }
+    });
+
+    // Tüm işlenmiş verileri geri döndürün
+    return {
+        ...sanitizedRow,
+        attributes,
+        prices,
+        taxRate: sanitizedRow.taxRate ? parseFloat(sanitizedRow.taxRate) : null,
+        price: sanitizedRow.price ? parseFloat(sanitizedRow.price) : null,
+        quantity: sanitizedRow.quantity ? parseFloat(sanitizedRow.quantity) : null,
+        barcode: sanitizedRow.barcode ? String(sanitizedRow.barcode) : null,
+        stockStatus: sanitizedRow.stockStatus === 'DOĞRU',
+        hasExpirationDate: sanitizedRow.hasExpirationDate === 'DOĞRU',
+        allowNegativeStock: sanitizedRow.allowNegativeStock === 'DOĞRU',
+    };
+}
+
+
 export const importExcelService = async (file: File) => {
     if (!file || !file.name.endsWith('.xlsx')) {
         throw new Error("Geçerli bir Excel dosyası yükleyin.");
@@ -180,9 +250,17 @@ export const importExcelService = async (file: File) => {
         const stockMovementsData: any[] = [];
         const currentMovementsData: any[] = [];
 
-        const firstRow = data[0];
-        console.log(data)
-        let isStockCard = StockCardSchema.safeParse(firstRow).success;
+        const validPriceLists = await fetchValidPriceLists();
+
+        // İlk satırı işlerken validPriceLists'i geçiriyoruz
+        const firstRow = await convertStockCardData(data[0] as Record<string, any>, validPriceLists);
+        console.log("İlk Satır:", firstRow);
+
+
+        // `StockCardSchema` doğrulamasını ayrıntılı olarak gözlemleyin
+        const stockCardValidation = StockCardSchema.safeParse(firstRow);
+        let isStockCard = stockCardValidation.success;
+        //let isStockCard = StockCardSchema.safeParse(firstRow).success;
         let isCurrent = CurrentSchema.safeParse(firstRow).success;
         let isStockMovement = StockMovementSchema.safeParse(firstRow).success;
         let isCurrentMovement = CurrentMovementSchema.safeParse(firstRow).success;
@@ -199,9 +277,13 @@ export const importExcelService = async (file: File) => {
         for (const row of data as Record<string, any>[]) {
 
             if (isStockCard) {
-                const stockCardValidation = StockCardSchema.safeParse(row);
+                const stockCardData = await convertStockCardData(row, validPriceLists);
+                const stockCardValidation = StockCardSchema.safeParse(stockCardData);
+
                 if (stockCardValidation.success) {
                     stockCardsData.push(replaceUndefinedWithNull(stockCardValidation.data));
+                } else {
+                    console.error(`Doğrulama hatası: ${stockCardValidation.error}`);
                 }
             } else if (isCurrent) {
                 const currentValidation = CurrentSchema.safeParse(row);
@@ -218,10 +300,103 @@ export const importExcelService = async (file: File) => {
             } else if (isStockMovement) {
                 const stockMovementValidation = StockMovementSchema.safeParse(row);
                 if (stockMovementValidation.success) {
-                    stockMovementsData.push(replaceUndefinedWithNull(stockMovementValidation.data));
+                    const stockMovementData = replaceUndefinedWithNull(stockMovementValidation.data);
+
+                    try {
+                        // `priceListName` kullanarak `priceListId`'yi buluyoruz
+                        let priceListId: string | undefined;
+                        if (stockMovementData.priceListName) {
+                            const priceList = await prisma.stockCardPriceList.findUnique({
+                                where: { priceListName: stockMovementData.priceListName }
+                            });
+
+                            if (!priceList) {
+                                console.error(`Hata: '${stockMovementData.priceListName}' için PriceList kaydı bulunamadı.`);
+                                continue; // PriceList kaydı yoksa bu satırı atla
+                            }
+
+                            // Bulunan `priceListId`'yi ekleyin
+                            priceListId = priceList.id;
+                        }
+
+                        // Gerekli doğrulamalar: `warehouseCode`, `branchCode`, `productCode`
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { warehouseCode: stockMovementData.warehouseCode }
+                        });
+
+                        if (!warehouse) {
+                            console.error(`Hata: ${stockMovementData.productCode} için 'Warehouse' kaydı bulunamadı - WarehouseCode: ${stockMovementData.warehouseCode}`);
+                            continue;
+                        }
+
+                        const branch = await prisma.branch.findUnique({
+                            where: { branchCode: stockMovementData.branchCode }
+                        });
+
+                        if (!branch) {
+                            console.error(`Hata: ${stockMovementData.productCode} için 'Branch' kaydı bulunamadı - BranchCode: ${stockMovementData.branchCode}`);
+                            continue;
+                        }
+
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { productCode: stockMovementData.productCode }
+                        });
+
+                        if (!stockCard) {
+                            console.error(`Hata: ${stockMovementData.productCode} için 'StockCard' kaydı bulunamadı.`);
+                            continue;
+                        }
+
+                        // Opsiyonel doğrulamalar: `outWarehouseCode`, `currentCode`, `documentNo`
+                        const outWarehouse = stockMovementData.outWarehouseCode
+                            ? await prisma.warehouse.findUnique({
+                                where: { warehouseCode: stockMovementData.outWarehouseCode }
+                            })
+                            : null;
+
+                        const current = stockMovementData.currentCode
+                            ? await prisma.current.findUnique({
+                                where: { currentCode: stockMovementData.currentCode }
+                            })
+                            : null;
+
+                        const invoice = stockMovementData.documentNo
+                            ? await prisma.invoice.findUnique({
+                                where: { invoiceNo: stockMovementData.documentNo }
+                            })
+                            : null;
+
+                        // Yeni `StockMovement` kaydı oluşturuyoruz
+                        await prisma.stockMovement.create({
+                            data: {
+                                productCode: stockMovementData.productCode,
+                                warehouseCode: stockMovementData.warehouseCode,
+                                branchCode: stockMovementData.branchCode,
+                                currentCode: stockMovementData.currentCode,
+                                documentType: stockMovementData.documentType,
+                                invoiceType: stockMovementData.invoiceType,
+                                movementType: stockMovementData.movementType,
+                                documentNo: stockMovementData.documentNo,
+                                gcCode: stockMovementData.gcCode,
+                                type: stockMovementData.type,
+                                description: stockMovementData.description,
+                                quantity: stockMovementData.quantity,
+                                unitPrice: stockMovementData.unitPrice,
+                                totalPrice: stockMovementData.totalPrice,
+                                unitOfMeasure: stockMovementData.unitOfMeasure,
+                                outWarehouseCode: stockMovementData.outWarehouseCode,
+                                priceListId: priceListId // `priceListName` yerine `priceListId` kullanıyoruz
+                            }
+                        });
+                        console.log(`StockMovement başarıyla oluşturuldu - ProductCode: ${stockMovementData.productCode}`);
+                    } catch (error) {
+                        console.error(`Hata: ${stockMovementData.productCode} için veri işlenemedi.`, error);
+                    }
+                } else {
+                    console.error(`Geçersiz StockMovement verisi - ${JSON.stringify(row)}`);
                 }
+
             } else if (isCurrentMovement) {
-                // CurrentMovement özel doğrulama ve veri ekleme işlemi
                 const filledRow = {
                     dueDate: row.dueDate ?? null,
                     debtAmount: row.debtAmount ?? 0,
@@ -229,12 +404,55 @@ export const importExcelService = async (file: File) => {
                     balanceAmount: row.balanceAmount ?? 0,
                     ...row,
                 };
-                const validation = CurrentMovementSchema.safeParse(filledRow);
-                if (validation.success) {
-                    currentMovementsData.push(replaceUndefinedWithNull(validation.data));
+
+                const currentMovementValidation = CurrentMovementSchema.safeParse(filledRow);
+                if (currentMovementValidation.success) {
+                    const currentMovementData = replaceUndefinedWithNull(currentMovementValidation.data);
+
+                    try {
+                        // `priceListName` kullanarak `priceListId`'yi buluyoruz
+                        let priceListId: string | undefined;
+                        if (currentMovementData.priceListName) {
+                            const priceList = await prisma.stockCardPriceList.findUnique({
+                                where: { priceListName: currentMovementData.priceListName }
+                            });
+
+                            if (!priceList) {
+                                console.error(`Hata: '${currentMovementData.priceListName}' için PriceList kaydı bulunamadı.`);
+                                continue; // PriceList kaydı yoksa bu satırı atla
+                            }
+
+                            // Bulunan `priceListId`'yi `currentMovementData`'ya ekleyin
+                            priceListId = priceList.id;
+                        }
+
+                        // Yeni `CurrentMovement` kaydı oluşturuyoruz
+                        await prisma.currentMovement.create({
+                            data: {
+                                currentCode: currentMovementData.currentCode,
+                                dueDate: currentMovementData.dueDate,
+                                description: currentMovementData.description,
+                                debtAmount: currentMovementData.debtAmount,
+                                creditAmount: currentMovementData.creditAmount,
+                                balanceAmount: currentMovementData.balanceAmount,
+                                priceListId: priceListId, // `priceListName` yerine `priceListId` kullanıyoruz
+                                movementType: currentMovementData.movementType,
+                                documentType: currentMovementData.documentType,
+                                documentNo: currentMovementData.documentNo || "Belirtilmedi", // Tanımlı değilse "Belirtilmedi" olarak ayarlanıyor
+                                companyCode: currentMovementData.companyCode,
+                                branchCode: currentMovementData.branchCode,
+                            }
+                        });
+                        console.log(`CurrentMovement başarıyla oluşturuldu - DocumentNo: ${currentMovementData.documentNo || "Belirtilmedi"}`);
+                    } catch (error) {
+                        console.error(`Hata: ${currentMovementData.documentNo || "Belirtilmedi"} için veri işlenemedi.`, error);
+                    }
+                } else {
+                    console.error(`Geçersiz CurrentMovement verisi - ${JSON.stringify(row)}`);
                 }
             }
         }
+
 
         // Verileri işliyoruz
         for (const stockCardData of stockCardsData) {
@@ -249,6 +467,37 @@ export const importExcelService = async (file: File) => {
                     continue; // Eğer kayıt mevcutsa, yeni bir kayıt oluşturma
                 }
 
+                if (stockCardData.companyCode) {
+                    const company = await prisma.company.findUnique({
+                        where: { companyCode: stockCardData.companyCode }
+                    });
+                    if (!company) {
+                        console.error(`Hata: ${stockCardData.productCode} için 'Company' kaydı bulunamadı - CompanyCode: ${stockCardData.companyCode}`);
+                        continue; // Şirket kaydı yoksa devam et
+                    }
+                }
+                // İlişkili `Branch` kaydını doğrulayın
+                if (stockCardData.branchCode) {
+                    const branch = await prisma.branch.findUnique({
+                        where: { branchCode: stockCardData.branchCode }
+                    });
+                    if (!branch) {
+                        console.error(`Hata: ${stockCardData.productCode} için 'Branch' kaydı bulunamadı - BranchCode: ${stockCardData.branchCode}`);
+                        continue; // Şube kaydı yoksa devam et
+                    }
+                }
+
+                // İlişkili `StockCardCategory` kaydını doğrulayın
+                if (stockCardData.categoryId) {
+                    const category = await prisma.stockCardCategory.findUnique({
+                        where: { id: stockCardData.categoryId }
+                    });
+                    if (!category) {
+                        console.error(`Hata: ${stockCardData.productCode} için 'StockCardCategory' kaydı bulunamadı - CategoryId: ${stockCardData.categoryId}`);
+                        continue; // Kategori kaydı yoksa devam et
+                    }
+                }
+
                 // Yeni `StockCard` kaydı oluşturma
                 const stockCard = await prisma.stockCard.create({
                     data: {
@@ -261,76 +510,163 @@ export const importExcelService = async (file: File) => {
                         gtip: stockCardData.gtip,
                         pluCode: stockCardData.pluCode,
                         raf: stockCardData.raf,
+                        maliyet: stockCardData.maliyet,
                         maliyetDoviz: stockCardData.maliyetDoviz,
                         stockStatus: stockCardData.stockStatus,
                         hasExpirationDate: stockCardData.hasExpirationDate,
                         allowNegativeStock: stockCardData.allowNegativeStock,
                         company: stockCardData.companyCode ? {
-                            connect: { companyCode: stockCardData.companyCode }
-                        } : undefined,
-                        branch: stockCardData.branchCode ? {
-                            connect: { branchCode: stockCardData.branchCode }
-                        } : undefined,
-                        brand: stockCardData.brandId ? {
-                            connect: { id: stockCardData.brandId }
-                        } : undefined,
-                        // İlişkili Kategori
-                        stockCardCategoryItem: stockCardData.categoryId ? {
-                            create: [{
-                                stockCardCategory: {
-                                    connect: { id: stockCardData.categoryId }
-                                }
-                            }]
-                        } : undefined,
-                        // İlişkili Vergi Bilgileri
-                        taxRates: stockCardData.taxName && stockCardData.taxRate ? {
-                            create: [{
-                                taxName: stockCardData.taxName,
-                                taxRate: stockCardData.taxRate
-                            }]
-                        } : undefined,
-                        // İlişkili Market İsimleri
-                        stockCardMarketNames: stockCardData.marketName ? {
-                            create: [{
-                                marketName: stockCardData.marketName
-                            }]
-                        } : undefined,
-                        // İlişkili Barkodlar
-                        barcodes: stockCardData.barcode ? {
-                            create: [{
-                                barcode: stockCardData.barcode
-                            }]
-                        } : undefined,
-                        // İlişkili Fiyat Listesi
-                        stockCardPriceLists: stockCardData.priceListId ? {
-                            create: [{
-                                priceList: {
-                                    connect: { id: stockCardData.priceListId }
-                                },
-                                price: stockCardData.price // price alanını burada sağlıyoruz
-                            }]
-                        } : undefined,
-                        // İlişkili Özellikler
-                        stockCardAttributeItems: stockCardData.attributeId ? {
-                            create: [{
-                                attribute: {
-                                    connect: { id: stockCardData.attributeId }
-                                }
-                            }]
-                        } : undefined,
-                        // İlişkili Depolar
-                        stockCardWarehouse: stockCardData.warehouseId && stockCardData.quantity ? {
-                            create: [{
-                                warehouse: {
-                                    connect: { id: stockCardData.warehouseId }
-                                },
-                                quantity: stockCardData.quantity // Burada quantity belirtiliyor
-                            }]
-                        } : undefined,
-                    },
-                });
-
+                            company: stockCardData.companyCode ? {
+                                connect: { companyCode: stockCardData.companyCode }
+                            } : undefined,
+                            branch: stockCardData.branchCode ? {
+                                branch: stockCardData.branchCode ? {
+                                    connect: { branchCode: stockCardData.branchCode }
+                                } : undefined,
+                                // İlişkili Vergi Bilgileri
+                                taxRates: stockCardData.taxName && stockCardData.taxRate ? {
+                                    taxRates: stockCardData.taxName && stockCardData.taxRate ? {
+                                        create: [{
+                                            taxName: stockCardData.taxName,
+                                            taxRate: stockCardData.taxRate
+                                        }]
+                                    } : undefined,
+                                    // İlişkili Market İsimleri
+                                    stockCardMarketNames: stockCardData.marketName ? {
+                                        stockCardMarketNames: stockCardData.marketName ? {
+                                            create: [{
+                                                marketName: stockCardData.marketName
+                                            }]
+                                        } : undefined,
+                                        // İlişkili Barkodlar
+                                        barcodes: stockCardData.barcode ? {
+                                            barcodes: stockCardData.barcode ? {
+                                                create: [{
+                                                    barcode: stockCardData.barcode
+                                                }]
+                                            } : undefined
+                                        },
+                                    });
                 console.log(`StockCard başarıyla oluşturuldu - ProductCode: ${stockCardData.productCode}`);
+
+                // Brand ilişkilendirme
+                if (stockCardData.brandName) {
+                    const brand = await prisma.brand.findUnique({
+                        where: { brandName: stockCardData.brandName },
+                    });
+
+                    if (!brand) {
+                        console.error(`Hata: ${stockCardData.productCode} için 'Brand' kaydı bulunamadı - BrandName: ${stockCardData.brandName}`);
+                    } else {
+                        // StockCard kaydını güncelleyerek brand ilişkisini ekliyoruz
+                        await prisma.stockCard.update({
+                            where: { id: stockCard.id },
+                            data: {
+                                brand: {
+                                    connect: { id: brand.id },
+                                },
+                            },
+                        });
+                    }
+                }
+
+                if (stockCardData.prices) {
+                    for (const priceListItem of stockCardData.prices) {
+                        const priceList = await prisma.stockCardPriceList.findUnique({
+                            where: { priceListName: priceListItem.priceListName },
+                        });
+
+                        if (!priceList) {
+                            console.error(`Hata: '${priceListItem.priceListName}' için PriceList kaydı bulunamadı.`);
+                            continue;
+                        }
+
+                        await prisma.stockCardPriceListItems.create({
+                            data: {
+                                priceList: {
+                                    connect: { id: priceList.id },
+                                },
+                                stockCard: { connect: { id: stockCard.id } },
+                                price: priceListItem.price,
+                            },
+                        });
+                    }
+                }
+
+                if (stockCardData.attributes) {
+                    for (const [attributeName, values] of Object.entries(stockCardData.attributes)) {
+                        const attributeValues = values as string[];
+
+                        for (const attributeValue of attributeValues) {
+                            let attribute = await prisma.stockCardAttribute.findFirst({
+                                where: {
+                                    attributeName,
+                                    value: attributeValue,
+                                },
+                            });
+
+                            if (!attribute) {
+                                attribute = await prisma.stockCardAttribute.create({
+                                    data: {
+                                        attributeName,
+                                        value: attributeValue,
+                                    },
+                                });
+                            }
+
+                            await prisma.stockCardAttributeItems.create({
+                                data: {
+                                    attributeId: attribute.id,
+                                    stockCardId: stockCard.id,
+                                },
+                            });
+                        }
+                    }
+                }
+
+                // `StockCardCategoryItem` ilişkilendirme işlemi
+                if (stockCardData.categoryName) {
+                    // `categoryName` ile `StockCardCategory` kaydını buluyoruz
+                    const category = await prisma.stockCardCategory.findUnique({
+                        where: { categoryName: stockCardData.categoryName },
+                    });
+
+                    // `categoryName` ile eşleşen bir kayıt yoksa hata mesajı verip sonraki döngüye geçiyoruz
+                    if (!category) {
+                        console.error(`Hata: ${stockCardData.productCode} için 'Category' kaydı bulunamadı - CategoryName: ${stockCardData.categoryName}`);
+                        continue;
+                    }
+
+                    // Elde ettiğimiz `category.id` ile `StockCardCategoryItem` kaydını oluşturuyoruz
+                    await prisma.stockCardCategoryItem.create({
+                        data: {
+                            categoryId: category.id,  // Bulunan `category.id` değeri
+                            stockCardId: stockCard.id,  // Yeni oluşturulan `stockCard.id` değeri
+                        },
+                    });
+                }
+
+                // `StockCardWarehouse` ilişkilendirme işlemi
+                if (stockCardData.warehouseName && stockCardData.quantity) {
+                    // `warehouseName` ile `Warehouse` kaydını buluyoruz
+                    const warehouse = await prisma.warehouse.findUnique({
+                        where: { warehouseName: stockCardData.warehouseName },
+                    });
+
+                    // `warehouseName` ile eşleşen bir kayıt yoksa hata mesajı verip sonraki döngüye geçiyoruz
+                    if (!warehouse) {
+                        console.error(`Hata: ${stockCardData.productCode} için 'Warehouse' kaydı bulunamadı - WarehouseName: ${stockCardData.warehouseName}`);
+                    } else {
+                        // `warehouse.id` ile `StockCardWarehouse` kaydını oluşturuyoruz
+                        await prisma.stockCardWarehouse.create({
+                            data: {
+                                warehouseId: warehouse.id,  // Bulunan `warehouse.id` değeri
+                                stockCardId: stockCard.id,  // Yeni oluşturulan `stockCard.id` değeri
+                                quantity: stockCardData.quantity, // Quantity alanını burada sağlıyoruz
+                            },
+                        });
+                    }
+                }
 
             } catch (error: any) {
                 console.error(`Hata: ${stockCardData.productCode} için veri işlenemedi.`, error.message || error);
@@ -342,13 +678,28 @@ export const importExcelService = async (file: File) => {
 
         // Verileri işliyoruz
         for (const currentData of currentsData) {
-            // currentData'dan priceListId'yi ayırıyoruz
-            const { priceListId, ...currentDataWithoutPriceListId } = currentData;
+            // priceListName kullanarak priceListId'yi buluyoruz
+            const priceList = await prisma.stockCardPriceList.findUnique({
+                where: { priceListName: currentData.priceListName }
+            });
+
+            if (!priceList) {
+                throw new Error(`PriceList '${currentData.priceListName}' bulunamadı.`);
+            }
+
+            // categoryName kullanarak categoryId'yi buluyoruz
+            const category = await prisma.currentCategory.findFirst({
+                where: { categoryName: currentData.categoryName }
+            });
+
+            if (!category) {
+                throw new Error(`Category '${currentData.categoryName}' bulunamadı.`);
+            }
 
             // Current ana verisi
             const current: Prisma.CurrentCreateInput = {
                 priceList: {
-                    connect: { id: currentData.priceListId },
+                    connect: { id: priceList.id }, // priceListId yerine bulunan id ile bağlantı kuruyoruz
                 },
                 currentCode: currentData.currentCode,
                 currentName: currentData.currentName,
@@ -429,18 +780,18 @@ export const importExcelService = async (file: File) => {
                 }]
             } : undefined;
 
-            const currentCategoryItem = currentData.categoryId ? {
+            const currentCategoryItem = {
                 create: [{
                     category: {
-                        connect: { id: currentData.categoryId }
+                        connect: { id: category.id } // Bulunan categoryId ile bağlantı sağlanıyor
                     }
                 }]
-            } : undefined;
+            };
 
             // createCurrent fonksiyonunu kullanarak verileri ekliyoruz
             await currentsService.createCurrent({
                 current: current,
-                priceListId: priceListId,
+                priceListName: currentData.priceListName,
                 currentAddress: currentAddress,
                 currentBranch: currentBranch,
                 currentFinancial: currentFinancial,
@@ -460,7 +811,7 @@ export const importExcelService = async (file: File) => {
             console.log("CurrentMovement verileri başarıyla kaydedildi.");
         }
 
-        return { message: 'Veriler başarıyla işlendi. Tekrarlı kayıtlar atlandı.' };
+        return { message: 'Veriler başarıyla işlendi.' };
     } catch (error) {
         console.error("Veritabanı işlemlerinde bir hata oluştu:", error);
         throw new Error("Bir hata oluştu: " + (error as Error).message);
