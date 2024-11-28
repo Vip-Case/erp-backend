@@ -442,6 +442,8 @@ model Company {
   stockCard       StockCard[]
   currentMovement CurrentMovement[]
   invoice         Invoice[]
+
+  User User[]
 }
 
 model Branch {
@@ -766,8 +768,6 @@ model User {
 
   company Company @relation(fields: [companyCode], references: [companyCode])
 
-  branch     Branch[]
-  warehouse  Warehouse[]
   role       Role[]
   permission Permission[]
 }
@@ -814,11 +814,7 @@ model Invoice {
   stockMovement   StockMovement[]
   currentMovement CurrentMovement[]
   vaultMovement   VaultMovement[]
-
-  vaultMovement VaultMovement[]
-
   BankMovement BankMovement[]
-
   PosMovement PosMovement[]
 }
 
@@ -857,7 +853,7 @@ model VaultMovement {
   id                String            @id @default(cuid())
   vaultId           String
   invoiceId         String?
-  receiptId         String??
+  receiptId         String?
   description       String
   entering          Decimal           @db.Decimal(15, 2) //giriş
   emerging          Decimal           @db.Decimal(15, 2) //çıkış
@@ -925,7 +921,7 @@ model PosMovement {
 
   pos     Pos      @relation(fields: [posId], references: [id])
   invoice Invoice? @relation(fields: [invoiceId], references: [id])
-  receipt Receipt?? @relation(fields: [receiptId], references: [id])
+  receipt Receipt? @relation(fields: [receiptId], references: [id])
 }
 
 model Order {
