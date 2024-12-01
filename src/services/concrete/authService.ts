@@ -11,8 +11,10 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
 
   // Sadece adminler kullanıcı oluşturabilir
   if (!createdByAdmin) {
-    throw new Error('Yalnızca adminler yeni kullanıcı oluşturabilir.');
+  if (!userData.permissionGroups?.length && !userData.permissions?.length) {
+    throw new Error('Seçilen izinler veya gruplar geçerli değil.');
   }
+}
 
   // Rol kontrolü
   const role = await prisma.role.findUnique({
@@ -20,30 +22,38 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
     include: { permission: true },
   });
 
+  console.log("Role Name:", userData.roleName);
   if (!role) {
     throw new Error('Geçersiz rol.');
   }
 
   // İzin gruplarını al
-  const groups = await prisma.permissionGroup.findMany({
-    where: { groupName: { in: userData.permissionGroups || [] } },
-    include: { permissions: true },
-  });
+  const groups = userData.permissionGroups?.length
+    ? await prisma.permissionGroup.findMany({
+        where: { groupName: { in: userData.permissionGroups } },
+        include: { permissions: true },
+      })
+    : [];
 
+    console.log("Gruplar:", groups);
   // Gruplardan izinleri topla
   const groupPermissions = groups.flatMap((group) => group.permissions);
 
   // Bireysel izinleri doğrula
-  const individualPermissions = await prisma.permission.findMany({
-    where: { permissionName: { in: userData.permissions || [] } },
-  });
+  const individualPermissions = userData.permissions?.length
+    ? await prisma.permission.findMany({
+        where: { permissionName: { in: userData.permissions } },
+      })
+    : [];
 
+    console.log("Bireysel İzinler:", individualPermissions);
   // Tüm izinleri birleştir (gruplar + bireysel)
   const aggregatedPermissions = [...new Set([...groupPermissions, ...individualPermissions])];
 
-  if (aggregatedPermissions.length === 0) {
-    throw new Error('Seçilen izinler veya gruplar geçerli değil.');
-  }
+    console.log("Tüm İzinler:", aggregatedPermissions);
+    if (aggregatedPermissions.length === 0 && !createdByAdmin) {
+      throw new Error('Seçilen izinler veya gruplar geçerli değil.');
+    }
 
   const user = await prisma.user.create({
     data: {
@@ -62,8 +72,10 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
     },
   });
 
+  console.log("Kullanıcı başarıyla oluşturuldu:", user);
   return user;
 };
+
 
 // Kullanıcı Giriş
 export const loginUser = async (credentials: any) => {
@@ -81,7 +93,7 @@ export const loginUser = async (credentials: any) => {
   if (!isPasswordValid) throw new Error('Geçersiz şifre.');
 
   // Admin rolü kontrolü
-  const isAdmin = user.role.some((role) => role.roleName === 'admin');
+  const isAdmin = user.role?.some((role) => role.roleName === 'admin') || false;
 
   const rolePermissions = user.role.flatMap((role) => role.permission.map((perm) => perm.permissionName));
   const individualPermissions = user.permission.map((perm) => perm.permissionName);
@@ -92,7 +104,7 @@ export const loginUser = async (credentials: any) => {
       userId: user.id,
       username: user.username,
       email: user.email,
-      roles: user.role.map((role) => role.roleName),
+      roles: user.role?.map((role) => role.roleName) || [],
       permissions: aggregatedPermissions,
       isAdmin,
     },
@@ -102,5 +114,6 @@ export const loginUser = async (credentials: any) => {
 
   return { token, user };
 };
+
 
 export default { registerUser, loginUser }

@@ -16,7 +16,7 @@ interface CustomContext {
         };
     };
     body: RoleRequest;
-    params: { [key: string]: string };
+    params: { id?: string };
     set: { status: number };
     query: { [key: string]: any };
     error: (code: number, message: string) => void;
@@ -26,6 +26,17 @@ interface CustomContext {
 const roleService = new RoleService();
 
 export const RoleController = {
+    getAllRoles: async (ctx: CustomContext) => {
+        try {
+            const roles = await roleService.getAllRoles();
+            ctx.set.status = 200;
+            return roles;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching roles", details: error.message };
+        }
+    },
+
     createRole: async (ctx: CustomContext) => {
         const { roleName, description, permissionIds } = ctx.body;
         try {
@@ -34,12 +45,31 @@ export const RoleController = {
                 return { error: "Yalnızca adminler yeni rol oluşturabilir." };
             }
 
-            const role = await roleService.createRole({ roleName, description } as Role, permissionIds || []);
+            const role = await roleService.createRole(
+                { roleName, description } as Role,
+                permissionIds || []
+            );
             ctx.set.status = 201;
             return role;
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error creating role", details: error.message };
+        }
+    },
+
+    getRoleById: async (ctx: CustomContext) => {
+        const { id } = ctx.params;
+        try {
+            const role = await roleService.getRoleById(id || "");
+            if (!role) {
+                ctx.error(404, "Role not found");
+                return;
+            }
+            ctx.set.status = 200;
+            return role;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching role", details: error.message };
         }
     },
 
@@ -52,7 +82,11 @@ export const RoleController = {
                 return { error: "Yalnızca adminler rol güncelleyebilir." };
             }
 
-            const role = await roleService.updateRole(id, { roleName, description }, permissionIds || []);
+            const role = await roleService.updateRole(
+                id || "",
+                { roleName, description },
+                permissionIds || []
+            );
             ctx.set.status = 200;
             return role;
         } catch (error: any) {
@@ -69,9 +103,9 @@ export const RoleController = {
                 return { error: "Yalnızca adminler rol silebilir." };
             }
 
-            const role = await roleService.deleteRole(id);
+            const result = await roleService.deleteRole(id || "");
             ctx.set.status = 200;
-            return role;
+            return { message: "Rol başarıyla silindi", result };
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error deleting role", details: error.message };

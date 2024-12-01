@@ -504,28 +504,22 @@ export class InvoiceService {
 
 
     async getAllInvoicesWithRelations(): Promise<Invoice[]> {
-        return this.invoiceRepository.findAll(
-            {
-                include: {
-                    invoiceDetail: true
-                }
+        return await prisma.invoice.findMany({
+            include: {
+                invoiceDetail: true, // İlişkili detayları dahil et
+            },
+        });
+    }
 
-    async getAllInvoicesWithRelations(): Promise<any[]> {
-                    return await prisma.invoice.findMany({
-                        include: {
-                            invoiceDetail: true
-                        }
-                    });
-                }
-
+    // Belirli bir invoice'ı ID ile ilişkili detaylarla birlikte getirme
     async getInvoiceWithRelationsById(id: string): Promise<Invoice | null> {
-                    return this.invoiceRepository.findByIdWithOptions(id, {
-                        include: {
-                            invoiceDetail: true
-                        }
-                    });
-                }
-
-            }
+        return await prisma.invoice.findUnique({
+            where: { id },
+            include: {
+                invoiceDetail: true, // İlişkili detayları dahil et
+            },
+        });
+    }
+}
 
 export default InvoiceService;

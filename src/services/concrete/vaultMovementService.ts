@@ -21,32 +21,24 @@ export class VaultMovementService {
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
-
-                    vault: vaultMovement.vaultId ? {
-
-                        // İlişkiler
-                        vault: {
+    
+                    // İlişkiler
+                    vault: vaultMovement.vaultId
+                        ? {
                             connect: {
-                                id: vaultMovement.vaultId
-                            }
-                        } : undefined,
-
-                        invoice: vaultMovement?.invoiceId ? {
-                            id: vaultMovement.vaultId,
-                        },
-                    },
-                    invoice: {
-                        connect: {
-                            id: vaultMovement.invoiceId
+                                id: vaultMovement.vaultId,
+                            },
                         }
-                    } : undefined,
-
-                    receipt: vaultMovement?.receiptId ? {
-                        connect: {
-                            id: vaultMovement.receiptId
-                            id: vaultMovement.invoiceId, // Invoice ilişkisi
-                        },
-                    },
+                        : undefined,
+    
+                    invoice: vaultMovement.invoiceId
+                        ? {
+                            connect: {
+                                id: vaultMovement.invoiceId,
+                            },
+                        }
+                        : undefined,
+    
                     receipt: vaultMovement.receiptId
                         ? {
                             connect: {
@@ -56,21 +48,26 @@ export class VaultMovementService {
                         : undefined,
                 } as Prisma.VaultMovementCreateInput,
             });
-
-            VaultService.updateVaultBalance(vaultMovement.vaultId, vaultMovement.entering, vaultMovement.emerging);
-
+    
+            // Vault bakiyesini güncelleme
+            await VaultService.updateVaultBalance(
+                vaultMovement.vaultId,
+                vaultMovement.entering,
+                vaultMovement.emerging
+            );
+    
             return createdVaultMovement;
         } catch (error) {
             logger.error("Error creating vaultMovement", error);
             throw error;
         }
     }
+    
 
 
     async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
         try {
             return await prisma.vaultMovement.update({
-                where: { id },
                 where: { id },
                 data: {
                     description: vaultMovement.description,
