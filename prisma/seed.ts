@@ -2712,7 +2712,7 @@ async function main() {
             invoiceType: "Purchase",
             movementType: "Devir",
             documentNo: "F1",
-            gcCode: "G",
+            gcCode: "Giris",
             type: "Giris",
             description: "Description 1",
             quantity: 10,

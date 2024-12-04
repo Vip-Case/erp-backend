@@ -63,6 +63,15 @@ enum CurrentMovementDocumentType {
   Muhtelif
 }
 
+enum CurrentPaymentType {
+  Kasa
+  POS
+  Banka
+  Cek
+  Senet
+  Diger
+}
+
 enum ReceiptType {
   Devir
   Sayim
@@ -143,6 +152,9 @@ enum VaultType {
   OutgoingVirement //Gönderilen Virman
   InGoingVirement //Gelen Virman
   POSWithdrawals //POS'tan Para Çekme
+  CashCollection //Nakit Tahsilat
+  BankCollection //Banka Tahsilatı
+  POSCollection //POS Tahsilatı
 }
 
 enum VaultDocumentType {
@@ -505,7 +517,6 @@ model Warehouse {
   invoice            Invoice[]
   stockCardWarehouse StockCardWarehouse[]
 
-  receipt    Receipt[] @relation("ReceiptWarehouse")
   outReceipt Receipt[] @relation("ReceiptOutWarehouse")
   inReceipt  Receipt[] @relation("ReceiptInWarehouse")
 }
@@ -534,19 +545,17 @@ model StockCardWarehouse {
 }
 
 model Receipt {
-  id            String      @id @default(cuid())
-  receiptType   ReceiptType
-  receiptDate   DateTime    @default(now())
-  documentNo    String      @db.VarChar(50)
-  branchCode    String      @db.VarChar(50)
-  warehouseCode String      @db.VarChar(50)
-  isTransfer    Boolean     @default(false)
-  outWarehouse  String?
-  inWarehouse   String?
-  description   String?
+  id           String      @id @default(cuid())
+  receiptType  ReceiptType
+  receiptDate  DateTime    @default(now())
+  documentNo   String      @db.VarChar(50)
+  branchCode   String      @db.VarChar(50)
+  isTransfer   Boolean     @default(false)
+  outWarehouse String?
+  inWarehouse  String?
+  description  String?
 
   branch              Branch          @relation(fields: [branchCode], references: [branchCode])
-  warehouse           Warehouse?      @relation("ReceiptWarehouse", fields: [warehouseCode], references: [warehouseCode])
   outReceiptWarehouse Warehouse?      @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
   inReceiptWarehouse  Warehouse?      @relation("ReceiptInWarehouse", fields: [inWarehouse], references: [warehouseCode])
   receiptDetail       ReceiptDetail[]
@@ -716,6 +725,7 @@ model CurrentMovement {
   priceListId   String?
   movementType  CurrentMovementType
   documentType  CurrentMovementDocumentType?
+  paymentType   CurrentPaymentType?
   documentNo    String?
   companyCode   String
   branchCode    String
