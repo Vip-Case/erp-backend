@@ -235,6 +235,7 @@ model StockCard {
   stockCardAttributeItems StockCardAttributeItems[]
   stockCardMarketNames    StockCardMarketNames[]
   orderItems              OrderItem[]
+  Store Store[]
 }
 
 model StockCardEFatura {
@@ -944,6 +945,8 @@ model Order {
   billingAddress    OrderInvoiceAddress? @relation("BillingAddress", fields: [billingAddressId], references: [id])
   items             OrderItem[] // Sipariş ürünleri ile ilişki
   cargos            OrderCargo[] // Kargo bilgileri ile ilişki
+
+  Store Store[]
 }
 
 model OrderInvoiceAddress {
@@ -990,4 +993,107 @@ model OrderItem {
 
   order     Order     @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
   stockCard StockCard @relation(fields: [stockCardId], references: [id]) // StockCard ile ilişki
+}
+
+model MarketPlace {
+  id          String   @id @default(cuid()) // Benzersiz market ID'si
+  name        String
+  apiBaseUrl  String
+  logoUrl     String
+  
+  Store Store[]
+
+  MarketPlaceAttributes MarketPlaceAttributes[]
+}
+
+model Store {
+  id          String   @id @default(cuid()) // Benzersiz market ID'si
+  name        String
+  marketPlaceId   String
+  apiCredentials  String
+
+  marketPlace   MarketPlace @relation(fields: [marketPlaceId], references: [id])
+  stockcard  StockCard[]
+  order      Order[]
+
+  MarketPlaceProducts MarketPlaceProducts[]
+
+  MarketPlaceProductMatch MarketPlaceProductMatch[]
+}
+
+model MarketPlaceCategories {
+  id          String   @id @default(cuid())
+  categoryName String?
+  marketPlaceCategoryId   String?
+  marketPlaceCategoryParentId   String?
+
+  MarketPlaceProducts MarketPlaceProducts[]
+}
+
+model MarketPlaceBrands {
+  id          String   @id @default(cuid())
+  marketPlaceBrandId String?
+  brandName String?
+
+  MarketPlaceProducts MarketPlaceProducts[]
+}
+
+model MarketPlaceAttributes {
+  id          String   @id @default(cuid())
+  marketPlaceId String?
+  MarketPlaceCategoriesId String?
+  attributeName String?
+  attributeMarketPlaceId String?
+  valueName String?
+  valueMarketPlaceId String?
+  required Boolean?
+  allowCustom Boolean?
+
+  marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id])
+
+  MarketPlaceProducts MarketPlaceProducts[]
+}
+
+model MarketPlaceProductImages {
+  id          String   @id @default(cuid())
+  imageUrl String?
+  marketPlaceProductId String?
+
+  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
+}
+
+model MarketPlaceProducts {
+  id          String   @id @default(cuid())
+  productName String?
+  productSku String?
+  description String?
+  shortDescription String?
+  listPrice Decimal? @db.Decimal(15, 4)
+  salePrice Decimal? @db.Decimal(15, 4)
+  barcode String?
+  storeId String?
+  marketPlaceAttributesId String?
+  marketPlaceCategoriesId String?
+  marketPlaceBrandsId String?
+
+  marketPlaceAttributes MarketPlaceAttributes? @relation(fields: [marketPlaceAttributesId], references: [id])
+  marketPlaceCategories MarketPlaceCategories? @relation(fields: [marketPlaceCategoriesId], references: [id])
+  marketPlaceBrands MarketPlaceBrands? @relation(fields: [marketPlaceBrandsId], references: [id])
+  store Store? @relation(fields: [storeId], references: [id])
+
+  MarketPlaceProductImages MarketPlaceProductImages[]
+
+  MarketPlaceProductMatch MarketPlaceProductMatch[]
+}
+
+model MarketPlaceProductMatch {
+  id          String   @id @default(cuid())
+  storeId String?
+  marketPlaceProductId String?
+  platformProductId String? // Mağazadaki ürünün idsi
+  platformVariationId String? // Mağazadaki ürünün varyasyon idsi. Bu alan boş ise ana üründür. platformProductId alanı ise varyasyonun ebeveyn ürününün idsi
+  marketPlaceSKU String?
+
+  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
+  store Store? @relation(fields: [storeId], references: [id])
 }

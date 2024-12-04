@@ -20,8 +20,6 @@ import ReceiptRoutes from './api/routes/v1/receiptRoutes';
 import importRoutes from './api/routes/v1/importExcelRoutes';
 import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
-import { CustomError } from './utils/CustomError';
-import { Prisma } from '@prisma/client';
 import exportRoutes from './api/routes/v1/exportRoutes';
 import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 import OrderRoutes from './api/routes/v1/orderRoutes';
@@ -29,8 +27,7 @@ import { authRoutes } from './api/routes/v1/authRoutes';
 import PermissionRoutes from './api/routes/v1/permissionRoute';
 import { syncPermissionsWithRoutes } from './utils/permissionSync';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-import logger from './utils/logger';
+import { wooCommerceRoutes } from './api/routes/v1/productRoutes';
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
@@ -168,6 +165,7 @@ app.use(cors({
       { name: "Imports", description: "Import operations" }, // Import'lar için
       { name: "Exports", description: "Export operations" }, // Export'lar için
       { name: "Permissions", description: "Permission operations" },
+      { name: "Products", description: "Product operations" },
     ]
   },
 }))
@@ -201,8 +199,10 @@ const routes = [
   exportRoutes,
   OrderRoutes,
   authRoutes,
-  PermissionRoutes
+  PermissionRoutes,
 ];
+
+wooCommerceRoutes(app);
 
 routes.forEach((route) => app.use(route));
 
