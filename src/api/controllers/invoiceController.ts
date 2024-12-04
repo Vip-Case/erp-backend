@@ -7,8 +7,8 @@ const invoiceService = new InvoiceService();
 
 const InvoiceController = {
     // API to create an invoice
-    
-    createInvoice: async (ctx: Context) => { 
+
+    createInvoice: async (ctx: Context) => {
         const invoiceData = ctx.body as Invoice;
         try {
             const invoice = await invoiceService.createInvoice(invoiceData);
@@ -69,7 +69,7 @@ const InvoiceController = {
             }
             ctx.set.status = 200;
             return invoice;
-        } catch (error : any) {
+        } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error getting invoice", details: error.message };
         }
@@ -101,18 +101,18 @@ const InvoiceController = {
                 invoiceDetails: InvoiceDetail[];
                 vaultId?: string;
             };
-    
+
             // Gerekli kontrolleri yap
             if (!invoice?.id) {
                 ctx.set.status = 400; // Bad Request
                 return { error: "`invoice.id` is required for updating." };
             }
-    
+
             if (!invoiceDetails || !Array.isArray(invoiceDetails)) {
                 ctx.set.status = 400; // Bad Request
                 return { error: "`invoiceDetails` must be an array and cannot be undefined." };
             }
-    
+
             // Güncelleme işlemini çağır
             const updatedInvoice = await invoiceService.updateInvoiceWithRelations(
                 invoice.id,
@@ -120,7 +120,7 @@ const InvoiceController = {
                 invoiceDetails,
                 vaultId
             );
-    
+
             ctx.set.status = 200; // Success
             return updatedInvoice;
         } catch (error: any) {
@@ -129,8 +129,8 @@ const InvoiceController = {
             return { error: "Error updating invoice with relations", details: error.message };
         }
     },
-    
-    
+
+
 
     // API to delete an invoice with relations
     deleteInvoiceWithRelations: async (ctx: Context) => {
@@ -155,7 +155,7 @@ const InvoiceController = {
             ctx.set.status = 500;
             return { error: "Error getting all invoices with relations", details: error.message };
         }
-    },  
+    },
 
     getInvoiceWithRelationsById: async (ctx: Context) => {
         const { id } = ctx.params;

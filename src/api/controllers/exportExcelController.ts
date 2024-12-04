@@ -11,7 +11,6 @@ export const exportExcelController = async (context: any) => {
         ]);
 
         // Önce dosyanın mevcut olduğundan emin olun
-        //const filePath = 'StockCards.xlsx';
         console.log("Excel dosyası oluşturulmaya başlandı.");
 
         const { filePath } = await exportStockCardsToExcel();
@@ -43,3 +42,11 @@ export const exportExcelController = async (context: any) => {
         });
     }
 };
+function timeoutPromise(ms: number): Promise<void> {
+    return new Promise((_, reject) => {
+        setTimeout(() => {
+            reject(new Error(`Operation timed out after ${ms} ms`));
+        }, ms);
+    });
+}
+

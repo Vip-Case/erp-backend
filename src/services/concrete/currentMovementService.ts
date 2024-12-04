@@ -3,7 +3,7 @@ import prisma from "../../config/prisma";
 import { CurrentMovement, Prisma } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
-
+import { Decimal } from "@prisma/client/runtime/library";
 export class CurrentMovementService {
     private currentMovementRepository: BaseRepository<CurrentMovement>;
 
@@ -11,39 +11,54 @@ export class CurrentMovementService {
         this.currentMovementRepository = new BaseRepository<CurrentMovement>(prisma.currentMovement);
     }
 
-    async createCurrentMovement(currentMovement: any): Promise<CurrentMovement> {
+    async createCurrentMovement(currentMovement: any): Promise<any> {
         try {
+            const companyCode = await prisma.company.findFirst();
+            console.log("companyCode", companyCode);
+            const getLastBalanceAmountByCurrentId = await prisma.currentMovement.findFirst({
+                where: {
+                    currentCode: currentMovement.currentCode
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
             const createdCurrentMovement = await prisma.currentMovement.create({
                 data: {
                     dueDate: currentMovement.dueDate,
                     description: currentMovement.description,
                     debtAmount: currentMovement.debtAmount,
                     creditAmount: currentMovement.creditAmount,
-                    balanceAmount: currentMovement.balanceAmount,
+                    balanceAmount: (currentMovement.debtAmount - currentMovement.creditAmount),
                     movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
+                    paymentType: currentMovement.paymentType,
 
                     current: currentMovement.currentCode ? {
                         connect: {
-                            id: currentMovement.currentCode
+                            currentCode: currentMovement.currentCode
                         }
                     } : undefined,
                     company: currentMovement.companyCode ? {
                         connect: {
                             companyCode: currentMovement.companyCode
                         }
-                    } : {},
+                    } : {
+                        connect: {
+                            companyCode: companyCode?.companyCode
+                        }
+                    },
                     branch: currentMovement.branchCode ? {
                         connect: {
                             branchCode: currentMovement.branchCode
                         }
                     } : {},
-                    StockCardPriceList: currentMovement.priceListId ? {
+                    StockCardPriceList: currentMovement?.priceListId ? {
                         connect: {
                             id: currentMovement.priceListId
                         }
                     } : undefined,
-                    invoice: currentMovement.documentNo ? {
+                    invoice: currentMovement?.documentNo ? {
                         connect: {
                             id: currentMovement.documentNo
                         }
@@ -59,6 +74,8 @@ export class CurrentMovementService {
 
     async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>): Promise<CurrentMovement> {
         try {
+            const debtAmount = currentMovement.debtAmount ?? new Decimal(0);
+            const creditAmount = currentMovement.creditAmount ?? new Decimal(0);
             return await prisma.currentMovement.update({
                 where: { id },
                 data: {
@@ -66,13 +83,13 @@ export class CurrentMovementService {
                     description: currentMovement.description,
                     debtAmount: currentMovement.debtAmount,
                     creditAmount: currentMovement.creditAmount,
-                    balanceAmount: currentMovement.balanceAmount,
-                    movementType: currentMovement.movementType,
+                    balanceAmount: debtAmount.equals(new Decimal(0)) ? creditAmount.negated() : debtAmount, movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
+                    paymentType: currentMovement.paymentType,
 
                     current: currentMovement.currentCode ? {
                         connect: {
-                            id: currentMovement.currentCode
+                            currentCode: currentMovement.currentCode
                         }
                     } : undefined,
                     company: currentMovement.companyCode ? {

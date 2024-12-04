@@ -27,7 +27,7 @@ export class BaseRepository<T> implements IBaseRepository<T> {
             ...options,
         });
     }
-    
+
     async findWithFilters(filter: any): Promise<T[] | null> {
         return this.model.findMany({
             where: filter,

@@ -14,7 +14,7 @@ export const UserController = {
         const user = await prisma.user.update({
             where: { id: userId },
             data: {
-                roles: {
+                role: {
                     connect: roleIds.map((id: string) => ({ id })),
                 },
             },
