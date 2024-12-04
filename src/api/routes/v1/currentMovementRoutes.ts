@@ -13,6 +13,7 @@ export const CurrentMovementRoutes = (app: Elysia) => {
             .get("/withCurrents", CurrentMovementController.getAllCurrentMovementsWithCurrents, { tags: ["Current Movements"] })
             .get("/byCurrent/:currentId", CurrentMovementController.getAllCurrentMovementsWithCurrentsByCurrentId, { tags: ["Current Movements"] })
     );
+  return app;
 };
 
 export default CurrentMovementRoutes;

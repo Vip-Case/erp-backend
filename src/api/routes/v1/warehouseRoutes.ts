@@ -11,6 +11,7 @@ export const WarehouseRoutes = (app: Elysia) => {
             .delete("/:id", WarehouseController.deleteWarehouse, { tags: ["Warehouses"] })
             .get("/filter", WarehouseController.getWarehousesWithFilters, { tags: ["Warehouses"] })
     );
+  return app;
 };
 
 export default WarehouseRoutes;

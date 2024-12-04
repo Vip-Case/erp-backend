@@ -11,6 +11,7 @@ export const UserRoutes = (app: Elysia) => {
             .delete("/:id", UserController.deleteUser, { tags: ["Users"] })
             .get("/filter", UserController.getUsersWithFilters, { tags: ["Users"] })
     );
+  return app;
 };
 
 export default UserRoutes;

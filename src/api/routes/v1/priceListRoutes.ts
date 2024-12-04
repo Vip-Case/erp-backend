@@ -10,6 +10,7 @@ export const PriceListRoutes = (app: Elysia) => {
             .delete("/:id", PriceListController.deletePriceList, { tags: ["Price Lists"] })
             
     );
+  return app;
 };
 
 export default PriceListRoutes;

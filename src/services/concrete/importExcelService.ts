@@ -499,6 +499,7 @@ export const importExcelService = async (file: File) => {
                 }
 
                 // Yeni `StockCard` kaydı oluşturma
+                // Yeni `StockCard` kaydı oluşturma
                 const stockCard = await prisma.stockCard.create({
                     data: {
                         productCode: stockCardData.productCode,
@@ -515,34 +516,59 @@ export const importExcelService = async (file: File) => {
                         stockStatus: stockCardData.stockStatus,
                         hasExpirationDate: stockCardData.hasExpirationDate,
                         allowNegativeStock: stockCardData.allowNegativeStock,
-                        company: stockCardData.companyCode ? {
-                            connect: { companyCode: stockCardData.companyCode }
-                        } : undefined,
-                        branch: stockCardData.branchCode ? {
-                            connect: { branchCode: stockCardData.branchCode }
-                        } : undefined,
+
+                        // Şirket bağlantısı
+                        company: stockCardData.companyCode
+                            ? {
+                                connect: { companyCode: stockCardData.companyCode },
+                            }
+                            : undefined,
+
+                        // Şube bağlantısı
+                        branch: stockCardData.branchCode
+                            ? {
+                                connect: { branchCode: stockCardData.branchCode },
+                            }
+                            : undefined,
+
                         // İlişkili Vergi Bilgileri
-                        taxRates: stockCardData.taxName && stockCardData.taxRate ? {
-                            create: [{
-                                taxName: stockCardData.taxName,
-                                taxRate: stockCardData.taxRate
-                            }]
-                        } : undefined,
+                        taxRates: stockCardData.taxName && stockCardData.taxRate
+                            ? {
+                                create: [
+                                    {
+                                        taxName: stockCardData.taxName,
+                                        taxRate: stockCardData.taxRate,
+                                    },
+                                ],
+                            }
+                            : undefined,
+
                         // İlişkili Market İsimleri
-                        stockCardMarketNames: stockCardData.marketName ? {
-                            create: [{
-                                marketName: stockCardData.marketName
-                            }]
-                        } : undefined,
+                        stockCardMarketNames: stockCardData.marketName
+                            ? {
+                                create: [
+                                    {
+                                        marketName: stockCardData.marketName,
+                                    },
+                                ],
+                            }
+                            : undefined,
+
                         // İlişkili Barkodlar
-                        barcodes: stockCardData.barcode ? {
-                            create: [{
-                                barcode: stockCardData.barcode
-                            }]
-                        } : undefined
+                        barcodes: stockCardData.barcode
+                            ? {
+                                create: [
+                                    {
+                                        barcode: stockCardData.barcode,
+                                    },
+                                ],
+                            }
+                            : undefined,
                     },
                 });
+
                 console.log(`StockCard başarıyla oluşturuldu - ProductCode: ${stockCardData.productCode}`);
+
 
                 // Brand ilişkilendirme
                 if (stockCardData.brandName) {

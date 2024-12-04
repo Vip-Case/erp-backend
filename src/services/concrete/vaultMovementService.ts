@@ -43,7 +43,12 @@ export class VaultMovementService {
                 } as Prisma.VaultMovementCreateInput,
             });
 
-            VaultService.updateVaultBalance(vaultMovement.vaultId, vaultMovement.entering, vaultMovement.emerging);
+            // Vault bakiyesini güncelleme
+            await VaultService.updateVaultBalance(
+                vaultMovement.vaultId,
+                vaultMovement.entering,
+                vaultMovement.emerging
+            );
 
             return createdVaultMovement;
         } catch (error) {

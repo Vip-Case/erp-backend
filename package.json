@@ -24,6 +24,7 @@
     "@sinclair/typebox": "0.32.34",
     "@types/node": "^22.7.4",
     "@types/pino-multi-stream": "^5.1.6",
+    "@woocommerce/woocommerce-rest-api": "^1.0.1",
     "bcrypt": "^5.1.1",
     "busboy": "^1.6.0",
     "dotenv": "^16.4.5",
@@ -40,7 +41,6 @@
     "pino-pretty": "^11.2.2",
     "prisma": "^5.22.0",
     "soap": "^1.1.5",
-    "ts-node": "^10.9.2",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
@@ -50,14 +50,9 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.2",
+    "@types/woocommerce__woocommerce-rest-api": "^1.0.5",
     "bun-types": "latest",
-    "prisma-docs-generator": "^0.8.0",
-    "prismabox": "^1.1.14",
     "supertest": "^7.0.0"
   },
-  "module": "src/index.js",
-  "type": "module",
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  }
+  "type": "module"
 }

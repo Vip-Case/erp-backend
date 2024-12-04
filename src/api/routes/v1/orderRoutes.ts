@@ -7,6 +7,7 @@ const OrderRoutes = (app: Elysia) => {
   app.get("/webhook/orders", OrderController.getAllOrders);
   app.get("/webhook/order-details", OrderController.getAllOrdersWithDetails);
   app.get("/webhook/order-infos", OrderController.getAllOrdersWithInfos);
+  return app;
 };
 
 export default OrderRoutes;

@@ -9,6 +9,7 @@ export const BrandRoutes = (app: Elysia) => {
             .put("/:id", BrandController.updateBrand, { tags: ["Brands"] })
             .delete("/:id", BrandController.deleteBrand, { tags: ["Brands"] })
     );
+  return app;
 };
 
 export default BrandRoutes;

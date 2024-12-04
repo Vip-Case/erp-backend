@@ -1,6 +1,5 @@
-
 import prisma from "../../config/prisma";
-import { Role } from "@prisma/client";
+import { Role, Permission } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 
@@ -11,27 +10,50 @@ export class RoleService {
         this.roleRepository = new BaseRepository<Role>(prisma.role);
     }
 
-    async createRole(role: Role): Promise<Role> {
+    // Rol oluşturma (izinlerle birlikte)
+    async createRole(role: Role, permissionIds: string[]): Promise<Role> {
         try {
-            return await this.roleRepository.create(role);
+            return await prisma.role.create({
+                data: {
+                    ...role,
+                    permission: {
+                        connect: permissionIds.map((id) => ({ id })),
+                    },
+                },
+                include: { permission: true },
+            });
         } catch (error) {
             logger.error("Error creating role", error);
             throw error;
         }
     }
 
-    async updateRole(id: string, role: Partial<Role>): Promise<Role> {
+    // Rol güncelleme
+    async updateRole(id: string, roleData: Partial<Role>, permissionIds?: string[]): Promise<Role> {
         try {
-            return await this.roleRepository.update(id, role);
+            return await prisma.role.update({
+                where: { id },
+                data: {
+                    ...roleData,
+                    ...(permissionIds && {
+                        permission: {
+                            set: permissionIds.map((id) => ({ id })), // Eski izinleri temizler, yenileri ekler
+                        },
+                    }),
+                },
+                include: { permission: true },
+            });
         } catch (error) {
             logger.error(`Error updating role with id ${id}`, error);
             throw error;
         }
     }
 
+    // Diğer metodlar (silme, listeleme) önceki gibi
     async deleteRole(id: string): Promise<boolean> {
         try {
-            return await this.roleRepository.delete(id);
+            await this.roleRepository.delete(id);
+            return true;
         } catch (error) {
             logger.error(`Error deleting role with id ${id}`, error);
             throw error;
@@ -40,7 +62,10 @@ export class RoleService {
 
     async getRoleById(id: string): Promise<Role | null> {
         try {
-            return await this.roleRepository.findById(id);
+            return await prisma.role.findUnique({
+                where: { id },
+                include: { permission: true },
+            });
         } catch (error) {
             logger.error(`Error fetching role with id ${id}`, error);
             throw error;
@@ -49,7 +74,7 @@ export class RoleService {
 
     async getAllRoles(): Promise<Role[]> {
         try {
-            return await this.roleRepository.findAll();
+            return await prisma.role.findMany({ include: { permission: true } });
         } catch (error) {
             logger.error("Error fetching all roles", error);
             throw error;

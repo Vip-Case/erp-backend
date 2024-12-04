@@ -7,7 +7,7 @@ export const exportExcelController = async (context: any) => {
         // Excel dosyasını oluştur
         await Promise.race([
             exportStockCardsToExcel(),
-            timeoutPromise(500) // 10 saniye zaman aşımı
+            //timeoutPromise(500) // 10 saniye zaman aşımı
         ]);
 
         // Önce dosyanın mevcut olduğundan emin olun

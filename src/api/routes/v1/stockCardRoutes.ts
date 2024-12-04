@@ -17,6 +17,7 @@ export const StockCardRoutes = (app: Elysia) => {
             .get("/stockCardsWithRelations/:id", StockCardController.getStockCardsWithRelationsById, { tags: ["Stock Cards"] })
             .get("/search", StockCardController.searchStockCards, { tags: ["Stock Cards"] })
     );
+  return app;
 };
 
 export default StockCardRoutes;
