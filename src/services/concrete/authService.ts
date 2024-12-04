@@ -11,10 +11,10 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
 
   // Sadece adminler kullanıcı oluşturabilir
   if (!createdByAdmin) {
-  if (!userData.permissionGroups?.length && !userData.permissions?.length) {
-    throw new Error('Seçilen izinler veya gruplar geçerli değil.');
+    if (!userData.permissionGroups?.length && !userData.permissions?.length) {
+      throw new Error('Seçilen izinler veya gruplar geçerli değil.');
+    }
   }
-}
 
   // Rol kontrolü
   const role = await prisma.role.findUnique({
@@ -30,30 +30,30 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
   // İzin gruplarını al
   const groups = userData.permissionGroups?.length
     ? await prisma.permissionGroup.findMany({
-        where: { groupName: { in: userData.permissionGroups } },
-        include: { permissions: true },
-      })
+      where: { groupName: { in: userData.permissionGroups } },
+      include: { permissions: true },
+    })
     : [];
 
-    console.log("Gruplar:", groups);
+  console.log("Gruplar:", groups);
   // Gruplardan izinleri topla
   const groupPermissions = groups.flatMap((group) => group.permissions);
 
   // Bireysel izinleri doğrula
   const individualPermissions = userData.permissions?.length
     ? await prisma.permission.findMany({
-        where: { permissionName: { in: userData.permissions } },
-      })
+      where: { permissionName: { in: userData.permissions } },
+    })
     : [];
 
-    console.log("Bireysel İzinler:", individualPermissions);
+  console.log("Bireysel İzinler:", individualPermissions);
   // Tüm izinleri birleştir (gruplar + bireysel)
   const aggregatedPermissions = [...new Set([...groupPermissions, ...individualPermissions])];
 
-    console.log("Tüm İzinler:", aggregatedPermissions);
-    if (aggregatedPermissions.length === 0 && !createdByAdmin) {
-      throw new Error('Seçilen izinler veya gruplar geçerli değil.');
-    }
+  console.log("Tüm İzinler:", aggregatedPermissions);
+  if (aggregatedPermissions.length === 0 && !createdByAdmin) {
+    throw new Error('Seçilen izinler veya gruplar geçerli değil.');
+  }
 
   const user = await prisma.user.create({
     data: {
@@ -79,6 +79,8 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
 
 // Kullanıcı Giriş
 export const loginUser = async (credentials: any) => {
+  const hashedPassword = await bcrypt.hash(credentials.password, 10);
+  console.log(hashedPassword);
   const user = await prisma.user.findUnique({
     where: { email: credentials.email },
     include: {

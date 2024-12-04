@@ -21,3 +21,5 @@ export async function syncPermissionsWithRoutes(app: any) {
     }
   }
 }
+
+export default syncPermissionsWithRoutes;

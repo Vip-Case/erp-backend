@@ -60,3 +60,5 @@ function isSyncProductsRequestBody(body: any): body is SyncProductsRequestBody {
     typeof body.consumerSecret === "string"
   );
 }
+
+export default wooCommerceRoutes;

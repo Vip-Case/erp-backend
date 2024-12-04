@@ -5,7 +5,6 @@ import { CustomError } from './utils/CustomError';
 import { Prisma } from '@prisma/client';
 import dotenv from 'dotenv';
 import loggerWithCaller from './utils/logger';
-
 import CurrentMovementRoutes from './api/routes/v1/currentMovementRoutes';
 import CurrentCategoryRoutes from './api/routes/v1/currentCategoryRoutes';
 import StockMovementRoutes from './api/routes/v1/stockMovementRoutes';
@@ -13,7 +12,9 @@ import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
 import ManufacturerRoutes from './api/routes/v1/manufacturerRoutes';
 import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
 import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
-import { PrismaClient } from '@prisma/client';
+import PermissionRoutes from './api/routes/v1/permissionRoute';
+import syncPermissionsWithRoutes from './utils/permissionSync';
+import wooCommerceRoutes from './api/routes/v1/productRoutes';
 import StockCardRoutes from './api/routes/v1/stockCardRoutes';
 import PriceListRoutes from './api/routes/v1/priceListRoutes';
 import AttributeRoutes from './api/routes/v1/attributeRoutes';
@@ -26,23 +27,19 @@ import InvoiceRoutes from './api/routes/v1/invoiceRoutes';
 import ReceiptRoutes from './api/routes/v1/receiptRoutes';
 import BranchRoutes from './api/routes/v1/branchRoutes';
 import exportRoutes from './api/routes/v1/exportRoutes';
+import { authRoutes } from './api/routes/v1/authRoutes';
+import OrderRoutes from './api/routes/v1/orderRoutes';
 import VaultRoutes from './api/routes/v1/vaultRoutes';
 import BrandRoutes from './api/routes/v1/brandRoutes';
 import BankRoutes from './api/routes/v1/bankRoutes';
 import UserRoutes from './api/routes/v1/userRoutes';
 import RoleRoutes from './api/routes/v1/roleRoutes';
 import PosRoutes from './api/routes/v1/posRoutes';
-import OrderRoutes from './api/routes/v1/orderRoutes';
-import authRoutes from './api/routes/v1/authRoutes';
-dotenv.config();
-import exportRoutes from './api/routes/v1/exportRoutes';
-import VaultMovementRoutes from './api/routes/v1/vaultMovementRoutes';
-import OrderRoutes from './api/routes/v1/orderRoutes';
-import { authRoutes } from './api/routes/v1/authRoutes';
-import PermissionRoutes from './api/routes/v1/permissionRoute';
-import { syncPermissionsWithRoutes } from './utils/permissionSync';
+import { PrismaClient } from '@prisma/client';
+import { appConfig } from './config/app';
 import jwt from 'jsonwebtoken';
-import { wooCommerceRoutes } from './api/routes/v1/productRoutes';
+
+dotenv.config();
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
@@ -187,9 +184,64 @@ app.use(cors({
 
 app.get("/", () => "Elysia is running!"); // Ana route tanımlanıyor
 
-app.onError(({ error }: { error: Error }) => {
-  console.error("Hata:", error.message);
-  return { message: error.message || "Beklenmeyen bir hata oluştu." };
+app.onError(async ({ error, set, request }) => {
+  // Varsayılan hata yanıtı
+  let statusCode = 500;
+  let message = 'Beklenmeyen bir hata oluştu.';
+  let errorCode: string | undefined;
+  let meta: any;
+
+  // Bilinen hata türlerini işleyin
+  if (error instanceof CustomError) {
+    statusCode = error.statusCode;
+    message = error.message;
+    errorCode = error.errorCode;
+    meta = error.meta;
+  } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    statusCode = 400; // Bad Request
+    message = 'Veritabanı hatası oluştu.';
+    errorCode = error.code;
+    meta = error.meta;
+  } else if (error instanceof Prisma.PrismaClientValidationError) {
+    statusCode = 400;
+    message = 'Doğrulama hatası oluştu.';
+    meta = error.message;
+  } else if (error instanceof Error) {
+    message = error.message;
+  }
+
+  // İstekten gelen body'yi alın
+  const body = await request.json().catch(() => null);
+
+  // Hataları loglayın
+  loggerWithCaller.error(
+    {
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body: body,
+      message: error.message,
+      stack: error.stack,
+      code: (error as any).code,
+      meta: (error as any).meta,
+      prisma: error instanceof Prisma.PrismaClientKnownRequestError ? {
+        clientVersion: error.clientVersion,
+        errorCode: error.code,
+        meta: error.meta,
+      } : undefined,
+    },
+    'Hata oluştu'
+  );
+  // Yanıtı ayarlayın ve gönderin
+  set.status = statusCode;
+
+  return {
+    error: {
+      message,
+      errorCode,
+      meta,
+    },
+  };
 });
 
 const routes = [
@@ -215,6 +267,12 @@ const routes = [
   OrderRoutes,
   authRoutes,
   PermissionRoutes,
+  CurrentCategoryRoutes,
+  ManufacturerRoutes,
+  BankRoutes,
+  BankMovementRoutes,
+  PosRoutes,
+  PosMovementRoutes,
 ];
 
 wooCommerceRoutes(app);
