@@ -1049,7 +1049,7 @@ model MarketPlaceAttributes {
   required Boolean?
   allowCustom Boolean?
 
-  marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id])
+  marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
 
   MarketPlaceProducts MarketPlaceProducts[]
 }
@@ -1059,7 +1059,7 @@ model MarketPlaceProductImages {
   imageUrl String?
   marketPlaceProductId String?
 
-  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
+  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id], onDelete: Cascade)
 }
 
 model MarketPlaceProducts {

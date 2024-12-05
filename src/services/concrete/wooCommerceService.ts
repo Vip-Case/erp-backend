@@ -3,6 +3,37 @@ import { WooCommerceAdapter } from "../../adapters/wooCommerceAdapter";
 
 const prisma = new PrismaClient();
 
+interface Category {
+  id: number | string;
+  name: string;
+  slug: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  description: string;
+  short_description: string;
+  regular_price: string | null;
+  sale_price: string | null;
+  barcode: string | null;
+  categories: Category[];
+  price?: string | null; // WooCommerce'den gelen fiyat değeri
+  brand?: {
+    id: number | string;
+    name: string;
+  };
+  attributes?: {
+    id: number | string;
+    name: string;
+    options: string[];
+  }[];
+  images?: {
+    src: string;
+  }[];
+}
+
 export class WooCommerceService {
   private wooCommerce: WooCommerceAdapter;
   private consumerKey: string;
@@ -14,11 +45,25 @@ export class WooCommerceService {
     this.consumerSecret = consumerSecret;
   }
 
+  // WooCommerce'den tüm ürünleri çekmek için yeni bir yardımcı metot
+  private async fetchAllProducts(): Promise<Product[]> {
+    const allProducts: Product[] = [];
+    let page = 1;
+
+    while (true) {
+      const products = await this.wooCommerce.getProducts({ page, per_page: 100 });
+      if (!products.length) break;
+      allProducts.push(...products);
+      page++;
+    }
+
+    return allProducts;
+  }
+
   async syncProducts(storeId: string | null): Promise<void> {
     try {
       let store = null;
 
-      // Store doğrulama veya oluşturma
       if (storeId) {
         store = await prisma.store.findFirst({ where: { id: storeId } });
 
@@ -52,100 +97,86 @@ export class WooCommerceService {
         }
       }
 
-      // WooCommerce API'den ürünleri al
-      const products = await this.wooCommerce.getProducts();
+      const products: Product[] = await this.fetchAllProducts();
 
       for (const product of products) {
-        const marketplaceProduct = await prisma.marketPlaceProducts.create({
-          data: {
-            productName: product.name,
-            productSku: product.sku,
-            description: product.description,
-            shortDescription: product.short_description,
-            listPrice: product.regular_price ? parseFloat(product.regular_price) : null,
-            salePrice: product.sale_price ? parseFloat(product.sale_price) : null,
-            barcode: product.barcode || null,
-            storeId: store?.id || null,
-          },
+        const price = product.price ? parseFloat(product.price) : null;
+
+        // Ürün Ekleme veya Güncelleme
+        const existingProduct = await prisma.marketPlaceProducts.findFirst({
+          where: { productSku: product.sku },
         });
 
-        console.log("MarketPlaceProduct created:", marketplaceProduct);
+        let marketplaceProduct;
+        if (existingProduct) {
+          marketplaceProduct = await prisma.marketPlaceProducts.update({
+            where: { id: existingProduct.id },
+            data: {
+              listPrice: price,
+              salePrice: price,
+              description: product.description || "",
+              shortDescription: product.short_description || "",
+            },
+          });
+          console.log(`Ürün güncellendi: ${existingProduct.productName}`);
+        } else {
+          marketplaceProduct = await prisma.marketPlaceProducts.create({
+            data: {
+              productName: product.name,
+              productSku: product.sku,
+              description: product.description,
+              shortDescription: product.short_description,
+              listPrice: price,
+              salePrice: price,
+              barcode: product.barcode || null,
+              storeId: store?.id || null,
+            },
+          });
+          console.log("MarketPlaceProduct oluşturuldu:", marketplaceProduct);
+        }
 
-        // İlgili kategoriler
-        // İlgili kategoriler
-// İlgili kategoriler
-if (product.categories) {
-  // Benzersiz kategori ID'lerini elde et
-  const uniqueCategories = Array.from(new Set(product.categories.map(c => c.id)));
+        // Kategoriler
+        if (product.categories) {
+          for (const category of product.categories) {
+            // Mevcut kategori kontrolü
+            const existingCategory = await prisma.marketPlaceCategories.findFirst({
+              where: { marketPlaceCategoryId: category.id.toString() },
+            });
 
-  for (const rawCategoryId of uniqueCategories) {
-    // rawCategoryId'nin türünü kontrol et ve dönüştür
-    if (typeof rawCategoryId !== 'string' && typeof rawCategoryId !== 'number') {
-      console.error("Invalid category ID:", rawCategoryId);
-      continue; // Tür uygun değilse işlemi atla
-    }
+            let linkedCategoryId;
+            if (existingCategory) {
+              linkedCategoryId = existingCategory.id;
+            } else {
+              // Yeni kategori oluşturma
+              const newCategory = await prisma.marketPlaceCategories.create({
+                data: {
+                  marketPlaceCategoryId: category.id.toString(),
+                  categoryName: category.name,
+                  marketPlaceCategoryParentId: null, // Parent ID varsa burada güncelleyin
+                },
+              });
+              linkedCategoryId = newCategory.id;
+            }
 
-    // categoryId artık kesin olarak string
-    const categoryId = rawCategoryId.toString();
-
-    // Kategori bilgilerini al
-    const category = product.categories.find(c => c.id === rawCategoryId);
-
-    if (category) {
-      console.log("Processing unique category:", category);
-
-      // Mevcut kategoriyi bul
-      const existingCategory = await prisma.marketPlaceCategories.findFirst({
-        where: { marketPlaceCategoryId: categoryId },
-      });
-
-      console.log("Existing unique category:", existingCategory);
-
-      let marketplaceCategory;
-
-      if (existingCategory) {
-        // Mevcut kategoriyi güncelle
-        marketplaceCategory = await prisma.marketPlaceCategories.update({
-          where: { id: existingCategory.id },
-          data: { categoryName: category.name },
-        });
-      } else {
-        // Yeni kategori oluştur
-        marketplaceCategory = await prisma.marketPlaceCategories.create({
-          data: {
-            marketPlaceCategoryId: categoryId,
-            categoryName: category.name,
-          },
-        });
-      }
-
-      console.log("Created or updated unique category:", marketplaceCategory);
-
-      // Ürünle kategori ilişkilendir
-      await prisma.marketPlaceProducts.update({
-        where: { id: marketplaceProduct.id },
-        data: { marketPlaceCategoriesId: marketplaceCategory.id },
-      });
-    }
-  }
-}
+            // Ürünü kategoriyle ilişkilendirme
+            await prisma.marketPlaceProducts.update({
+              where: { id: marketplaceProduct.id },
+              data: {
+                marketPlaceCategoriesId: linkedCategoryId,
+              },
+            });
+          }
+        }
 
 
-
-        // İlgili markalar
+        // Markalar
         if (product.brand) {
-          const existingBrand = await prisma.marketPlaceBrands.findFirst({
+          let existingBrand = await prisma.marketPlaceBrands.findFirst({
             where: { marketPlaceBrandId: product.brand.id.toString() },
           });
 
-          let marketplaceBrand;
-          if (existingBrand) {
-            marketplaceBrand = await prisma.marketPlaceBrands.update({
-              where: { id: existingBrand.id },
-              data: { brandName: product.brand.name },
-            });
-          } else {
-            marketplaceBrand = await prisma.marketPlaceBrands.create({
+          if (!existingBrand) {
+            existingBrand = await prisma.marketPlaceBrands.create({
               data: {
                 marketPlaceBrandId: product.brand.id.toString(),
                 brandName: product.brand.name,
@@ -153,57 +184,89 @@ if (product.categories) {
             });
           }
 
+          // Ürünle markayı ilişkilendir
           await prisma.marketPlaceProducts.update({
             where: { id: marketplaceProduct.id },
-            data: { marketPlaceBrandsId: marketplaceBrand.id },
+            data: { marketPlaceBrandsId: existingBrand.id },
           });
         }
 
-        // İlgili özellikler
+
+        // Özellikler (Attributes)
         if (product.attributes) {
           for (const attribute of product.attributes) {
-            const existingAttribute = await prisma.marketPlaceAttributes.findFirst({
-              where: { attributeMarketPlaceId: attribute.id.toString() },
+            // Mevcut attribute kontrolü
+            let existingAttribute = await prisma.marketPlaceAttributes.findFirst({
+              where: {
+                attributeMarketPlaceId: attribute.id.toString(),
+                attributeName: attribute.name,
+              },
+              include: { MarketPlaceProducts: true },
             });
 
-            let marketplaceAttribute;
             if (existingAttribute) {
-              marketplaceAttribute = await prisma.marketPlaceAttributes.update({
+              // İlgili ürün için attribute değerlerini güncelle
+              const updatedValueName = Array.from(
+                new Set([
+                  ...(existingAttribute.valueName?.split(", ") || []),
+                  ...attribute.options,
+                ])
+              ).join(", ");
+
+              await prisma.marketPlaceAttributes.update({
                 where: { id: existingAttribute.id },
-                data: { valueName: attribute.options.join(", ") },
+                data: {
+                  valueName: updatedValueName,
+                  MarketPlaceProducts: {
+                    connect: { id: marketplaceProduct.id },
+                  },
+                },
               });
             } else {
-              marketplaceAttribute = await prisma.marketPlaceAttributes.create({
+              // Yeni attribute oluşturma
+              await prisma.marketPlaceAttributes.create({
                 data: {
                   marketPlaceId: store?.marketPlaceId || null,
                   attributeMarketPlaceId: attribute.id.toString(),
                   attributeName: attribute.name,
                   valueName: attribute.options.join(", "),
+                  MarketPlaceProducts: {
+                    connect: { id: marketplaceProduct.id },
+                  },
                 },
               });
             }
-
-            await prisma.marketPlaceProducts.update({
-              where: { id: marketplaceProduct.id },
-              data: { marketPlaceAttributesId: marketplaceAttribute.id },
-            });
           }
         }
 
-        // İlgili görseller
+
+
+        // Görseller
         if (product.images) {
-          for (const image of product.images) {
-            await prisma.marketPlaceProductImages.create({
-              data: {
-                imageUrl: image.src,
-                marketPlaceProductId: marketplaceProduct.id,
-              },
+          // Mevcut görselleri veritabanından al
+          const existingImages = await prisma.marketPlaceProductImages.findMany({
+            where: { marketPlaceProductId: marketplaceProduct.id },
+            select: { imageUrl: true }, // Yalnızca URL'leri al
+          });
+
+          const existingImageUrls = existingImages.map((img) => img.imageUrl);
+
+          // Yalnızca yeni olan görselleri filtrele
+          const newImages = product.images
+            .filter((img) => !existingImageUrls.includes(img.src))
+            .map((img) => ({
+              imageUrl: img.src,
+              marketPlaceProductId: marketplaceProduct.id,
+            }));
+
+          // Yeni görseller varsa ekle
+          if (newImages.length > 0) {
+            await prisma.marketPlaceProductImages.createMany({
+              data: newImages,
+              skipDuplicates: true,
             });
           }
         }
-
-        console.log("Product categories:", product.categories);
-        console.log("Product attributes:", product.attributes);
 
       }
     } catch (error) {
@@ -211,4 +274,5 @@ if (product.categories) {
       throw new Error("Senkronizasyon sırasında bir hata oluştu.");
     }
   }
+
 }
