@@ -10,7 +10,7 @@ export const register = async (ctx: any) => {
   if (!authHeader) {
     return {
       status: 403,
-      body: { message: "Yalnızca adminler kullanıcı oluşturabilir." },
+      body: { message: "Auth header is missing" },
     };
   }
 
@@ -30,7 +30,7 @@ export const register = async (ctx: any) => {
   if (!isAdmin) {
     return {
       status: 403,
-      body: { message: "Yalnızca adminler kullanıcı oluşturabilir." },
+      body: { message: "Yalnızca adminler kullanıcı oluşturabilir!" },
     };
   }
 

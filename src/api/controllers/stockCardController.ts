@@ -171,7 +171,33 @@ const StockCardController = {
             ctx.set.status = 500;
             return { error: "Error fetching stock cards", details: error.message };
         }
-    }
+    },
+
+    getStockCardsByWarehouseId: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const stockCards = await stockCardService.getStockCardsByWarehouseId(id);
+            ctx.set.status = 200;
+            return stockCards;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    searchStockCardsByWarehouseId: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const criteria = ctx.query as unknown as SearchCriteria;
+        try {
+            const stockCards = await stockCardService.searchStockCardsByWarehouseId(id, criteria);
+            ctx.set.status = 200;
+            return stockCards;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
 }
 
 export default StockCardController;

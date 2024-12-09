@@ -3,9 +3,15 @@ import { Invoice, InvoiceDetail, Prisma } from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { BaseRepository } from "../../repositories/baseRepository";
+import { time } from "console";
 
 export const InvoiceRelations = {
     invoiceDetail: true
+};
+
+export interface InvoicePaymentDetail {
+    paymentWayId: string;
+    paymentAmount: number;
 };
 
 export class InvoiceService {
@@ -152,31 +158,31 @@ export class InvoiceService {
         invoice: Invoice,
         invoiceDetails: InvoiceDetail[],
         vaultId?: string
-    ): Promise<Invoice> {
+    ): Promise<any> {
         if (!invoice.invoiceNo || invoice.invoiceNo.trim() === "") {
             throw new Error("InvoiceNo is required and cannot be empty.");
         }
 
         try {
-            // 1. Ana fatura oluşturuluyor
-            const newInvoice = await prisma.invoice.create({
-                data: {
-                    invoiceNo: invoice.invoiceNo,
-                    gibInvoiceNo: invoice.gibInvoiceNo,
-                    invoiceDate: invoice.invoiceDate,
-                    invoiceType: invoice.invoiceType,
-                    documentType: invoice.documentType,
-                    description: invoice.description,
-                    current: invoice.currentCode ? { connect: { currentCode: invoice.currentCode } } : undefined,
-                    company: invoice.companyCode ? { connect: { companyCode: invoice.companyCode } } : undefined,
-                    branch: { connect: { branchCode: invoice.branchCode } },
-                    warehouse: invoice.warehouseCode ? { connect: { warehouseCode: invoice.warehouseCode } } : undefined,
-                    priceList: invoice.priceListId ? { connect: { id: invoice.priceListId } } : undefined,
-                },
-            });
+            const result = await prisma.$transaction(async (prisma) => {
 
-            // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
-            await prisma.$transaction(async (prisma) => {
+                // 1. Ana fatura oluşturuluyor
+                const newInvoice = await prisma.invoice.create({
+                    data: {
+                        invoiceNo: invoice.invoiceNo,
+                        gibInvoiceNo: invoice.gibInvoiceNo,
+                        invoiceDate: invoice.invoiceDate,
+                        invoiceType: invoice.invoiceType,
+                        documentType: invoice.documentType,
+                        description: invoice.description,
+                        current: invoice.currentCode ? { connect: { currentCode: invoice.currentCode } } : undefined,
+                        company: invoice.companyCode ? { connect: { companyCode: invoice.companyCode } } : undefined,
+                        branch: { connect: { branchCode: invoice.branchCode } },
+                        warehouse: invoice.warehouseCode ? { connect: { warehouseCode: invoice.warehouseCode } } : undefined,
+                        priceList: invoice.priceListId ? { connect: { id: invoice.priceListId } } : undefined,
+                    },
+                });
+                // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
                 await prisma.invoiceDetail.createMany({
                     data: invoiceDetails.map((detail) => ({
@@ -326,9 +332,9 @@ export class InvoiceService {
                         });
                     }
                 }
-            });
+            }, { timeout: 30000 });
 
-            return newInvoice;
+            return result;
         } catch (error) {
             logger.error("Error creating invoice with relations:", error);
             throw error;

@@ -38,6 +38,11 @@ import PosRoutes from './api/routes/v1/posRoutes';
 import { PrismaClient } from '@prisma/client';
 import { appConfig } from './config/app';
 import jwt from 'jsonwebtoken';
+import cron from "node-cron";
+import { backupDatabase, cleanOldBackups } from "./utils/backup";
+import NotificationRoutes from './api/routes/v1/notificationRoutes';
+import { NotificationService } from './services/concrete/NotificationService';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -52,9 +57,22 @@ const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
 
-// Global middleware: Kullanıcı doğrulama
+app.use(
+  cors({
+    origin: ["http://localhost:3000"], // İzin verilen frontend kökeni
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // İzin verilen HTTP yöntemleri
+    allowedHeaders: ["Content-Type", "Authorization"], // İzin verilen başlıklar
+    credentials: true, // Çerez ve yetkilendirme bilgilerini paylaş
+    preflight: true, // Preflight isteğini otomatik yanıtla
+    maxAge: 86400, // Preflight yanıtının önbellek süresi
+  })
+);
 
 app.onRequest(async (ctx) => {
+  if (ctx.request.method === "OPTIONS") {
+    ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
+    return; // İleri işlem yapmadan middleware'den çık
+  }
   const publicRoutes = ["/auth/login", "/auth/register"];
   const route = new URL(ctx.request.url).pathname;
 
@@ -87,6 +105,10 @@ app.onRequest(async (ctx) => {
 });
 
 app.onRequest(async (ctx) => {
+  if (ctx.request.method === "OPTIONS") {
+    ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
+    return; // İleri işlem yapmadan middleware'den çık
+  }
   const route = new URL(ctx.request.url).pathname; // Geçerli rota
   const publicRoutes = ["/auth/login", "/auth/register"]; // Public rotalar
 
@@ -133,20 +155,26 @@ app.onRequest(async (ctx) => {
   console.log("Kullanıcı gerekli izne sahip.");
 });
 
+// Stok seviyesi kontrolü için cron job
+const notificationService = new NotificationService();
+cron.schedule('*/30 * * * *', async () => {
+  try {
+    logger.info('Stok seviyesi kontrolü başlatılıyor...');
+    await notificationService.checkStockLevels(
+      process.env.SYSTEM_TOKEN || '', // Sistem tarafından yapılan kontroller için token
+      process.env.CRITICAL_STOCK_LEVEL ? Number(process.env.CRITICAL_STOCK_LEVEL) : undefined,
+      process.env.WARNING_STOCK_LEVEL ? Number(process.env.WARNING_STOCK_LEVEL) : undefined
+    );
+    logger.info('Stok seviyesi kontrolü tamamlandı');
+  } catch (error) {
+    logger.error('Stok seviyesi kontrolü sırasında hata:', error);
+  }
+});
+console.log("Bildirimler kontrol ediliyor...");
 
 app.get("/secure/data", () => {
   return { message: "Secure data accessed." };
-});
-
-
-app.use(cors({
-  origin: "*",
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 600
-}))
-
+})
   .use(swagger({
     path: "/docs", // Swagger UI'nin erişim yolu
     provider: 'scalar', // API provider'ı
@@ -156,29 +184,6 @@ app.use(cors({
         version: "1.0.0", // API versiyonu
         description: "ERP API Documentation", // API açıklaması
       },
-      tags: [
-        { name: "Stock Cards", description: "Stock Card operations" }, // Stock Card'lar için tag
-        { name: "Price Lists", description: "Price List operations" }, // Price List'ler için tag
-        { name: "Attributes", description: "Attribute operations" }, // Attribute'lar için tag
-        { name: "Stock Movements", description: "Stock Movement operations" }, // Stock Movement'lar için tag
-        { name: "Companies", description: "Company operations" }, // Company'ler için tag
-        { name: "Branches", description: "Branch operations" }, // Branch'ler için tag
-        { name: "Warehouses", description: "Warehouse operations" }, // Warehouse'lar için tag
-        { name: "Categories", description: "Category operations" }, // Category'ler için tag
-        { name: "Currents", description: "Current operations" }, // Current'lar için tag
-        { name: "Current Movements", description: "Current Movement operations" }, // Current Movement'lar için tag
-        { name: "Current Groups", description: "Current Group operations" }, // Current Group'lar için tag
-        { name: "Users", description: "User operations" }, // User'lar için tag
-        { name: "Roles", description: "Role operations" }, // Role'lar için tag
-        { name: "Invoices", description: "Invoice operations" }, // Invoice'lar için
-        { name: "Receipts", description: "Receipt operations" }, // Receipt'lar için
-        { name: "Brands", description: "Brand operations" }, // Brand'ler için
-        { name: "Vaults", description: "Vaults operations" }, // Banks'lar için
-        { name: "Imports", description: "Import operations" }, // Import'lar için
-        { name: "Exports", description: "Export operations" }, // Export'lar için
-        { name: "Permissions", description: "Permission operations" },
-        { name: "Products", description: "Product operations" },
-      ]
     },
   }))
 
@@ -273,6 +278,7 @@ const routes = [
   BankMovementRoutes,
   PosRoutes,
   PosMovementRoutes,
+  NotificationRoutes,
 ];
 
 wooCommerceRoutes(app);
@@ -291,10 +297,17 @@ syncPermissionsWithRoutes(app)
     await prisma.$disconnect();
   });
 
-
 // Uygulama belirtilen portta dinlemeye başlıyor
 app.listen(appConfig.port, () => {
-  console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
+  console.log(` Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
 });
+
+// Her gece saat 02:00'da yedekleme ve eski dosyaları temizleme işlemi
+cron.schedule("*/30 * * * *", () => {
+  console.log("Günlük yedekleme başlıyor...");
+  backupDatabase().then(cleanOldBackups);
+});
+
+console.log("Yedekleme zamanlayıcı çalışıyor...");
 
 export default app;
