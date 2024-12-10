@@ -167,7 +167,19 @@ const InvoiceController = {
             ctx.set.status = 500;
             return { error: "Error getting all invoices with relations by ID", details: error.message };
         }
-    }
+    },
+
+    getLastInvoiceNoByType: async (ctx: Context) => {
+        const { type } = ctx.params;
+        try {
+            const invoiceNo = await invoiceService.getLastInvoiceNoByType(type);
+            ctx.set.status = 200;
+            return invoiceNo;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error getting last invoice no by type", details: error.message };
+        }
+    },
 
 };
 

@@ -9,9 +9,23 @@ export const InvoiceRelations = {
     invoiceDetail: true
 };
 
-export interface InvoicePaymentDetail {
-    paymentWayId: string;
-    paymentAmount: number;
+export interface InvoiceItems {
+    stockCardId: string;
+    quantity: number;
+    unitPrice: number;
+    vatRate: number;
+    vatAmount: number;
+    totalAmount: number;
+    priceListId: string;
+    currency: string;
+}
+
+export interface InvoicePayment {
+    method: string;
+    accountId: number;
+    amount: number;
+    currency: string;
+    description: string;
 };
 
 export class InvoiceService {
@@ -156,8 +170,8 @@ export class InvoiceService {
 
     async createInvoiceWithRelations(
         invoice: Invoice,
-        invoiceDetails: InvoiceDetail[],
-        vaultId?: string
+        invoiceDetails: InvoiceItems[],
+        payments: InvoicePayment[],
     ): Promise<any> {
         if (!invoice.invoiceNo || invoice.invoiceNo.trim() === "") {
             throw new Error("InvoiceNo is required and cannot be empty.");
@@ -184,12 +198,24 @@ export class InvoiceService {
                 });
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
-                await prisma.invoiceDetail.createMany({
-                    data: invoiceDetails.map((detail) => ({
-                        ...detail,
-                        invoiceId: newInvoice.id,
-                    })),
-                });
+                for (const detail of invoiceDetails) {
+                    const _productCode = await prisma.stockCard.findUnique({
+                        where: { id: detail.stockCardId },
+                        select: { productCode: true },
+                    });
+                    await prisma.invoiceDetail.create({
+                        data: {
+                            invoiceId: newInvoice.id,
+                            productCode: _productCode?.productCode || "",
+                            quantity: detail.quantity,
+                            unitPrice: detail.unitPrice,
+                            vatRate: detail.vatRate,
+                            netPrice: detail.totalAmount - detail.vatAmount,
+                            totalPrice: detail.totalAmount,
+                            discount: 0,
+                        },
+                    });
+                }
 
                 // Alış veya Satış işlemleri
                 if (invoice.invoiceType === "Purchase" || invoice.invoiceType === "Sales") {
@@ -508,7 +534,6 @@ export class InvoiceService {
         }
     }
 
-
     async getAllInvoicesWithRelations(): Promise<Invoice[]> {
         return await prisma.invoice.findMany({
             include: {
@@ -525,6 +550,19 @@ export class InvoiceService {
                 invoiceDetail: true, // İlişkili detayları dahil et
             },
         });
+    }
+
+    async getLastInvoiceNoByType(invoiceType: string): Promise<string> {
+        const lastInvoice = await prisma.invoice.findFirst({
+            where: { invoiceType: invoiceType as Invoice["invoiceType"] },
+            orderBy: { invoiceNo: "desc" },
+        });
+
+        if (lastInvoice) {
+            return lastInvoice.invoiceNo;
+        }
+
+        return "";
     }
 }
 
