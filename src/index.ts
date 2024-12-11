@@ -43,6 +43,7 @@ import { backupDatabase, cleanOldBackups } from "./utils/backup";
 import NotificationRoutes from './api/routes/v1/notificationRoutes';
 import { NotificationService } from './services/concrete/NotificationService';
 import logger from './utils/logger';
+import InvoiceService from './services/concrete/invoiceService';
 
 dotenv.config();
 
@@ -59,11 +60,11 @@ const app = new Elysia()
 
 app.use(
   cors({
-    origin: ["http://localhost:3000"], // İzin verilen frontend kökeni
+    origin: "*", // İzin verilen frontend kökeni
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // İzin verilen HTTP yöntemleri
     allowedHeaders: ["Content-Type", "Authorization"], // İzin verilen başlıklar
     credentials: true, // Çerez ve yetkilendirme bilgilerini paylaş
-    preflight: true, // Preflight isteğini otomatik yanıtla
+    preflight: true, // Preflight isteğini otomatik yanıtlZa
     maxAge: 86400, // Preflight yanıtının önbellek süresi
   })
 );
@@ -296,11 +297,6 @@ syncPermissionsWithRoutes(app)
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-// Uygulama belirtilen portta dinlemeye başlıyor
-app.listen(appConfig.port, () => {
-  console.log(` Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
-});
 
 // Her gece saat 02:00'da yedekleme ve eski dosyaları temizleme işlemi
 cron.schedule("*/30 * * * *", () => {
