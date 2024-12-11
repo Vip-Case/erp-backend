@@ -60,7 +60,7 @@ const app = new Elysia()
 
 app.use(
   cors({
-    origin: "*", // İzin verilen frontend kökeni
+    origin: ["http://erp.novent.com.tr"], // İzin verilen frontend kökeni
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // İzin verilen HTTP yöntemleri
     allowedHeaders: ["Content-Type", "Authorization"], // İzin verilen başlıklar
     credentials: true, // Çerez ve yetkilendirme bilgilerini paylaş
