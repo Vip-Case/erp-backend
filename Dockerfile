@@ -3,18 +3,17 @@ FROM oven/bun:debian
 # Çalışma dizini ayarla
 WORKDIR /app
 
-# Paket ve bağımlılık dosyalarını kopyala
+# Paket dosyalarını kopyala
 COPY package.json bun.lockb ./
 
 # Çevresel değişken dosyasını kopyala
 COPY .env .env
 
-# Bun, Prisma ve bağımlılıkları kur
-RUN corepack enable && corepack prepare bun@latest --activate
-RUN bun install -g prisma
+# Bağımlılıkları kur
 RUN bun install --frozen-lockfile
+RUN bun add prisma --global
 
-# Uygulama kaynak kodunu kopyala
+# Uygulama dosyalarını kopyala
 COPY . .
 
 # Prisma Client'ı oluştur
