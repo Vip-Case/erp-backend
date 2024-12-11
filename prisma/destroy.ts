@@ -3,7 +3,11 @@ import prisma from '../src/config/prisma';
 
 async function main() {
     // Delete dependent records of Current
-    await prisma.stockCardManufacturer.deleteMany({});
+    try {
+        await prisma.stockCardManufacturer.deleteMany({});
+    } catch (e) {
+        console.warn('StockCardManufacturer tablosu bulunamadı, işlem atlanıyor.');
+    }
     await prisma.stockCardEFatura.deleteMany({});
     await prisma.stockCardMarketNames.deleteMany({});
     await prisma.stockCardAttributeItems.deleteMany({});

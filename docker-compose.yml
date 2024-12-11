@@ -25,8 +25,9 @@ services:
       [
         "/bin/sh",
         "-c",
-        "./init.sh",
+        "/init.sh && bun seed",
       ]
+
     develop:
       watch:
         - action: sync

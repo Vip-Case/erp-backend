@@ -18,10 +18,13 @@ COPY . .
 
 # Prisma Client'ı oluştur
 RUN bun prisma generate
-
-# wait-for-it.sh betiğini ekle ve çalıştırılabilir hale getir
+RUN bun seed
+# wait-for-it.sh ve init.sh dosyalarını kopyala
 COPY wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
+COPY init.sh /init.sh
+
+# Çalıştırma izinlerini ayarla
+RUN chmod +x /wait-for-it.sh /init.sh
 
 # Uygulamayı başlatma komutu
-CMD ["/wait-for-it.sh", "postgres:5432", "--", "bun", "run", "--watch", "src/index.ts"]
+CMD ["/wait-for-it.sh", "postgres:5432", "--", "/init.sh"]
