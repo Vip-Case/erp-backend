@@ -18,7 +18,7 @@ COPY . .
 
 # Prisma Client'ı oluştur
 RUN bun prisma generate
-RUN bun seed
+
 # wait-for-it.sh ve init.sh dosyalarını kopyala
 COPY wait-for-it.sh /wait-for-it.sh
 COPY init.sh /init.sh
