@@ -299,11 +299,11 @@ syncPermissionsWithRoutes(app)
   });
 
 // Her gece saat 02:00'da yedekleme ve eski dosyaları temizleme işlemi
-cron.schedule("*/30 * * * *", () => {
-  console.log("Günlük yedekleme başlıyor...");
-  backupDatabase().then(cleanOldBackups);
-});
+//cron.schedule("*/30 * * * *", () => {
+//console.log("Günlük yedekleme başlıyor...");
+//  backupDatabase().then(cleanOldBackups);
+//});
 
-console.log("Yedekleme zamanlayıcı çalışıyor...");
+//console.log("Yedekleme zamanlayıcı çalışıyor...");
 
 export default app;
