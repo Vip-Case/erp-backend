@@ -62,6 +62,7 @@ services:
     image: docker.elastic.co/logstash/logstash:7.17.0
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ./logs:/logs
     ports:
       - "5044:5044"
     depends_on:
