@@ -80,6 +80,16 @@ services:
     networks:
       - elk
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run elk-tunnel
+    networks:
+      - elk
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   esdata:
