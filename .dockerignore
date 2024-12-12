@@ -31,12 +31,6 @@ tmp
 temp
 /temp
 
-# Environment variables
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
 # IDE specific files
 .vscode
 .idea
