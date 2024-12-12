@@ -40,6 +40,7 @@
     "pino-caller": "^3.4.0",
     "pino-multi-stream": "^6.0.0",
     "pino-pretty": "^11.2.2",
+    "pino-socket": "^7.4.0",
     "prisma": "^6.0.1",
     "soap": "^1.1.5",
     "xlsx": "^0.18.5",

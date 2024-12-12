@@ -30,6 +30,13 @@ const logger = pino(
                             destination: logFilePath,
                         },
                     },
+                    {
+                        target: 'pino-socket',
+                        options: {
+                            address: 'logstash', // Docker içindeki Logstash servisi
+                            port: 5044, // Logstash'ın dinlediği port
+                        },
+                    },
                 ],
             }
             : {
@@ -47,6 +54,13 @@ const logger = pino(
                         target: 'pino/file',
                         options: {
                             destination: logFilePath,
+                        },
+                    },
+                    {
+                        target: 'pino-socket',
+                        options: {
+                            address: 'logstash', // Docker içindeki Logstash servisi
+                            port: 5044, // Logstash'ın dinlediği port
                         },
                     },
                 ],
