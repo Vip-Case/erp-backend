@@ -54,7 +54,7 @@ if (!process.env.JWT_SECRET) {
 const prisma = new PrismaClient();
 
 const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
-
+console.log("SECRET_KEY:", process.env.CORS_URL);
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
 
