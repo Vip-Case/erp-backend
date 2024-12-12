@@ -2,7 +2,6 @@ import prisma from '../src/config/prisma';
 
 async function main() {
     // Delete dependent records first to avoid foreign key constraints
-    await prisma.notification.deleteMany({});
     await prisma.marketPlaceProductImages.deleteMany({});
     await prisma.marketPlaceProductMatch.deleteMany({});
     await prisma.marketPlaceProducts.deleteMany({});
