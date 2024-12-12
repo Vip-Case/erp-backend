@@ -21,12 +21,7 @@ services:
       - DATABASE_URL=postgresql://postgres:xderensa@postgres:5432/erp_db?schema=public
     depends_on:
       - postgres
-    entrypoint:
-      [
-        "/bin/sh",
-        "-c",
-        "/init.sh && bun seed",
-      ]
+    entrypoint: ["/bin/sh", "-c", "/init.sh && bun seed"]
 
     develop:
       watch:
@@ -58,6 +53,7 @@ services:
     ports:
       - "9200:9200"
     volumes:
+      - ./elk/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - esdata:/usr/share/elasticsearch/data
     networks:
       - elk
@@ -77,6 +73,8 @@ services:
     image: docker.elastic.co/kibana/kibana:7.17.0
     ports:
       - "5601:5601"
+    volumes:
+      - ./elk/config/kibana.yml:/usr/share/kibana/config/kibana.yml
     depends_on:
       - elasticsearch
     networks:
