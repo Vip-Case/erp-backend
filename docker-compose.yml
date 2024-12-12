@@ -21,7 +21,7 @@ services:
       - DATABASE_URL=postgresql://postgres:xderensa@postgres:5432/erp_db?schema=public
     depends_on:
       - postgres
-    entrypoint: ["/bin/sh", "-c", "/init.sh && bun seed"]
+    entrypoint: ["/bin/sh", "-c", "/init.sh"]
 
     develop:
       watch:

@@ -6,14 +6,13 @@ echo "📡 Waiting for PostgreSQL to be ready..."
 echo "📡 Waiting for Prisma to be ready..."
 bunx prisma generate || exit 1
 
-echo "⚙️ Running Prisma migrations..."
-bunx prisma migrate dev --name init || exit 1
-
-echo "🧹 Destroying old data..."
-bun destroy || exit 1
-
-echo "🌱 Seeding database..."
-bun seed || exit 1
+echo "⚙️ Applying Prisma migrations..."
+if bunx prisma migrate deploy; then
+  echo "✅ Migrations applied successfully."
+else
+  echo "❌ Migration failed. Exiting..."
+  exit 1
+fi
 
 echo "🚀 Starting the application..."
 exec bun dev
