@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { register, login } from '../../controllers/authController';
+import { register, login, me } from '../../controllers/authController';
 
 export const authRoutes = (app: Elysia) => {
   // Kullanıcı kayıt (Admin erişimi gerekli)
@@ -8,17 +8,7 @@ export const authRoutes = (app: Elysia) => {
   // Kullanıcı giriş
   app.post('/auth/login', login);
 
-  app.get('/auth/me', async (ctx: any) => {
-    const authHeader = ctx.request.headers.get("Authorization");
-    if (!authHeader) {
-      return {
-        status: 403,
-        body: { message: "Auth header is missing" },
-      };
-    }
-
-    const token = authHeader.split(" ")[1];
-  });
+  app.get('/auth/me', me);
 
   return app;
 };
