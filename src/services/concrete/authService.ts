@@ -131,13 +131,7 @@ export const me = async (auth_token: string) => {
 
   const isAdmin = user.role?.some((role) => role.roleName === 'admin') || false;
 
-  return {
-    userId: user.id,
-    username: user.username,
-    email: user.email,
-    roles: user.role?.map((role) => role.roleName) || [],
-    isAdmin,
-  };
+  return user;
 }
 
 
