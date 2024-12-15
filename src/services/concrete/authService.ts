@@ -122,7 +122,7 @@ export const me = async (auth_token: string) => {
   const user = await prisma.user.findUnique({
     where: { id: decoded.userId },
     include: {
-      role: { include: { permission: true } },
+      role: true,
       permission: true,
     },
   });
