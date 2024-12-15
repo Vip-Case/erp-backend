@@ -104,10 +104,10 @@ export const StockMovementController = {
         }
     },
 
-    getAllStockMovementsByStockCardId: async (ctx: Context) => {
+    getAllStockMovementsByStockCardCode: async (ctx: Context) => {
         const { stockCardCode } = ctx.params;
         try {
-            const stockMovements = await stockMovementService.getAllStockMovementsByStockCardId(stockCardCode);
+            const stockMovements = await stockMovementService.getAllStockMovementsByStockCardCode(stockCardCode);
             ctx.set.status = 200;
             return stockMovements;
         } catch (error: any) {

@@ -202,7 +202,7 @@ export class StockMovementService {
         }
     }
 
-    getAllStockMovementsByStockCardId(stockCardCode: string): Promise<StockMovement[]> {
+    getAllStockMovementsByStockCardCode(stockCardCode: string): Promise<StockMovement[]> {
         try {
             return prisma.stockMovement.findMany({
                 where: {
