@@ -51,3 +51,21 @@ export const login = async (ctx: any) => {
   }
 };
 
+export const me = async (ctx: any) => {
+  const authHeader = ctx.request.headers.get("Authorization");
+  if (!authHeader) {
+    return {
+      status: 403,
+      body: { message: "Auth header is missing" },
+    };
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const user = await authService.me(token);
+    return { status: 200, body: user };
+  } catch (error: any) {
+    return { status: 400, message: error.message };
+  }
+};
