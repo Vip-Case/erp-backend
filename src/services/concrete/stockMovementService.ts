@@ -201,6 +201,19 @@ export class StockMovementService {
             throw error;
         }
     }
+
+    getAllStockMovementsByStockCardId(stockCardCode: string): Promise<StockMovement[]> {
+        try {
+            return prisma.stockMovement.findMany({
+                where: {
+                    productCode: stockCardCode
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching all stock movements for stock card with id ${stockCardCode}`, error);
+            throw error;
+        }
+    }
 }
 
 export default StockMovementService;

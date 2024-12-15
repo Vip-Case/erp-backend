@@ -102,6 +102,18 @@ export const StockMovementController = {
             ctx.set.status = 500;
             return { error: "Error fetching stockMovements", details: error.message };
         }
+    },
+
+    getAllStockMovementsByStockCardId: async (ctx: Context) => {
+        const { stockCardCode } = ctx.params;
+        try {
+            const stockMovements = await stockMovementService.getAllStockMovementsByStockCardId(stockCardCode);
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
     }
 }
 

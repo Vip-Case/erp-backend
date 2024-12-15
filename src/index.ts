@@ -299,32 +299,6 @@ syncPermissionsWithRoutes(app)
     await prisma.$disconnect();
   });
 
-app.post('/print-label', async ({ body }) => {
-  const { stockCode, quantity } = body;
-
-  const zplTemplate = `
-    ^XA
-    ^FO50,50^BY3
-    ^BCN,100,Y,N,N
-    ^FD${stockCode}^FS
-    ^FO50,160^A0N,30,30
-    ^FD${stockCode}^FS
-    ^XZ
-    `;
-
-  const zpl = zplTemplate.repeat(quantity);
-
-  // Yazıcıya gönderim
-  const net = await import('net');
-  const client = new net.Socket();
-  client.connect(9100, '192.168.1.100', () => {
-    client.write(zpl);
-    client.end();
-  });
-
-  return { message: 'Barkod gönderildi!' };
-});
-
 // Her gece saat 02:00'da yedekleme ve eski dosyaları temizleme işlemi
 //cron.schedule("*/30 * * * *", () => {
 //console.log("Günlük yedekleme başlıyor...");
