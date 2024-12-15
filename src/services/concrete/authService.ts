@@ -129,10 +129,6 @@ export const me = async (auth_token: string) => {
 
   if (!user) throw new Error('Kullanıcı bulunamadı.');
 
-  const rolePermissions = user.role.flatMap((role) => role.permission.map((perm) => perm.permissionName));
-  const individualPermissions = user.permission.map((perm) => perm.permissionName);
-  const aggregatedPermissions = [...new Set([...rolePermissions, ...individualPermissions])];
-
   const isAdmin = user.role?.some((role) => role.roleName === 'admin') || false;
 
   return {
@@ -140,7 +136,6 @@ export const me = async (auth_token: string) => {
     username: user.username,
     email: user.email,
     roles: user.role?.map((role) => role.roleName) || [],
-    permissions: aggregatedPermissions,
     isAdmin,
   };
 }
