@@ -102,6 +102,7 @@ enum StockUnits {
 enum ProductType {
   BasitUrun
   VaryasyonluUrun
+  VaryasyonUrun
   DijitalUrun
   Hizmet
 }
@@ -461,6 +462,8 @@ model Company {
   invoice         Invoice[]
 
   User User[]
+
+  MarketPlace MarketPlace[]
 }
 
 model Branch {
@@ -1022,13 +1025,14 @@ model OrderItem {
 }
 
 model MarketPlace {
-  id         String @id @default(cuid()) // Benzersiz market ID'si
-  name       String
-  apiBaseUrl String
-  logoUrl    String
-
+  id          String   @id @default(cuid()) // Benzersiz market ID'si
+  name        String
+  apiBaseUrl  String
+  logoUrl     String
+  companyCode String?  // Company ile ilişki için gerekli
+  company     Company? @relation(fields: [companyCode], references: [companyCode])
+  
   Store Store[]
-
   MarketPlaceAttributes MarketPlaceAttributes[]
 }
 
@@ -1053,7 +1057,13 @@ model MarketPlaceCategories {
   marketPlaceCategoryId       String?
   marketPlaceCategoryParentId String?
 
-  MarketPlaceProducts MarketPlaceProducts[]
+  products MarketPlaceProducts[]  @relation("ProductsOnCategories")
+
+  // Alt ve üst kategori ilişkileri
+  subCategories               MarketPlaceCategories[] @relation("CategoryParent")
+  parentCategory              MarketPlaceCategories?  @relation("CategoryParent", fields: [marketPlaceCategoryParentId], references: [id])
+
+  
 }
 
 model MarketPlaceBrands {
@@ -1075,9 +1085,10 @@ model MarketPlaceAttributes {
   required                Boolean?
   allowCustom             Boolean?
 
-  marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id])
+  marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
+  MarketPlaceProducts   MarketPlaceProducts[]
 
-  MarketPlaceProducts MarketPlaceProducts[]
+
 }
 
 model MarketPlaceProductImages {
@@ -1085,31 +1096,34 @@ model MarketPlaceProductImages {
   imageUrl             String?
   marketPlaceProductId String?
 
-  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
+  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id], onDelete: Cascade)
 }
 
 model MarketPlaceProducts {
-  id                      String   @id @default(cuid())
-  productName             String?
-  productSku              String?
-  description             String?
-  shortDescription        String?
-  listPrice               Decimal? @db.Decimal(15, 4)
-  salePrice               Decimal? @db.Decimal(15, 4)
-  barcode                 String?
-  storeId                 String?
+  id          String   @id @default(cuid())
+  productType   String?
+  parentProductId   String?
+  productId  String?
+  productName String?
+  productSku String?
+  description String?
+  shortDescription String?
+  listPrice Decimal? @db.Decimal(15, 4)
+  salePrice Decimal? @db.Decimal(15, 4)
+  barcode String?
+  storeId String?
   marketPlaceAttributesId String?
   marketPlaceCategoriesId String?
-  marketPlaceBrandsId     String?
-
-  marketPlaceAttributes MarketPlaceAttributes? @relation(fields: [marketPlaceAttributesId], references: [id])
-  marketPlaceCategories MarketPlaceCategories? @relation(fields: [marketPlaceCategoriesId], references: [id])
-  marketPlaceBrands     MarketPlaceBrands?     @relation(fields: [marketPlaceBrandsId], references: [id])
-  store                 Store?                 @relation(fields: [storeId], references: [id])
-
+  marketPlaceBrandsId String?
+  marketPlaceBrands MarketPlaceBrands? @relation(fields: [marketPlaceBrandsId], references: [id])
+  store Store? @relation(fields: [storeId], references: [id])
   MarketPlaceProductImages MarketPlaceProductImages[]
-
   MarketPlaceProductMatch MarketPlaceProductMatch[]
+  marketPlaceAttributes MarketPlaceAttributes[]
+  MarketPlaceCategories MarketPlaceCategories[] @relation("ProductsOnCategories")
+  // Self relation
+  parentProduct     MarketPlaceProducts? @relation("ParentChildRelation", fields: [parentProductId], references: [id])
+  childrenProducts  MarketPlaceProducts[] @relation("ParentChildRelation")
 }
 
 model MarketPlaceProductMatch {

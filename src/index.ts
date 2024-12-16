@@ -38,6 +38,7 @@ import PosRoutes from './api/routes/v1/posRoutes';
 import { PrismaClient } from '@prisma/client';
 import { appConfig } from './config/app';
 import jwt from 'jsonwebtoken';
+
 import cron from "node-cron";
 import { backupDatabase, cleanOldBackups } from "./utils/backup";
 import NotificationRoutes from './api/routes/v1/notificationRoutes';
@@ -51,6 +52,7 @@ if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
 }
 
+dotenv.config();
 const prisma = new PrismaClient();
 
 const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
