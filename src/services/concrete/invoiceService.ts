@@ -171,7 +171,7 @@ export class InvoiceService {
                 // Extract components from the last invoice number
                 const unitCode = "QRS";
                 const currentYear = new Date().getFullYear().toString();
-                const sequentialNumber = parseInt(lastInvoiceNo.slice(-9)) + 1;
+                const sequentialNumber = lastInvoiceNo.slice(-9) ? parseInt(lastInvoiceNo.slice(-9)) + 1 : "000000001";
 
                 // Generate new invoice number
                 const newInvoiceNo = `${unitCode}${currentYear}${sequentialNumber
