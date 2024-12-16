@@ -1341,6 +1341,9 @@ export class InvoiceService {
                 prisma.currentMovement.deleteMany({ where: { documentNo: invoiceNo } }), // InvoiceNo ile ilişkili
                 prisma.stockMovement.deleteMany({ where: { documentNo: invoiceNo } }), // InvoiceNo ile ilişkili
                 prisma.vaultMovement.deleteMany({ where: { invoiceId: id } }), // Vault hareketleri ID ile ilişkili
+                prisma.bankMovement.deleteMany({ where: { invoiceId: id } }), // Banka hareketleri ID ile ilişkili
+                prisma.posMovement.deleteMany({ where: { invoiceId: id } }), // Pos hareketleri ID ile ilişkili
+
             ]);
 
             // 3. Ana faturayı sil
