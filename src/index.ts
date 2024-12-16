@@ -28,11 +28,13 @@ import PermissionRoutes from './api/routes/v1/permissionRoute';
 import { syncPermissionsWithRoutes } from './utils/permissionSync';
 import jwt from 'jsonwebtoken';
 import { wooCommerceRoutes } from './api/routes/v1/productRoutes';
+import dotenv from 'dotenv';
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
 }
 
+dotenv.config();
 const prisma = new PrismaClient();
 
 const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";

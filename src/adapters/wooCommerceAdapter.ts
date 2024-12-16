@@ -30,6 +30,7 @@ export class WooCommerceAdapter implements PlatformInterface {
   }
 
   async updateProduct(productId: string, productData: any): Promise<any> {
+    console.log(`Updating product: ${productId} with data:`, productData);
     const response = await axios.put(
       `${this.baseUrl}/wp-json/wc/v3/products/${productId}`,
       productData,
@@ -61,6 +62,28 @@ export class WooCommerceAdapter implements PlatformInterface {
     );
     return response.data;
   }
+  
+  async getProductVariations(productId: string | number): Promise<any[]> {
+    const response = await axios.get(
+      `${this.baseUrl}/wp-json/wc/v3/products/${productId}/variations`,
+      { params: this.getAuthParams() }
+    );
+    return response.data;
+  }
 
+  async updateProductVariation(
+    productId: string | number,
+    variationId: string | number,
+    variationData: any
+  ): Promise<any> {
+    console.log(`Updating variation: Parent ID: ${productId}, Variation ID: ${variationId}, Data:`, variationData);
+    const response = await axios.put(
+      `${this.baseUrl}/wp-json/wc/v3/products/${productId}/variations/${variationId}`,
+      variationData,
+      { params: this.getAuthParams() }
+    );
+    return response.data;
+  }
+  
   
 }

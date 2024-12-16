@@ -12,11 +12,8 @@ export class WooCommerceController {
 
   constructor() {
     // Service başlatma işlemi
-    this.wooCommerceService = new WooCommerceService(
-      "https://demo.novent.com.tr",
-      "ck_e30acc3a659a40fb789d65613b7e8689225a1f20",
-      "cs_b99e1995a511141733e56f25f32dfa721a514f57"
-    );
+    this.wooCommerceService = new WooCommerceService();
+
   }
 
   async syncProducts(body: SyncProductsRequestBody) {
@@ -38,6 +35,38 @@ export class WooCommerceController {
         message: "Senkronizasyon sırasında bir hata oluştu.",
         error: error instanceof Error ? error.message : error,
       };
+    }
+  }
+
+  async addToStockCard(productIds: string[], branchCode?: string): Promise<void> {
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      throw new Error("Geçersiz ürün ID'leri sağlandı.");
+    }
+    
+    // WooCommerceService'deki metodu çağır
+    await this.wooCommerceService.addToStockCard(productIds, branchCode);
+  }
+
+  async addStockCardToStockCardWarehouse(): Promise<any> {
+    try {
+      await this.wooCommerceService.addStockCardToStockCardWarehouse();
+      return { success: true, message: "StockCard'lar başarıyla StockCardWarehouse'a eklendi." };
+    } catch (error) {
+      console.error("StockCardWarehouse eklerken hata oluştu:", error);
+      return {
+        success: false,
+        message: "StockCardWarehouse ekleme sırasında bir hata oluştu.",
+        error: error instanceof Error ? error.message : error,
+      };
+    }
+  }
+
+  async syncStockCardWithWooCommerce(): Promise<any> {
+    try {
+      return await this.wooCommerceService.syncStockCardWithWooCommerce();
+    } catch (error) {
+      console.error("StockCard ve WooCommerce senkronizasyonu sırasında hata oluştu:", error);
+      throw error;
     }
   }
 }
