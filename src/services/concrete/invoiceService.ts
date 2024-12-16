@@ -998,10 +998,11 @@ export class InvoiceService {
     async createQuickSaleInvoiceWithRelations(data: QuickSaleResponse): Promise<any> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
+                const _invoiceNo = await this.handleSerialToggle(true);
                 // 1. Ana fatura oluşturuluyor
                 const newInvoice = await prisma.invoice.create({
                     data: {
-                        invoiceNo: `${this.handleSerialToggle(true)}`,
+                        invoiceNo: _invoiceNo ?? data.id,
                         invoiceDate: data.date,
                         branch: { connect: { branchCode: data.branchCode } },
                         warehouse: { connect: { id: data.warehouseId } },
@@ -1011,7 +1012,8 @@ export class InvoiceService {
                         totalAmount: data.total,
                         totalVat: data.totalVat,
                         totalDiscount: 0,
-                        totalNet: data.subtotal
+                        totalNet: data.subtotal,
+                        description: `${_invoiceNo} no'lu hızlı satış faturası`,
                     },
                 });
 
