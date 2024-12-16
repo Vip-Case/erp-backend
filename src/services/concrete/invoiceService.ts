@@ -157,9 +157,33 @@ export interface InvoicePayments {
     description: string | null;
 }
 
+
 export class InvoiceService {
     private invoiceRepository = new BaseRepository<Invoice>(prisma.invoice);
     private invoiceDetailRepository = new BaseRepository<InvoiceDetail>(prisma.invoiceDetail);
+
+
+    handleSerialToggle = async (checked: boolean) => {
+        if (checked) {
+            try {
+                const lastInvoiceNo = await this.getLastInvoiceNoByType("Sales");
+
+                // Extract components from the last invoice number
+                const unitCode = "QRS";
+                const currentYear = new Date().getFullYear().toString();
+                const sequentialNumber = parseInt(lastInvoiceNo.slice(-9)) + 1;
+
+                // Generate new invoice number
+                const newInvoiceNo = `${unitCode}${currentYear}${sequentialNumber
+                    .toString()
+                    .padStart(9, "0")}`;
+                return newInvoiceNo;
+            } catch (error) {
+                logger.error("Error fetching last invoice number:", error);
+                throw error;
+            }
+        }
+    };
 
     async getAllInvoices(): Promise<Invoice[]> {
         return this.invoiceRepository.findAll();
@@ -972,14 +996,12 @@ export class InvoiceService {
     }
 
     async createQuickSaleInvoiceWithRelations(data: QuickSaleResponse): Promise<any> {
-        console.log("AAAA");
-        console.log(data);
         try {
             const result = await prisma.$transaction(async (prisma) => {
                 // 1. Ana fatura oluşturuluyor
                 const newInvoice = await prisma.invoice.create({
                     data: {
-                        invoiceNo: data.id,
+                        invoiceNo: `${this.handleSerialToggle(true)}`,
                         invoiceDate: data.date,
                         branch: { connect: { branchCode: data.branchCode } },
                         warehouse: { connect: { id: data.warehouseId } },
