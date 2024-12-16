@@ -23,9 +23,6 @@ export class VaultService {
                     branch: vault.branchCode ? {
                         connect: { branchCode: vault.branchCode },
                     } : {},
-                    branch: {
-                        connect: { branchCode: vault.branchCode }, // Sadece ilişki kullanılıyor
-                    },
 
                 } as Prisma.VaultCreateInput,
             });
@@ -44,9 +41,10 @@ export class VaultService {
                     vaultName: vault.vaultName,
                     balance: vault.balance,
                     currency: vault.currency,
-                    branch: {
-                        connect: { branchCode: vault.branchCode }, // Sadece ilişki kullanılıyor
-                    },
+
+                    branch: vault.branchCode ? {
+                        connect: { branchCode: vault.branchCode },
+                    } : {},
 
                 } as Prisma.VaultUpdateInput,
             });

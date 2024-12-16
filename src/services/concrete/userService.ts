@@ -49,7 +49,11 @@ export class UserService {
 
     async getAllUsers(): Promise<User[]> {
         try {
-            return await this.userRepository.findAll();
+            return await prisma.user.findMany({
+                include: {
+                    role: true
+                }
+            });
         } catch (error) {
             logger.error("Error fetching all users", error);
             throw error;

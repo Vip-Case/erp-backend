@@ -5,6 +5,10 @@ import { Prisma } from '@prisma/client';
 // Service Initialization
 const currentService = new CurrentService();
 
+interface SearchCriteria {
+    search: string;
+}
+
 export const CurrentController = {
 
     createCurrent: async (ctx: Context) => {
@@ -25,6 +29,7 @@ export const CurrentController = {
                     ...data.current
                 },
                 priceListId: data.priceListId,
+                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
@@ -60,6 +65,7 @@ export const CurrentController = {
                     ...data.current
                 },
                 priceListId: data.priceListId,
+                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
@@ -126,6 +132,18 @@ export const CurrentController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching currents", details: error.message };
+        }
+    },
+
+    searchCurrents: async (ctx: Context) => {
+        const criteria = ctx.query as unknown as SearchCriteria;
+        try {
+            const currents = await currentService.searchCurrents(criteria);
+            ctx.set.status = 200;
+            return currents;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stock cards", details: error.message };
         }
     }
 }

@@ -2,7 +2,7 @@ import { Elysia } from 'elysia';
 import BankMovementController from '../../controllers/bankMovementController';
 
 export const BankMovementRoutes = (app: Elysia) => {
-    app.group("/bankMovements", (app) =>
+    return app.group("/bankMovements", (app) =>
         app.get("/", BankMovementController.getAllBankMovements, { tags: ["BankMovements"] })
             .post("/", BankMovementController.createBankMovement, { tags: ["BankMovements"] })
             .get("/:id", BankMovementController.getBankMovementById, { tags: ["BankMovements"] })

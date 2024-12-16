@@ -10,8 +10,8 @@ export const ReceiptRelations = {
 
 export class ReceiptService {
     private receiptRepository: BaseRepository<Receipt>;
-    private receiptDetailRepository = new BaseRepository<ReceiptDetail> (prisma.receiptDetail);
-    
+    private receiptDetailRepository = new BaseRepository<ReceiptDetail>(prisma.receiptDetail);
+
     constructor() {
         this.receiptRepository = new BaseRepository<Receipt>(prisma.receipt);
     }
@@ -27,10 +27,14 @@ export class ReceiptService {
 
                     branch: receipt.branchCode ? {
                         connect: { branchCode: receipt.branchCode },
-                    } :  {},
+                    } : {},
 
-                    warehouse: receipt.warehouseCode ? {
-                        connect:  { warehouseCode: receipt.warehouseCode },
+                    inReceiptWarehouse: receipt.inWarehouse ? {
+                        connect: { warehouseCode: receipt.inWarehouse },
+                    } : {},
+
+                    outReceiptWarehouse: receipt.outWarehouse ? {
+                        connect: { warehouseCode: receipt.outWarehouse },
                     } : {}
 
                 } as Prisma.ReceiptCreateInput,
@@ -45,7 +49,7 @@ export class ReceiptService {
     async updateReceipt(id: string, receipt: Partial<Receipt>): Promise<Receipt> {
         try {
             return await prisma.receipt.update({
-                where: {id},
+                where: { id },
                 data: {
                     receiptType: receipt.receiptType,
                     receiptDate: receipt.receiptDate,
@@ -54,10 +58,10 @@ export class ReceiptService {
 
                     branch: receipt.branchCode ? {
                         connect: { branchCode: receipt.branchCode },
-                    } :  {},
+                    } : {},
 
                     warehouse: receipt.warehouseCode ? {
-                        connect:  { warehouseCode: receipt.warehouseCode },
+                        connect: { warehouseCode: receipt.warehouseCode },
                     } : {}
 
                 } as Prisma.ReceiptUpdateInput,

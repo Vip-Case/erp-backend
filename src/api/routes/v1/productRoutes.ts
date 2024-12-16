@@ -144,3 +144,5 @@ function isAddToStockCardRequestBody(body: any): body is AddToStockCardRequestBo
     body.productIds.every((id: any) => typeof id === "string")
   );
 }
+
+export default wooCommerceRoutes;

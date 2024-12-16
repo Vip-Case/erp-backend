@@ -21,37 +21,11 @@ const logger = pino(
         level: isProduction ? 'info' : 'debug',
         base: { pid: false },
         timestamp: pino.stdTimeFunctions.isoTime,
-        transport: isProduction
-            ? {
-                targets: [
-                    {
-                        target: 'pino/file',
-                        options: {
-                            destination: logFilePath,
-                        },
-                    },
-                ],
-            }
-            : {
-                targets: [
-                    {
-                        target: 'pino-pretty',
-                        options: {
-                            colorize: true,
-                            levelFirst: true,
-                            translateTime: 'SYS:standard',
-                            ignore: 'pid,hostname',
-                        },
-                    },
-                    {
-                        target: 'pino/file',
-                        options: {
-                            destination: logFilePath,
-                        },
-                    },
-                ],
-            },
-    }
+    },
+    pino.multistream([
+        { stream: fs.createWriteStream(logFilePath, { flags: 'a' }) }, // Logları dosyaya yaz
+        { stream: pino.transport({ target: 'pino-socket', options: { address: 'logstash', port: 5044 } }) }, // Logstash'e gönder
+    ])
 );
 
 // Dosya ve satır numarası bilgisini eklemek için pinoCaller kullanın

@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { register, login } from '../../controllers/authController';
+import { register, login, me } from '../../controllers/authController';
 
 export const authRoutes = (app: Elysia) => {
   // Kullanıcı kayıt (Admin erişimi gerekli)
@@ -7,6 +7,8 @@ export const authRoutes = (app: Elysia) => {
 
   // Kullanıcı giriş
   app.post('/auth/login', login);
+
+  app.get('/auth/me', me);
 
   return app;
 };

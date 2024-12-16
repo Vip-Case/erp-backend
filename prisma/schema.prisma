@@ -38,6 +38,7 @@ enum StokManagementType {
   Teshir
   AlisFaturasi
   SatisFaturasi
+  HizliSatis
 }
 
 enum GCCode {
@@ -61,6 +62,16 @@ enum CurrentMovementDocumentType {
   BorcCeki
   KarsiliksizCek
   Muhtelif
+}
+
+enum CurrentPaymentType {
+  ÇokluÖdeme
+  Kasa
+  POS
+  Banka
+  Cek
+  Senet
+  Diger
 }
 
 enum ReceiptType {
@@ -129,6 +140,7 @@ enum VaultType {
   CompanyCreditCardWithdrawals //firma kredi kartından para çekme
   BuyingForeignCurrency //döviz alma
   InputReceipt //giriş fişi
+  PurchaseInvoicePayment //Alış Faturası Ödemesi
   BankWithdrawals //bankadan para çekme
   ReceivingValuableAssets //değerli kıymet alma
   ReceivableTransfer //Alacak Devri
@@ -138,12 +150,16 @@ enum VaultType {
   LoanPayment //Kredi Ödemesi
   LoanWithdrawal //Kredi Çekme
   ExitReceipt //Çıkış Fişi
+  SalesInvoicePayment //Satış Faturası Ödemesi
   PaymentToBank //Bankaya Ödeme
   PreciousMetalExchange //Değerli Kıymet Bozdurma
   ReceivedVirement //Alınan Virman
   OutgoingVirement //Gönderilen Virman
   InGoingVirement //Gelen Virman
   POSWithdrawals //POS'tan Para Çekme
+  CashCollection //Nakit Tahsilat
+  BankCollection //Banka Tahsilatı
+  POSCollection //POS Tahsilatı
 }
 
 enum VaultDocumentType {
@@ -169,7 +185,7 @@ model Permission {
   id             String   @id @default(cuid())
   groupId        String?
   permissionName String   @unique @db.VarChar(50)
-  route       String?  @unique 
+  route          String?  @unique
   description    String   @db.VarChar(100)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -236,7 +252,7 @@ model StockCard {
   stockCardAttributeItems StockCardAttributeItems[]
   stockCardMarketNames    StockCardMarketNames[]
   orderItems              OrderItem[]
-  Store Store[]
+  Store                   Store[]
 }
 
 model StockCardEFatura {
@@ -510,9 +526,10 @@ model Warehouse {
   invoice            Invoice[]
   stockCardWarehouse StockCardWarehouse[]
 
-  receipt    Receipt[] @relation("ReceiptWarehouse")
   outReceipt Receipt[] @relation("ReceiptOutWarehouse")
   inReceipt  Receipt[] @relation("ReceiptInWarehouse")
+
+  StockTake StockTake[]
 }
 
 model BranchWarehouse {
@@ -538,20 +555,26 @@ model StockCardWarehouse {
   @@unique([stockCardId, warehouseId])
 }
 
+model StockTake {
+  id           String   @id @default(cuid())
+  stockCardIds String[]
+  warehouseId  String
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+}
+
 model Receipt {
-  id            String      @id @default(cuid())
-  receiptType   ReceiptType
-  receiptDate   DateTime    @default(now())
-  documentNo    String      @db.VarChar(50)
-  branchCode    String      @db.VarChar(50)
-  warehouseCode String      @db.VarChar(50)
-  isTransfer    Boolean     @default(false)
-  outWarehouse  String?
-  inWarehouse   String?
-  description   String?
+  id           String      @id @default(cuid())
+  receiptType  ReceiptType
+  receiptDate  DateTime    @default(now())
+  documentNo   String      @db.VarChar(50)
+  branchCode   String      @db.VarChar(50)
+  isTransfer   Boolean     @default(false)
+  outWarehouse String?
+  inWarehouse  String?
+  description  String?
 
   branch              Branch          @relation(fields: [branchCode], references: [branchCode])
-  warehouse           Warehouse?      @relation("ReceiptWarehouse", fields: [warehouseCode], references: [warehouseCode])
   outReceiptWarehouse Warehouse?      @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
   inReceiptWarehouse  Warehouse?      @relation("ReceiptInWarehouse", fields: [inWarehouse], references: [warehouseCode])
   receiptDetail       ReceiptDetail[]
@@ -721,6 +744,7 @@ model CurrentMovement {
   priceListId   String?
   movementType  CurrentMovementType
   documentType  CurrentMovementDocumentType?
+  paymentType   CurrentPaymentType?
   documentNo    String?
   companyCode   String
   branchCode    String
@@ -774,6 +798,8 @@ model User {
 
   role       Role[]
   permission Permission[]
+
+  Notification Notification[]
 }
 
 model Invoice {
@@ -818,8 +844,8 @@ model Invoice {
   stockMovement   StockMovement[]
   currentMovement CurrentMovement[]
   vaultMovement   VaultMovement[]
-  BankMovement BankMovement[]
-  PosMovement PosMovement[]
+  BankMovement    BankMovement[]
+  PosMovement     PosMovement[]
 }
 
 model InvoiceDetail {
@@ -1005,20 +1031,20 @@ model MarketPlace {
   logoUrl     String
   companyCode String?  // Company ile ilişki için gerekli
   company     Company? @relation(fields: [companyCode], references: [companyCode])
+  
   Store Store[]
-
   MarketPlaceAttributes MarketPlaceAttributes[]
 }
 
 model Store {
-  id          String   @id @default(cuid()) // Benzersiz market ID'si
-  name        String
-  marketPlaceId   String
-  apiCredentials  String
+  id             String @id @default(cuid()) // Benzersiz market ID'si
+  name           String
+  marketPlaceId  String
+  apiCredentials String
 
-  marketPlace   MarketPlace @relation(fields: [marketPlaceId], references: [id])
-  stockcard  StockCard[]
-  order      Order[]
+  marketPlace MarketPlace @relation(fields: [marketPlaceId], references: [id])
+  stockcard   StockCard[]
+  order       Order[]
 
   MarketPlaceProducts MarketPlaceProducts[]
 
@@ -1026,10 +1052,10 @@ model Store {
 }
 
 model MarketPlaceCategories {
-  id          String   @id @default(cuid())
-  categoryName String?
-  marketPlaceCategoryId   String?
-  marketPlaceCategoryParentId   String?
+  id                          String  @id @default(cuid())
+  categoryName                String?
+  marketPlaceCategoryId       String?
+  marketPlaceCategoryParentId String?
 
   products MarketPlaceProducts[]  @relation("ProductsOnCategories")
 
@@ -1041,23 +1067,23 @@ model MarketPlaceCategories {
 }
 
 model MarketPlaceBrands {
-  id          String   @id @default(cuid())
+  id                 String  @id @default(cuid())
   marketPlaceBrandId String?
-  brandName String?
+  brandName          String?
 
   MarketPlaceProducts MarketPlaceProducts[]
 }
 
 model MarketPlaceAttributes {
-  id          String   @id @default(cuid())
-  marketPlaceId String?
+  id                      String   @id @default(cuid())
+  marketPlaceId           String?
   MarketPlaceCategoriesId String?
-  attributeName String?
-  attributeMarketPlaceId String?
-  valueName String?
-  valueMarketPlaceId String?
-  required Boolean?
-  allowCustom Boolean?
+  attributeName           String?
+  attributeMarketPlaceId  String?
+  valueName               String?
+  valueMarketPlaceId      String?
+  required                Boolean?
+  allowCustom             Boolean?
 
   marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
   MarketPlaceProducts   MarketPlaceProducts[]
@@ -1066,8 +1092,8 @@ model MarketPlaceAttributes {
 }
 
 model MarketPlaceProductImages {
-  id          String   @id @default(cuid())
-  imageUrl String?
+  id                   String  @id @default(cuid())
+  imageUrl             String?
   marketPlaceProductId String?
 
   marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id], onDelete: Cascade)
@@ -1089,30 +1115,40 @@ model MarketPlaceProducts {
   marketPlaceAttributesId String?
   marketPlaceCategoriesId String?
   marketPlaceBrandsId String?
-
   marketPlaceBrands MarketPlaceBrands? @relation(fields: [marketPlaceBrandsId], references: [id])
   store Store? @relation(fields: [storeId], references: [id])
-
   MarketPlaceProductImages MarketPlaceProductImages[]
-
   MarketPlaceProductMatch MarketPlaceProductMatch[]
   marketPlaceAttributes MarketPlaceAttributes[]
-
   MarketPlaceCategories MarketPlaceCategories[] @relation("ProductsOnCategories")
-
   // Self relation
   parentProduct     MarketPlaceProducts? @relation("ParentChildRelation", fields: [parentProductId], references: [id])
   childrenProducts  MarketPlaceProducts[] @relation("ParentChildRelation")
 }
 
 model MarketPlaceProductMatch {
-  id          String   @id @default(cuid())
-  storeId String?
+  id                   String  @id @default(cuid())
+  storeId              String?
   marketPlaceProductId String?
-  platformProductId String? // Mağazadaki ürünün idsi
-  platformVariationId String? // Mağazadaki ürünün varyasyon idsi. Bu alan boş ise ana üründür. platformProductId alanı ise varyasyonun ebeveyn ürününün idsi
-  marketPlaceSKU String?
+  platformProductId    String? // Mağazadaki ürünün idsi
+  platformVariationId  String? // Mağazadaki ürünün varyasyon idsi. Bu alan boş ise ana üründür. platformProductId alanı ise varyasyonun ebeveyn ürününün idsi
+  marketPlaceSKU       String?
 
   marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
-  store Store? @relation(fields: [storeId], references: [id])
+  store               Store?               @relation(fields: [storeId], references: [id])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  title     String
+  message   String
+  type      String
+  severity  String
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  readBy    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User? @relation(fields: [readBy], references: [username])
 }

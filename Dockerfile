@@ -1,10 +1,30 @@
 FROM oven/bun:debian
+
+# Çalışma dizini ayarla
 WORKDIR /app
+
+# Paket dosyalarını kopyala
 COPY package.json bun.lockb ./
+
+# Çevresel değişken dosyasını kopyala
 COPY .env .env
+
+# Bağımlılıkları kur
 RUN bun install --frozen-lockfile
+RUN bun add prisma --global
+
+# Uygulama dosyalarını kopyala
 COPY . .
-RUN bun install --frozen-lockfile
+
+# Prisma Client'ı oluştur
+RUN bun prisma generate
+
+# wait-for-it.sh ve init.sh dosyalarını kopyala
 COPY wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
-CMD ["/wait-for-it.sh", "postgres:5432", "--", "bun", "run", "--watch", "src/index.ts"]
+COPY init.sh /init.sh
+
+# Çalıştırma izinlerini ayarla
+RUN chmod +x /wait-for-it.sh /init.sh
+
+# Uygulamayı başlatma komutu
+CMD ["/wait-for-it.sh", "postgres:5432", "--", "/init.sh"]

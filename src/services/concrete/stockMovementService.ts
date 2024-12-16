@@ -25,41 +25,49 @@ export class StockMovementService {
                     unitPrice: stockMovementData.unitPrice,
                     totalPrice: stockMovementData.totalPrice,
                     unitOfMeasure: stockMovementData.unitOfMeasure,
+
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
                             warehouseCode: stockMovementData.warehouseCode
                         }
                     } : {},
+
                     outWarehouse: stockMovementData.outWarehouseCode ? {
                         connect: {
                             warehouseCode: stockMovementData.outWarehouseCode
                         }
                     } : undefined,
+
                     branch: stockMovementData.branchCode ? {
                         connect: {
                             branchCode: stockMovementData.branchCode
                         }
                     } : {},
+
                     stockCard: stockMovementData.productCode ? {
                         connect: {
                             productCode: stockMovementData.productCode
                         }
                     } : undefined,
+
                     priceList: stockMovementData.priceListId ? {
                         connect: {
                             id: stockMovementData.priceListId
                         }
                     } : undefined,
+
                     current: stockMovementData.currentCode ? {
                         connect: {
                             id: stockMovementData.currentCode
                         }
                     } : undefined,
+
                     invoice: stockMovementData.invoiceId ? {
                         connect: {
                             id: stockMovementData.documentNo
                         }
                     } : undefined
+
                 } as Prisma.StockMovementCreateInput,
             });
             return stockMovement;
@@ -190,6 +198,19 @@ export class StockMovementService {
             });
         } catch (error) {
             logger.error("Error fetching all purchase stock movements", error);
+            throw error;
+        }
+    }
+
+    getAllStockMovementsByStockCardCode(stockCardCode: string): Promise<StockMovement[]> {
+        try {
+            return prisma.stockMovement.findMany({
+                where: {
+                    productCode: stockCardCode
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching all stock movements for stock card with id ${stockCardCode}`, error);
             throw error;
         }
     }

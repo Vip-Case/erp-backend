@@ -1,0 +1,4 @@
+server.host: "0.0.0.0"
+server.publicBaseUrl: "https://kibana.novent.com.tr"
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+

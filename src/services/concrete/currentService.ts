@@ -11,6 +11,7 @@ import {
     StockCardPriceList
 } from "@prisma/client";
 import logger from "../../utils/logger";
+import { asyncHandler } from "../../utils/asyncHandler";
 
 const currentRelations = {
     priceList: true,
@@ -21,6 +22,12 @@ const currentRelations = {
     currentRisk: true,
     currentOfficials: true
 };
+
+interface SearchCriteria {
+    query?: string; // Genel bir arama için
+    currentCode?: string;
+    currentName?: string;
+}
 
 export class currentService {
     async createCurrent(data: {
@@ -105,7 +112,7 @@ export class currentService {
                 priceListConnect = { connect: { id: priceList.id } };
             }
             const updatedCurrent = await prisma.current.update({
-                
+
                 where: { id },
                 data: {
                     ...data.current,
@@ -478,10 +485,61 @@ export class currentService {
                 include: currentRelations
             });
         } catch (error) {
-            logger.error("Error finding all StockCards with relations:", error);
-            throw new Error("Could not find all StockCards with relations");
+            logger.error("Error finding all Current with relations:", error);
+            throw new Error("Could not find all Current with relations");
         }
     }
+
+    searchCurrents = asyncHandler(async (criteria: SearchCriteria) => {
+        const where: Prisma.CurrentWhereInput = {
+            OR: [],
+        };
+
+        if (!where.OR) {
+            where.OR = [];
+        }
+
+        // Eğer belirli kriterler sağlanmışsa, bunları ekle
+        if (criteria.currentCode) {
+            where.OR.push({
+                currentCode: { contains: criteria.currentCode, mode: 'insensitive' },
+            });
+        }
+
+        if (criteria.currentName) {
+            where.OR.push({
+                currentName: { contains: criteria.currentName, mode: 'insensitive' },
+            });
+        }
+
+        // Eğer hiçbir kriter belirtilmemişse, genel query'yi tüm alanlarda ara
+        if (where.OR.length === 0 && criteria.query) {
+            where.OR.push(
+                { currentCode: { contains: criteria.query, mode: 'insensitive' } },
+                { currentName: { contains: criteria.query, mode: 'insensitive' } },
+            );
+        }
+
+        // Eğer hem spesifik kriterler hem genel bir query yoksa, hata döndür
+        if (where.OR.length === 0) {
+            throw new Error('En az bir arama kriteri veya genel bir sorgu belirtmelisiniz.');
+        }
+
+        const currents = await prisma.current.findMany({
+            where,
+            include: {
+                priceList: true,
+                currentAddress: true,
+                currentBranch: true,
+                currentCategoryItem: true,
+                currentFinancial: true,
+                currentRisk: true,
+                currentOfficials: true
+            },
+        });
+
+        return currents;
+    });
 }
 
 export default currentService;

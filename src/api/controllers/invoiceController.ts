@@ -1,14 +1,15 @@
 
-import InvoiceService from '../../services/concrete/invoiceService';
+import InvoiceService, { QuickSaleResponse } from '../../services/concrete/invoiceService';
 import { Context } from 'elysia';
 import { Invoice, InvoiceDetail } from '@prisma/client';
+import { InvoiceInfo } from '../../services/concrete/invoiceService';
 
 const invoiceService = new InvoiceService();
 
 const InvoiceController = {
     // API to create an invoice
-    
-    createInvoice: async (ctx: Context) => { 
+
+    createInvoice: async (ctx: Context) => {
         const invoiceData = ctx.body as Invoice;
         try {
             const invoice = await invoiceService.createInvoice(invoiceData);
@@ -69,21 +70,32 @@ const InvoiceController = {
             }
             ctx.set.status = 200;
             return invoice;
-        } catch (error : any) {
+        } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error getting invoice", details: error.message };
         }
     },
 
-    // API to create an invoice with relations
-    createInvoiceWithRelations: async (ctx: Context) => {
-        const data = ctx.body as { invoice: Invoice, invoiceDetails: InvoiceDetail[], vaultId?: string };
-        const invoiceData = data.invoice as Invoice;
-        const invoiceDetails = data.invoiceDetails as InvoiceDetail[];
-        const vaultId = data.vaultId;
+    // API to create an purchase invoice with relations
+    createPurchaseInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as InvoiceInfo
 
         try {
-            const invoice = await invoiceService.createInvoiceWithRelations(invoiceData, invoiceDetails, vaultId);
+            const invoice = await invoiceService.createPurchaseInvoiceWithRelations(data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error creating invoice with relations", details: error.message };
+        }
+    },
+
+    // API to create an sales invoice with relations
+    createSalesInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as InvoiceInfo
+
+        try {
+            const invoice = await invoiceService.createSalesInvoiceWithRelations(data);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -101,18 +113,18 @@ const InvoiceController = {
                 invoiceDetails: InvoiceDetail[];
                 vaultId?: string;
             };
-    
+
             // Gerekli kontrolleri yap
             if (!invoice?.id) {
                 ctx.set.status = 400; // Bad Request
                 return { error: "`invoice.id` is required for updating." };
             }
-    
+
             if (!invoiceDetails || !Array.isArray(invoiceDetails)) {
                 ctx.set.status = 400; // Bad Request
                 return { error: "`invoiceDetails` must be an array and cannot be undefined." };
             }
-    
+
             // Güncelleme işlemini çağır
             const updatedInvoice = await invoiceService.updateInvoiceWithRelations(
                 invoice.id,
@@ -120,7 +132,7 @@ const InvoiceController = {
                 invoiceDetails,
                 vaultId
             );
-    
+
             ctx.set.status = 200; // Success
             return updatedInvoice;
         } catch (error: any) {
@@ -129,8 +141,8 @@ const InvoiceController = {
             return { error: "Error updating invoice with relations", details: error.message };
         }
     },
-    
-    
+
+
 
     // API to delete an invoice with relations
     deleteInvoiceWithRelations: async (ctx: Context) => {
@@ -155,7 +167,7 @@ const InvoiceController = {
             ctx.set.status = 500;
             return { error: "Error getting all invoices with relations", details: error.message };
         }
-    },  
+    },
 
     getInvoiceWithRelationsById: async (ctx: Context) => {
         const { id } = ctx.params;
@@ -167,7 +179,44 @@ const InvoiceController = {
             ctx.set.status = 500;
             return { error: "Error getting all invoices with relations by ID", details: error.message };
         }
-    }
+    },
+
+    getLastInvoiceNoByType: async (ctx: Context) => {
+        const { type } = ctx.params;
+        try {
+            const invoiceNo = await invoiceService.getLastInvoiceNoByType(type);
+            ctx.set.status = 200;
+            return invoiceNo;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error getting last invoice no by type", details: error.message };
+        }
+    },
+
+    getInvoiceInfoById: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const invoiceInfo = await invoiceService.getInvoiceInfoById(id);
+            ctx.set.status = 200;
+            return invoiceInfo;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error getting invoice info by ID", details: error.message };
+        }
+    },
+
+    createQuickSaleInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as any
+
+        try {
+            const invoice = await invoiceService.createQuickSaleInvoiceWithRelations(data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Hızlı satış oluşturulurken hata oluştu.", details: error.message };
+        }
+    },
 
 };
 
