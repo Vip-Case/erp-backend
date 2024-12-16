@@ -525,6 +525,8 @@ model Warehouse {
 
   outReceipt Receipt[] @relation("ReceiptOutWarehouse")
   inReceipt  Receipt[] @relation("ReceiptInWarehouse")
+
+  StockTake StockTake[]
 }
 
 model BranchWarehouse {
@@ -548,6 +550,14 @@ model StockCardWarehouse {
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@unique([stockCardId, warehouseId])
+}
+
+model StockTake {
+  id           String   @id @default(cuid())
+  stockCardIds String[]
+  warehouseId  String
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 }
 
 model Receipt {
