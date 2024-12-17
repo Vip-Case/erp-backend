@@ -706,6 +706,8 @@ export class StockCardService {
 
     async deleteManyStockCardsWithRelations(ids: string[]): Promise<boolean> {
         try {
+            // ids liste içinde obje olarak geliyor ve prisma bunu kabul etmiyor bu yüzden map ile id'leri alıyoruz
+            ids = ids.map(id => id);
             return await prisma.$transaction(async (prisma) => {
 
                 await prisma.stockCardBarcode.deleteMany({
