@@ -51,11 +51,12 @@ async function main() {
     await prisma.warehouse.deleteMany({});
     await prisma.branchWarehouse.deleteMany({});
     await prisma.branch.deleteMany({});
-    await prisma.company.deleteMany({});
     await prisma.user.deleteMany({});
     await prisma.role.deleteMany({});
     await prisma.permission.deleteMany({});
     await prisma.permissionGroup.deleteMany({});
+    await prisma.company.deleteMany({});
+
 }
 
 main()
