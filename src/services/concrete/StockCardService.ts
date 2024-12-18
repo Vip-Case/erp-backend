@@ -708,6 +708,7 @@ export class StockCardService {
         try {
             // ids liste içinde obje olarak geliyor ve prisma bunu kabul etmiyor bu yüzden map ile id'leri alıyoruz
             ids = ids.map(id => id);
+            console.log(ids);
             return await prisma.$transaction(async (prisma) => {
 
                 await prisma.stockCardBarcode.deleteMany({
