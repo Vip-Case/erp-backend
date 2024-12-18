@@ -81,7 +81,7 @@ export const importStockCards = async (file: File) => {
                     description: stockCard.description || null,
                     companyCode: stockCard.companyCode || null,
                     branchCode: stockCard.branchCode || null,
-                    brandId: brandID?.brandName || null,
+                    brandId: brandID?.id || null,
                     productType: stockCard.productType,
                     gtip: stockCard.gtip || null,
                     pluCode: stockCard.pluCode || null,
@@ -126,30 +126,71 @@ export const importStockCards = async (file: File) => {
                     const [attributeName, value] = attr.split('=');
                     return { attributeName: attributeName.trim(), value: value.trim() };
                 }) || [];
+
                 const attributeRecords = await Promise.all(
                     attributes.map(async ({ attributeName, value }) => {
-                        const attribute = await prisma.stockCardAttribute.findFirst({ where: { attributeName, value } });
-                        if (!attribute) {
-                            throw new Error(`Attribute ${attributeName} with value ${value} not found.`);
-                        }
-                        return prisma.stockCardAttributeItems.create({
-                            data: {
-                                attributeId: attribute.id,
-                                stockCardId: stockCardId,
-                            },
+                        // Use transaction for atomic operations
+                        return prisma.$transaction(async (tx) => {
+                            // Try to find existing attribute
+                            let attribute = await tx.stockCardAttribute.findFirst({
+                                where: {
+                                    attributeName,
+                                    value
+                                }
+                            });
+
+                            // If not found, create new attribute
+                            if (!attribute) {
+                                attribute = await tx.stockCardAttribute.create({
+                                    data: {
+                                        attributeName,
+                                        value
+                                    }
+                                });
+                            }
+
+                            // Create attribute item with found or new attribute
+                            return tx.stockCardAttributeItems.create({
+                                data: {
+                                    attributeId: attribute.id,
+                                    stockCardId: stockCardId,
+                                }
+                            });
                         });
                     })
                 );
 
                 // Fiyat İşleme
-                const prices = stockCard.prices?.split(',').map((price) => {
-                    const [priceListName, priceValue] = price.split('=');
-                    return { priceListName: priceListName.trim(), price: parseFloat(priceValue.trim()) };
-                }) || [];
+                const pricePattern = /([^=,]+)=([^,]+)(?:,|$)/g;
+                const priceString = stockCard.prices || '';
+                console.log('Processing prices:', priceString); // Debug log
+
+                const prices = [...priceString.matchAll(pricePattern)].map(match => {
+                    const priceListName = match[1].trim();
+                    const priceStr = match[2].trim().replace(',', '.');
+                    const price = parseFloat(priceStr);
+
+                    console.log('Parsed price:', { priceListName, priceStr, price }); // Debug log
+
+                    if (isNaN(price)) {
+                        throw new Error(`Invalid price value for ${priceListName}: ${match[2]}`);
+                    }
+
+                    return { priceListName, price };
+                });
+
                 const priceRecords = await Promise.all(
                     prices.map(async ({ priceListName, price }) => {
-                        const priceList = await prisma.stockCardPriceList.findUnique({ where: { priceListName } });
-                        if (!priceList) throw new Error(`Price list ${priceListName} not found.`);
+                        const priceList = await prisma.stockCardPriceList.findUnique({
+                            where: {
+                                priceListName: priceListName.trim()
+                            }
+                        });
+
+                        if (!priceList) {
+                            throw new Error(`Price list "${priceListName}" not found.`);
+                        }
+
                         return prisma.stockCardPriceListItems.create({
                             data: {
                                 priceListId: priceList.id,
