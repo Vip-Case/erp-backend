@@ -704,51 +704,50 @@ export class StockCardService {
         }
     }
 
-    async deleteManyStockCardsWithRelations(ids: string[]): Promise<boolean> {
+    async deleteManyStockCardsWithRelations(ids: any[]): Promise<boolean> {
         try {
-            // ids liste içinde obje olarak geliyor ve prisma bunu kabul etmiyor bu yüzden map ile id'leri alıyoruz
-            ids = ids.map(id => id);
-            console.log(ids);
+            const idList = ids.map(item => item.id);
+            console.log(idList);
             return await prisma.$transaction(async (prisma) => {
 
                 await prisma.stockCardBarcode.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardAttributeItems.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardCategoryItem.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardPriceListItems.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardTaxRate.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardWarehouse.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardEFatura.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardManufacturer.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCardMarketNames.deleteMany({
-                    where: { stockCardId: { in: ids } },
+                    where: { stockCardId: { in: idList } },
                 });
 
                 await prisma.stockCard.deleteMany({
-                    where: { id: { in: ids } },
+                    where: { id: { in: idList } },
                 });
 
                 return true;
