@@ -226,13 +226,17 @@ export const importStockCards = async (file: File) => {
 
                 const stockUnit = await prisma.stockCardWarehouse.upsert({
                     where: {
-                        warehouseId_stockCard_id: {
+                        stockCardId_warehouseId: {
                             warehouseId: warehouse.id,
-                            stockCard_id: stockCardId
+                            stockCardId: stockCardId
                         }
                     },
                     update: { quantity: stockCard.quantity || 0 },
-                    create: { quantity: stockCard.quantity || 0, warehouseId: warehouse.id, stockCardId },
+                    create: {
+                        quantity: stockCard.quantity || 0,
+                        warehouseId: warehouse.id,
+                        stockCardId
+                    },
                 });
 
                 // Üretici İşleme
