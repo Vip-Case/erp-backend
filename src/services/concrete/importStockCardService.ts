@@ -22,6 +22,7 @@ interface StockCardData {
     raf?: string | null;
     karMarji?: number | null;
     riskQuantities?: number | null;
+    warehouseName?: string | null;
 }
 
 // Zod ile Stok Kartı Doğrulama Şeması
@@ -41,6 +42,8 @@ const StockCardSchema = z.object({
     raf: z.string().nullable().optional(),
     karMarji: z.number().nullable().optional(),
     riskQuantities: z.number().nullable().optional(),
+    warehouseName: z.string().nullable().optional(),
+    quantity: z.number().nullable().optional(),
     brandName: z.string().nullable().optional(),
     productType: z.enum(['BasitUrun', 'VaryasyonluUrun', 'DijitalUrun', 'Hizmet']),
     categories: z.string().optional(),
@@ -215,6 +218,22 @@ export const importStockCards = async (file: File) => {
                         })
                     )
                 );
+
+                // Depo İşleme
+                const warehouseName = stockCard.warehouseName || 'Ana Depo';
+                const warehouse = await prisma.warehouse.findFirst({ where: { warehouseName } });
+                if (!warehouse) throw new Error('Depo bulunamadı');
+
+                const stockUnit = await prisma.stockCardWarehouse.upsert({
+                    where: {
+                        warehouseId_stockCard_id: {
+                            warehouseId: warehouse.id,
+                            stockCard_id: stockCardId
+                        }
+                    },
+                    update: { quantity: stockCard.quantity || 0 },
+                    create: { quantity: stockCard.quantity || 0, warehouseId: warehouse.id, stockCardId },
+                });
 
                 // Üretici İşleme
                 if (stockCard.manufacturerName && barcodes.length > 0) {
