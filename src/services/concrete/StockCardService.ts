@@ -560,7 +560,6 @@ export class StockCardService {
                             quantity: warehouseItem.quantity,
                         },
                         create: {
-                            id: warehouseItem.id,
                             stockCardId: _id,
                             warehouseId: warehouseItem.warehouseId,
                             quantity: warehouseItem.quantity,
