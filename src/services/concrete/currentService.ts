@@ -564,7 +564,7 @@ export class currentService {
             });
         } catch (error) {
             logger.error("Error deleting Current with relations:", error);
-            throw new Error("Could not delete Current with relations");
+            throw new Error(`Could not delete Current with relations${error}`);
         }
     }
 
