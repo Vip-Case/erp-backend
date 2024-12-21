@@ -529,9 +529,18 @@ export class currentService {
         }
     }
 
-    async deleteManyCurrentsWithRelations(data: { ids: any[] }) {
+    async deleteManyCurrentsWithRelations(data: any) {
         try {
-            const idList = data.ids.map(item => item.id);
+            // Input data contains {ids: [...]} structure, so extract the ids array
+            const idsArray = Array.isArray(data.ids) ? data.ids : [data.ids];
+
+            if (idsArray.length === 0) {
+                throw new Error("No ids provided");
+            }
+
+            // Extract just the id values
+            const idList = idsArray.map(item => item.id);
+
             return await prisma.$transaction(async (prisma) => {
                 await prisma.currentAddress.deleteMany({
                     where: { current: { id: { in: idList } } }
