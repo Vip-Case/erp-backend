@@ -180,6 +180,18 @@ export const CurrentController = {
             ctx.set.status = 500;
             return { error: "Error creating current", details: error.message };
         }
+    },
+
+    deleteManyCurrentsWithRelations: async (ctx: Context) => {
+        const ids = ctx.body as any[];
+        try {
+            const deleted = await currentService.deleteManyCurrentsWithRelations(ids);
+            ctx.set.status = 200;
+            return { success: deleted, message: "true" };
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting current", details: error.message };
+        }
     }
 }
 

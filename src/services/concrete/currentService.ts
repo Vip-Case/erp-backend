@@ -529,6 +529,45 @@ export class currentService {
         }
     }
 
+    async deleteManyCurrentsWithRelations(ids: any[]) {
+        try {
+            const idList = ids.map(item => item.id);
+            return await prisma.$transaction(async (prisma) => {
+                await prisma.currentAddress.deleteMany({
+                    where: { current: { id: { in: ids } } }
+                });
+
+                await prisma.currentBranch.deleteMany({
+                    where: { current: { id: { in: ids } } }
+                });
+
+                await prisma.currentCategoryItem.deleteMany({
+                    where: { current: { id: { in: ids } } }
+                });
+
+                await prisma.currentFinancial.deleteMany({
+                    where: { current: { id: { in: ids } } }
+                });
+
+                await prisma.currentOfficials.deleteMany({
+                    where: { current: { id: { in: ids } } }
+                });
+
+                await prisma.currentRisk.deleteMany({
+                    where: { current: { id: { in: ids } } }
+                });
+
+                await prisma.current.deleteMany({
+                    where: { id: { in: ids } }
+                });
+
+            });
+        } catch (error) {
+            logger.error("Error deleting Current with relations:", error);
+            throw new Error("Could not delete Current with relations");
+        }
+    }
+
     async getCurrentWithRelationsById(id: string): Promise<Current | null> {
         try {
             return await prisma.current.findUnique({

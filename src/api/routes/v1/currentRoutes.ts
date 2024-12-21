@@ -12,6 +12,7 @@ export const CurrentRoutes = (app: Elysia) => {
       .get("/filter", CurrentController.getCurrentsWithFilters, { tags: ["Currents"] })
       .get("/search", CurrentController.searchCurrents, { tags: ["Currents"] })
       .post("/create", CurrentController.createWithRelations, { tags: ["Currents"] })
+      .delete("/deleteMany", CurrentController.deleteManyCurrentsWithRelations, { tags: ["Currents"] })
   );
   return app;
 };
