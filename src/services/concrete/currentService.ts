@@ -207,7 +207,26 @@ export class currentService {
     }
 
     async createCurrentWithRelations(data: {
-        current: CurrentData;
+        currentCode: string
+        currentName: string
+        currentType?: $Enums.CurrentType
+        institution?: $Enums.InstitutionType
+        identityNo?: string | null
+        taxNumber?: string | null
+        taxOffice?: string | null
+        title?: string | null
+        name?: string | null
+        surname?: string | null
+        webSite?: string | null
+        birthOfDate?: Date | string | null
+        kepAddress?: string | null
+        mersisNo?: string | null
+        sicilNo?: string | null
+        createdAt?: Date | string
+        updatedAt?: Date | string
+        createdBy?: string | null
+        updatedBy?: string | null
+        priceListId: string
         categories?: CurrentCategoryItem[];
         addresses?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
@@ -218,17 +237,28 @@ export class currentService {
     }) {
         try {
             const result = await prisma.$transaction(async (prisma) => {
-
-                if (!data.current) {
-                    throw new Error("Current data is required");
-                }
+                console.log(data);
 
                 const current = await prisma.current.create({
                     data: {
-                        ...data.current,
+                        currentCode: data.currentCode,
+                        currentName: data.currentName,
+                        currentType: data.currentType,
+                        institution: data.institution,
+                        identityNo: data.identityNo,
+                        taxNumber: data.taxNumber,
+                        taxOffice: data.taxOffice,
+                        title: data.title,
+                        name: data.name,
+                        surname: data.surname,
+                        webSite: data.webSite,
+                        birthOfDate: data.birthOfDate,
+                        kepAddress: data.kepAddress,
+                        mersisNo: data.mersisNo,
+                        sicilNo: data.sicilNo,
                         priceList: {
                             connect: {
-                                id: data.current.priceListId
+                                id: data.priceListId
                             }
                         }
                     }
