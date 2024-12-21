@@ -207,11 +207,10 @@ export class currentService {
     }
 
     async createCurrentWithRelations(data: {
-        current: Current;
-        priceList: StockCardPriceList[];
-        currentAdress?: CurrentAddress[];
+        current: CurrentCreateInput;
+        addresses?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
-        currentCategoryItem?: CurrentCategoryItem[];
+        categories?: CurrentCategoryItem[];
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
@@ -233,9 +232,9 @@ export class currentService {
 
                 const currentCode = current.currentCode;
 
-                if (data.currentAdress) {
+                if (data.addresses) {
                     await Promise.all(
-                        data.currentAdress.map((currentAdress) =>
+                        data.addresses.map((currentAdress) =>
                             prisma.currentAddress.create({
                                 data: {
                                     addressName: currentAdress.addressName,
@@ -328,9 +327,9 @@ export class currentService {
                     );
                 }
 
-                if (data.currentCategoryItem) {
+                if (data.categories) {
                     await Promise.all(
-                        data.currentCategoryItem.map((currentCategoryItem) =>
+                        data.categories.map((currentCategoryItem) =>
                             prisma.currentCategoryItem.create({
                                 data: {
                                     category: { connect: { id: currentCategoryItem.categoryId } },
@@ -342,6 +341,7 @@ export class currentService {
                 }
 
             });
+            return result;
         } catch (error) {
             logger.error("Error creating StockCard with relations:", error);
             throw new Error("Could not create StockCard with relations");

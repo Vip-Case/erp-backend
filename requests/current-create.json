@@ -1,0 +1,70 @@
+{
+    "current": {
+        "currentCode": "CUR001",
+        "currentName": "Sample Company Ltd",
+        "currentType": "Musteri",
+        "institution": "Sirket",
+        "taxNumber": "1234567890",
+        "taxOffice": "Sample Tax Office",
+        "title": "Sample Company Limited",
+        "webSite": "www.samplecompany.com",
+        "priceListId": "price-list-uuid-here"
+    },
+    "currentAddress": {
+        "create": [
+            {
+                "addressType": "Fatura",
+                "country": "Turkey",
+                "city": "Istanbul",
+                "district": "Kadikoy",
+                "address": "Sample Street No:123",
+                "postalCode": "34700"
+            }
+        ]
+    },
+    "currentBranch": {
+        "create": [
+            {
+                "branchName": "Main Branch",
+                "branchCode": "BR001",
+                "isActive": true
+            }
+        ]
+    },
+    "currentFinancial": {
+        "create": [
+            {
+                "creditLimit": 50000,
+                "riskLimit": 25000,
+                "paymentTerm": 30
+            }
+        ]
+    },
+    "currentRisk": {
+        "create": [
+            {
+                "riskLimit": 25000,
+                "currentRisk": 0,
+                "isActive": true
+            }
+        ]
+    },
+    "currentOfficials": {
+        "create": [
+            {
+                "name": "John",
+                "surname": "Doe",
+                "email": "john.doe@samplecompany.com",
+                "phone": "5551234567",
+                "title": "Sales Manager"
+            }
+        ]
+    },
+    "currentCategoryItem": {
+        "create": [
+            {
+                "categoryId": "category-uuid-here"
+            }
+        ]
+    }
+}
