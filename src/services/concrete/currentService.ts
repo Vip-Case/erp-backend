@@ -30,7 +30,7 @@ interface SearchCriteria {
     currentName?: string;
 }
 
-interface CurrentCreateInput {
+interface CurrentData {
     id?: string
     currentCode: string
     currentName: string
@@ -56,7 +56,7 @@ interface CurrentCreateInput {
 
 export class currentService {
     async createCurrent(data: {
-        current: CurrentCreateInput;
+        current: CurrentData;
         currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
         currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
@@ -207,7 +207,7 @@ export class currentService {
     }
 
     async createCurrentWithRelations(data: {
-        current: CurrentCreateInput;
+        current: CurrentData;
         categories?: CurrentCategoryItem[];
         addresses?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
@@ -228,7 +228,7 @@ export class currentService {
                         }
                     }
                 });
-
+                const currentCode = current.currentCode;
                 if (data.addresses) {
                     await Promise.all(
                         data.addresses.map((currentAdress) =>
@@ -245,7 +245,7 @@ export class currentService {
                                     phone2: currentAdress.phone2,
                                     email: currentAdress.email,
                                     email2: currentAdress.email2,
-                                    current: { connect: { currentCode: currentAdress.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -258,7 +258,7 @@ export class currentService {
                             prisma.currentBranch.create({
                                 data: {
                                     branch: { connect: { branchCode: currentBranch.branchCode } },
-                                    current: { connect: { currentCode: currentBranch.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -275,7 +275,7 @@ export class currentService {
                                     bankBranchCode: currentFinancial.bankBranchCode,
                                     iban: currentFinancial.iban,
                                     accountNo: currentFinancial.accountNo,
-                                    current: { connect: { currentCode: currentFinancial.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -299,7 +299,7 @@ export class currentService {
                                     limitKontrol: currentRisk.limitKontrol,
                                     acikHesap: currentRisk.acikHesap,
                                     posKullanim: currentRisk.posKullanim,
-                                    current: { connect: { currentCode: currentRisk.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -317,7 +317,7 @@ export class currentService {
                                     phone: currentOfficials.phone,
                                     email: currentOfficials.email,
                                     note: currentOfficials.note,
-                                    current: { connect: { currentCode: currentOfficials.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -330,7 +330,7 @@ export class currentService {
                             prisma.currentCategoryItem.create({
                                 data: {
                                     category: { connect: { id: currentCategoryItem.categoryId } },
-                                    current: { connect: { currentCode: currentCategoryItem.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
