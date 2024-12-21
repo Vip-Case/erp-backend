@@ -208,9 +208,9 @@ export class currentService {
 
     async createCurrentWithRelations(data: {
         current: CurrentCreateInput;
+        categories?: CurrentCategoryItem[];
         addresses?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
-        categories?: CurrentCategoryItem[];
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
@@ -219,15 +219,14 @@ export class currentService {
         try {
             const result = await prisma.$transaction(async (prisma) => {
 
+                const { priceListId, ...currentData } = data.current;
                 const current = await prisma.current.create({
                     data: {
-                        ...data.current,
-
-                        priceList: data.current.priceListId ? {
-                            connect: { id: data.current.priceListId }
-                        } : {}
-
-                    } as Prisma.CurrentCreateInput
+                        ...currentData,
+                        priceList: {
+                            connect: { id: priceListId }
+                        }
+                    }
                 });
 
                 if (data.addresses) {
