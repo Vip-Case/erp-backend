@@ -219,12 +219,17 @@ export class currentService {
         try {
             const result = await prisma.$transaction(async (prisma) => {
 
-                const { priceListId, ...currentData } = data.current;
+                if (!data.current) {
+                    throw new Error("Current data is required");
+                }
+
                 const current = await prisma.current.create({
                     data: {
-                        ...currentData,
+                        ...data.current,
                         priceList: {
-                            connect: { id: priceListId }
+                            connect: {
+                                id: data.current.priceListId
+                            }
                         }
                     }
                 });
