@@ -1,6 +1,6 @@
 import CurrentService from '../../services/concrete/currentService';
 import { Context } from 'elysia';
-import { Prisma } from '@prisma/client';
+import { $Enums, Prisma } from '@prisma/client';
 
 // Service Initialization
 const currentService = new CurrentService();
@@ -9,12 +9,35 @@ interface SearchCriteria {
     search: string;
 }
 
+interface CurrentCreateInput {
+    id?: string
+    currentCode: string
+    currentName: string
+    currentType?: $Enums.CurrentType
+    institution?: $Enums.InstitutionType
+    identityNo?: string | null
+    taxNumber?: string | null
+    taxOffice?: string | null
+    title?: string | null
+    name?: string | null
+    surname?: string | null
+    webSite?: string | null
+    birthOfDate?: Date | string | null
+    kepAddress?: string | null
+    mersisNo?: string | null
+    sicilNo?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    createdBy?: string | null
+    updatedBy?: string | null
+    priceListId: string
+}
+
 export const CurrentController = {
 
     createCurrent: async (ctx: Context) => {
         const data = ctx.body as {
-            current: Prisma.CurrentCreateInput;
-            priceListId: string;
+            current: CurrentCreateInput;
             currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
             currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
             currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
@@ -26,10 +49,9 @@ export const CurrentController = {
         try {
             const createData = {
                 current: {
-                    ...data.current
+                    ...data.current,
+                    priceListId: data.current.priceListId
                 },
-                priceListId: data.priceListId,
-                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
