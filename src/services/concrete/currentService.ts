@@ -529,9 +529,9 @@ export class currentService {
         }
     }
 
-    async deleteManyCurrentsWithRelations(ids: any[]) {
+    async deleteManyCurrentsWithRelations(data: { ids: any[] }) {
         try {
-            const idList = ids.map(item => item.id);
+            const idList = data.ids.map(item => item.id);
             return await prisma.$transaction(async (prisma) => {
                 await prisma.currentAddress.deleteMany({
                     where: { current: { id: { in: idList } } }
