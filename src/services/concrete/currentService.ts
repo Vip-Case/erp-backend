@@ -2,7 +2,6 @@ import prisma from "../../config/prisma";
 import {
     $Enums,
     Current,
-    CurrentAddress,
     CurrentBranch,
     CurrentCategoryItem,
     CurrentFinancial,
@@ -52,6 +51,21 @@ interface CurrentData {
     createdBy?: string | null
     updatedBy?: string | null
     priceListId: string
+}
+
+interface CurrentAddress {
+    id?: string
+    addressName: string
+    addressType: $Enums.AddressType
+    address: string
+    countryCode: string
+    province: string
+    district: string
+    postalCode: string
+    phone: string
+    phone2: string
+    email: string
+    email2: string
 }
 
 export class currentService {
@@ -273,7 +287,7 @@ export class currentService {
                                     addressType: currentAdress.addressType,
                                     address: currentAdress.address,
                                     countryCode: currentAdress.countryCode,
-                                    city: currentAdress.city,
+                                    city: currentAdress.province,
                                     district: currentAdress.district,
                                     postalCode: currentAdress.postalCode,
                                     phone: currentAdress.phone,
