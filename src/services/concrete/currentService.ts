@@ -230,8 +230,6 @@ export class currentService {
                     } as Prisma.CurrentCreateInput
                 });
 
-                const currentCode = current.currentCode;
-
                 if (data.addresses) {
                     await Promise.all(
                         data.addresses.map((currentAdress) =>
@@ -344,7 +342,7 @@ export class currentService {
             return result;
         } catch (error) {
             logger.error("Error creating StockCard with relations:", error);
-            throw new Error("Could not create StockCard with relations");
+            throw new Error(`Could not create StockCard with relations: ${error}`);
         }
     }
 
