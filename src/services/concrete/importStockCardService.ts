@@ -22,7 +22,10 @@ interface StockCardData {
     raf?: string | null;
     karMarji?: number | null;
     riskQuantities?: number | null;
+    maliyet?: number | null;
+    maliyetKur?: string | null;
     warehouseName?: string | null;
+    quantity?: number | null;
 }
 
 // Zod ile Stok Kartı Doğrulama Şeması
@@ -42,6 +45,8 @@ const StockCardSchema = z.object({
     raf: z.string().nullable().optional(),
     karMarji: z.number().nullable().optional(),
     riskQuantities: z.number().nullable().optional(),
+    maliyet: z.number().nullable().optional(),
+    maliyetKur: z.string().nullable().optional(),
     warehouseName: z.string().nullable().optional(),
     quantity: z.number().nullable().optional(),
     brandName: z.string().nullable().optional(),
@@ -94,6 +99,8 @@ export const importStockCards = async (file: File) => {
                     raf: stockCard.raf || null,
                     karMarji: stockCard.karMarji ? Number(stockCard.karMarji) : null,
                     riskQuantities: stockCard.riskQuantities ? Number(stockCard.riskQuantities) : null,
+                    maliyet: stockCard.maliyet ? Number(stockCard.maliyet) : null,
+                    maliyetKur: stockCard.maliyetKur || null,
                 };
 
                 // Create or update stock card first

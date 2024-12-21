@@ -1,5 +1,6 @@
 import prisma from "../../config/prisma";
 import {
+    $Enums,
     Current,
     CurrentAddress,
     CurrentBranch,
@@ -29,10 +30,33 @@ interface SearchCriteria {
     currentName?: string;
 }
 
+interface CurrentCreateInput {
+    id?: string
+    currentCode: string
+    currentName: string
+    currentType?: $Enums.CurrentType
+    institution?: $Enums.InstitutionType
+    identityNo?: string | null
+    taxNumber?: string | null
+    taxOffice?: string | null
+    title?: string | null
+    name?: string | null
+    surname?: string | null
+    webSite?: string | null
+    birthOfDate?: Date | string | null
+    kepAddress?: string | null
+    mersisNo?: string | null
+    sicilNo?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    createdBy?: string | null
+    updatedBy?: string | null
+    priceListId: string
+}
+
 export class currentService {
     async createCurrent(data: {
-        current: Prisma.CurrentCreateInput;
-        priceListName: string;
+        current: CurrentCreateInput;
         currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
         currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
@@ -42,20 +66,12 @@ export class currentService {
 
     }): Promise<Current> {
         try {
-            // priceListName ile id'yi buluyoruz
-            const priceList = await prisma.stockCardPriceList.findUnique({
-                where: { priceListName: data.priceListName }
-            });
-
-            if (!priceList) {
-                throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
-            }
 
             const newCurrent = await prisma.current.create({
                 data: {
-                    ...data.current,
+                    ...{ ...data.current, priceListId: undefined },
                     priceList: {
-                        connect: { id: priceList.id } // Bulunan id ile bağlantı sağlanıyor
+                        connect: { id: data.current.priceListId }
                     },
                     currentAddress: data.currentAddress,
                     currentBranch: data.currentBranch,
