@@ -170,27 +170,10 @@ export const CurrentController = {
     },
 
     createWithRelations: async (ctx: Context) => {
-        const data = ctx.body as {
-            current: CurrentCreateInput;
-            addresses?: CurrentAddress[];
-            currentBranch?: CurrentBranch[];
-            categories?: CurrentCategoryItem[];
-            currentRisk?: CurrentRisk[];
-            currentFinancial?: CurrentFinancial[];
-            currentOfficials?: CurrentOfficials[];
-        };
+        const data = ctx.body as any;
 
         try {
-            const transformedData = {
-                current: data.current,
-                currentAddress: data.addresses ? { create: data.addresses } : undefined,
-                currentBranch: data.currentBranch ? { create: data.currentBranch } : undefined,
-                currentCategoryItem: data.categories ? { create: data.categories } : undefined,
-                currentRisk: data.currentRisk ? { create: data.currentRisk } : undefined,
-                currentFinancial: data.currentFinancial ? { create: data.currentFinancial } : undefined,
-                currentOfficials: data.currentOfficials ? { create: data.currentOfficials } : undefined
-            };
-            const newCurrent = await currentService.createCurrent(transformedData);
+            const newCurrent = await currentService.createCurrent(data);
             ctx.set.status = 200;
             return newCurrent;
         } catch (error: any) {
