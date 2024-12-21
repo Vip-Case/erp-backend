@@ -185,7 +185,7 @@ export const CurrentController = {
     deleteManyCurrentsWithRelations: async (ctx: Context) => {
         const ids = ctx.body as any[];
         try {
-            const deleted = await currentService.deleteManyCurrentsWithRelations(ids);
+            const deleted = await currentService.deleteManyCurrentsWithRelations({ ids });
             ctx.set.status = 200;
             return { success: deleted, message: "true" };
         } catch (error: any) {
