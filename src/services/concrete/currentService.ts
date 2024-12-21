@@ -241,7 +241,7 @@ export class currentService {
         createdBy?: string | null
         updatedBy?: string | null
         priceListId: string
-        categories?: CurrentCategoryItem[];
+        categories?: string[];
         addresses?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
         currentRisk?: CurrentRisk[];
@@ -378,7 +378,7 @@ export class currentService {
                         data.categories.map((currentCategoryItem) =>
                             prisma.currentCategoryItem.create({
                                 data: {
-                                    category: { connect: { id: currentCategoryItem.categoryId } },
+                                    category: { connect: { id: currentCategoryItem } },
                                     current: { connect: { currentCode: currentCode } }
                                 }
                             })
