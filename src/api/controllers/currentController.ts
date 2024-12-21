@@ -171,9 +171,9 @@ export const CurrentController = {
 
     createWithRelations: async (ctx: Context) => {
         const data = ctx.body as any;
-
+        console.log(data);
         try {
-            const newCurrent = await currentService.createCurrent(data);
+            const newCurrent = await currentService.createCurrentWithRelations(data);
             ctx.set.status = 200;
             return newCurrent;
         } catch (error: any) {
