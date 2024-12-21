@@ -1,6 +1,6 @@
 import CurrentService from '../../services/concrete/currentService';
 import { Context } from 'elysia';
-import { $Enums, Prisma } from '@prisma/client';
+import { $Enums, CurrentAddress, CurrentBranch, CurrentCategoryItem, CurrentFinancial, CurrentOfficials, CurrentRisk, Prisma } from '@prisma/client';
 
 // Service Initialization
 const currentService = new CurrentService();
@@ -166,6 +166,36 @@ export const CurrentController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    createWithRelations: async (ctx: Context) => {
+        const data = ctx.body as {
+            current: CurrentCreateInput;
+            addresses?: CurrentAddress[];
+            currentBranch?: CurrentBranch[];
+            categories?: CurrentCategoryItem[];
+            currentRisk?: CurrentRisk[];
+            currentFinancial?: CurrentFinancial[];
+            currentOfficials?: CurrentOfficials[];
+        };
+
+        try {
+            const transformedData = {
+                current: data.current,
+                currentAddress: data.addresses ? { create: data.addresses } : undefined,
+                currentBranch: data.currentBranch ? { create: data.currentBranch } : undefined,
+                currentCategoryItem: data.categories ? { create: data.categories } : undefined,
+                currentRisk: data.currentRisk ? { create: data.currentRisk } : undefined,
+                currentFinancial: data.currentFinancial ? { create: data.currentFinancial } : undefined,
+                currentOfficials: data.currentOfficials ? { create: data.currentOfficials } : undefined
+            };
+            const newCurrent = await currentService.createCurrent(transformedData);
+            ctx.set.status = 200;
+            return newCurrent;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error creating current", details: error.message };
         }
     }
 }
