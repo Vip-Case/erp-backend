@@ -534,31 +534,31 @@ export class currentService {
             const idList = ids.map(item => item.id);
             return await prisma.$transaction(async (prisma) => {
                 await prisma.currentAddress.deleteMany({
-                    where: { current: { id: { in: ids } } }
+                    where: { current: { id: { in: idList } } }
                 });
 
                 await prisma.currentBranch.deleteMany({
-                    where: { current: { id: { in: ids } } }
+                    where: { current: { id: { in: idList } } }
                 });
 
                 await prisma.currentCategoryItem.deleteMany({
-                    where: { current: { id: { in: ids } } }
+                    where: { current: { id: { in: idList } } }
                 });
 
                 await prisma.currentFinancial.deleteMany({
-                    where: { current: { id: { in: ids } } }
+                    where: { current: { id: { in: idList } } }
                 });
 
                 await prisma.currentOfficials.deleteMany({
-                    where: { current: { id: { in: ids } } }
+                    where: { current: { id: { in: idList } } }
                 });
 
                 await prisma.currentRisk.deleteMany({
-                    where: { current: { id: { in: ids } } }
+                    where: { current: { id: { in: idList } } }
                 });
 
                 await prisma.current.deleteMany({
-                    where: { id: { in: ids } }
+                    where: { id: { in: idList } }
                 });
 
             });
