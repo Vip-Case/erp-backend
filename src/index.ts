@@ -77,7 +77,7 @@ app.onRequest(async (ctx) => {
     ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
     return; // İleri işlem yapmadan middleware'den çık
   }
-  const publicRoutes = ["/auth/login", "/auth/register"];
+  const publicRoutes = ["/auth/login", "/users/"];
   const route = new URL(ctx.request.url).pathname;
 
   // Public route kontrolü
@@ -114,7 +114,7 @@ app.onRequest(async (ctx) => {
     return; // İleri işlem yapmadan middleware'den çık
   }
   const route = new URL(ctx.request.url).pathname; // Geçerli rota
-  const publicRoutes = ["/auth/login", "/auth/register"]; // Public rotalar
+  const publicRoutes = ["/auth/login", "/users/"]; // Public rotalar
 
   // Public rotalarda izin kontrolü yapılmaz
   if (publicRoutes.includes(route)) {
@@ -264,6 +264,7 @@ const routes = [
   CurrentRoutes,
   CurrentMovementRoutes,
   RoleRoutes,
+  UserRoutes,
   InvoiceRoutes,
   CategoryRoutes,
   ReceiptRoutes,
@@ -283,7 +284,6 @@ const routes = [
   PosMovementRoutes,
   NotificationRoutes,
 ];
-UserRoutes(app);
 wooCommerceRoutes(app);
 
 routes.forEach((route) => app.use(route));
