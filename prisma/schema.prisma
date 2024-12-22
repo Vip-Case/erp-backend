@@ -297,6 +297,7 @@ model Brand {
 
   stockCardManufacturer StockCardManufacturer[]
   stockCard             StockCard[]
+  user                  User?                   @relation(fields: [createdBy], references: [username])
 }
 
 model StockCardPriceList {
@@ -800,6 +801,7 @@ model User {
   permission Permission[]
 
   Notification Notification[]
+  Brand        Brand[]
 }
 
 model Invoice {
@@ -1029,10 +1031,10 @@ model MarketPlace {
   name        String
   apiBaseUrl  String
   logoUrl     String
-  companyCode String?  // Company ile ilişki için gerekli
+  companyCode String? // Company ile ilişki için gerekli
   company     Company? @relation(fields: [companyCode], references: [companyCode])
-  
-  Store Store[]
+
+  Store                 Store[]
   MarketPlaceAttributes MarketPlaceAttributes[]
 }
 
@@ -1057,13 +1059,11 @@ model MarketPlaceCategories {
   marketPlaceCategoryId       String?
   marketPlaceCategoryParentId String?
 
-  products MarketPlaceProducts[]  @relation("ProductsOnCategories")
+  products MarketPlaceProducts[] @relation("ProductsOnCategories")
 
   // Alt ve üst kategori ilişkileri
-  subCategories               MarketPlaceCategories[] @relation("CategoryParent")
-  parentCategory              MarketPlaceCategories?  @relation("CategoryParent", fields: [marketPlaceCategoryParentId], references: [id])
-
-  
+  subCategories  MarketPlaceCategories[] @relation("CategoryParent")
+  parentCategory MarketPlaceCategories?  @relation("CategoryParent", fields: [marketPlaceCategoryParentId], references: [id])
 }
 
 model MarketPlaceBrands {
@@ -1085,10 +1085,8 @@ model MarketPlaceAttributes {
   required                Boolean?
   allowCustom             Boolean?
 
-  marketPlace MarketPlace? @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
-  MarketPlaceProducts   MarketPlaceProducts[]
-
-
+  marketPlace         MarketPlace?          @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
+  MarketPlaceProducts MarketPlaceProducts[]
 }
 
 model MarketPlaceProductImages {
@@ -1100,30 +1098,30 @@ model MarketPlaceProductImages {
 }
 
 model MarketPlaceProducts {
-  id          String   @id @default(cuid())
-  productType   String?
-  parentProductId   String?
-  productId  String?
-  productName String?
-  productSku String?
-  description String?
-  shortDescription String?
-  listPrice Decimal? @db.Decimal(15, 4)
-  salePrice Decimal? @db.Decimal(15, 4)
-  barcode String?
-  storeId String?
-  marketPlaceAttributesId String?
-  marketPlaceCategoriesId String?
-  marketPlaceBrandsId String?
-  marketPlaceBrands MarketPlaceBrands? @relation(fields: [marketPlaceBrandsId], references: [id])
-  store Store? @relation(fields: [storeId], references: [id])
+  id                       String                     @id @default(cuid())
+  productType              String?
+  parentProductId          String?
+  productId                String?
+  productName              String?
+  productSku               String?
+  description              String?
+  shortDescription         String?
+  listPrice                Decimal?                   @db.Decimal(15, 4)
+  salePrice                Decimal?                   @db.Decimal(15, 4)
+  barcode                  String?
+  storeId                  String?
+  marketPlaceAttributesId  String?
+  marketPlaceCategoriesId  String?
+  marketPlaceBrandsId      String?
+  marketPlaceBrands        MarketPlaceBrands?         @relation(fields: [marketPlaceBrandsId], references: [id])
+  store                    Store?                     @relation(fields: [storeId], references: [id])
   MarketPlaceProductImages MarketPlaceProductImages[]
-  MarketPlaceProductMatch MarketPlaceProductMatch[]
-  marketPlaceAttributes MarketPlaceAttributes[]
-  MarketPlaceCategories MarketPlaceCategories[] @relation("ProductsOnCategories")
+  MarketPlaceProductMatch  MarketPlaceProductMatch[]
+  marketPlaceAttributes    MarketPlaceAttributes[]
+  MarketPlaceCategories    MarketPlaceCategories[]    @relation("ProductsOnCategories")
   // Self relation
-  parentProduct     MarketPlaceProducts? @relation("ParentChildRelation", fields: [parentProductId], references: [id])
-  childrenProducts  MarketPlaceProducts[] @relation("ParentChildRelation")
+  parentProduct            MarketPlaceProducts?       @relation("ParentChildRelation", fields: [parentProductId], references: [id])
+  childrenProducts         MarketPlaceProducts[]      @relation("ParentChildRelation")
 }
 
 model MarketPlaceProductMatch {
