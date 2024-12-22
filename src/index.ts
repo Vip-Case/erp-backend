@@ -75,7 +75,7 @@ app.onRequest(async (ctx) => {
     ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
     return; // İleri işlem yapmadan middleware'den çık
   }
-  const publicRoutes = ["/auth/login", "/users/"];
+  const publicRoutes = ["/auth/login", "/users/create"];
   const route = new URL(ctx.request.url).pathname;
 
   // Public route kontrolü
