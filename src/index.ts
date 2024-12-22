@@ -38,7 +38,6 @@ import PosRoutes from './api/routes/v1/posRoutes';
 import { PrismaClient } from '@prisma/client';
 import { appConfig } from './config/app';
 import jwt from 'jsonwebtoken';
-
 import cron from "node-cron";
 import { backupDatabase, cleanOldBackups } from "./utils/backup";
 import NotificationRoutes from './api/routes/v1/notificationRoutes';
@@ -52,7 +51,6 @@ if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
 }
 
-dotenv.config();
 const prisma = new PrismaClient();
 
 const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
@@ -77,7 +75,7 @@ app.onRequest(async (ctx) => {
     ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
     return; // İleri işlem yapmadan middleware'den çık
   }
-  const publicRoutes = ["/auth/login", "/users/create"];
+  const publicRoutes = ["/auth/login", "/auth/register"];
   const route = new URL(ctx.request.url).pathname;
 
   // Public route kontrolü
@@ -114,7 +112,7 @@ app.onRequest(async (ctx) => {
     return; // İleri işlem yapmadan middleware'den çık
   }
   const route = new URL(ctx.request.url).pathname; // Geçerli rota
-  const publicRoutes = ["/auth/login", "/users/"]; // Public rotalar
+  const publicRoutes = ["/auth/login", "/auth/register"]; // Public rotalar
 
   // Public rotalarda izin kontrolü yapılmaz
   if (publicRoutes.includes(route)) {
@@ -263,8 +261,8 @@ const routes = [
   BranchRoutes,
   CurrentRoutes,
   CurrentMovementRoutes,
-  RoleRoutes,
   UserRoutes,
+  RoleRoutes,
   InvoiceRoutes,
   CategoryRoutes,
   ReceiptRoutes,
@@ -284,6 +282,7 @@ const routes = [
   PosMovementRoutes,
   NotificationRoutes,
 ];
+
 wooCommerceRoutes(app);
 
 routes.forEach((route) => app.use(route));
