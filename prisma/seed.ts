@@ -76,7 +76,7 @@ async function main() {
     const hashedPassword = await bcrypt.hash('admin_password', 10);
 
     // Admin rolüyle kullanıcı ekleyin
-    await prisma.user.create({
+    const admin = await prisma.user.create({
         data: {
             username: 'admin_user',
             email: 'admin@example.com',
@@ -96,7 +96,7 @@ async function main() {
         data: {
             brandCode: "VPCS",
             brandName: "VipCase",
-            createdBy: adminRole.id,
+            createdBy: admin.username,
         },
     });
 }
