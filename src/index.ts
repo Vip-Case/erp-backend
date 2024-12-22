@@ -263,7 +263,6 @@ const routes = [
   BranchRoutes,
   CurrentRoutes,
   CurrentMovementRoutes,
-  UserRoutes,
   RoleRoutes,
   InvoiceRoutes,
   CategoryRoutes,
@@ -284,7 +283,7 @@ const routes = [
   PosMovementRoutes,
   NotificationRoutes,
 ];
-
+UserRoutes(app);
 wooCommerceRoutes(app);
 
 routes.forEach((route) => app.use(route));
