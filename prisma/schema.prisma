@@ -789,13 +789,13 @@ model User {
   phone       String   @db.VarChar(50)
   address     String   @db.VarChar(250)
   isActive    Boolean  @default(true)
-  companyCode String
+  companyCode String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdBy   String?
   updatedBy   String?
 
-  company Company @relation(fields: [companyCode], references: [companyCode])
+  company Company? @relation(fields: [companyCode], references: [companyCode])
 
   role       Role[]
   permission Permission[]

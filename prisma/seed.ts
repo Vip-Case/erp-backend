@@ -85,7 +85,6 @@ async function main() {
             lastName: 'User',
             phone: '123456789',
             address: 'Admin Address',
-            companyCode: 'C1',
             role: {
                 connect: { roleName: 'admin' } // admin rolüyle bağlanıyor
             },
