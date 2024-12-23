@@ -1,5 +1,5 @@
 
-import BranchService from '../../services/concrete/branchService';
+import BranchService, { BranchData } from '../../services/concrete/branchService';
 import { Context } from 'elysia';
 import { Branch } from '@prisma/client';
 
@@ -9,7 +9,7 @@ const branchService = new BranchService();
 export const BranchController = {
 
     createBranch: async (ctx: Context) => {
-        const branchData: Branch = ctx.body as Branch;
+        const branchData: BranchData = ctx.body as BranchData;
         try {
             const branch = await branchService.createBranch(branchData);
             ctx.set.status = 200;
