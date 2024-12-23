@@ -122,7 +122,11 @@ export class BranchService {
             return await prisma.branch.findMany({
                 include: {
                     company: true,
-                    warehouse: true
+                    warehouse: {
+                        include: {
+                            warehouse: true
+                        }
+                    }
                 }
             });
         } catch (error) {
