@@ -119,7 +119,12 @@ export class BranchService {
 
     async getAllBranches(): Promise<Branch[]> {
         try {
-            return await this.branchRepository.findAll();
+            return await prisma.branch.findMany({
+                include: {
+                    company: true,
+                    warehouse: true
+                }
+            });
         } catch (error) {
             logger.error("Error fetching all branches", error);
             throw error;
