@@ -80,16 +80,12 @@ export const importStockCards = async (file: File) => {
 
                 const brandID = stockCard.brandName ? await prisma.brand.findUnique({ where: { brandName: stockCard.brandName } }) : null;
 
-                // Add stockCardData mapping before upsert
-                const stockCardData: StockCardData = {
+                const stockCardData = {
                     productCode: stockCard.productCode,
                     productName: stockCard.productName,
                     unit: stockCard.unit,
                     shortDescription: stockCard.shortDescription || null,
                     description: stockCard.description || null,
-                    companyCode: stockCard.companyCode || null,
-                    branchCode: stockCard.branchCode || null,
-                    brandId: brandID?.id || null,
                     productType: stockCard.productType,
                     gtip: stockCard.gtip || null,
                     pluCode: stockCard.pluCode || null,
@@ -100,12 +96,37 @@ export const importStockCards = async (file: File) => {
                     karMarji: stockCard.karMarji ? Number(stockCard.karMarji) : null,
                     riskQuantities: stockCard.riskQuantities ? Number(stockCard.riskQuantities) : null,
                     maliyet: stockCard.maliyet ? Number(stockCard.maliyet) : null,
-                    maliyetKur: stockCard.maliyetKur || null,
+                    maliyetDoviz: stockCard.maliyetKur || null,
+
+                    // Handle relations using connect
+                    company: stockCard.companyCode ? {
+                        connect: { companyCode: stockCard.companyCode }
+                    } : undefined,
+
+                    branch: stockCard.branchCode ? {
+                        connect: { branchCode: stockCard.branchCode }
+                    } : undefined,
+
+                    brand: brandID ? {
+                        connect: { id: brandID.id }
+                    } : undefined,
                 };
+
+                // Add this validation before the upsert operation
+                if (stockCard.companyCode) {
+                    const company = await prisma.company.findUnique({
+                        where: { companyCode: stockCard.companyCode }
+                    });
+                    if (!company) {
+                        throw new Error(`Company with code ${stockCard.companyCode} not found`);
+                    }
+                }
 
                 // Create or update stock card first
                 const stockCardRecord = await prisma.stockCard.upsert({
-                    where: { productCode: stockCard.productCode },
+                    where: {
+                        productCode: stockCard.productCode
+                    },
                     update: stockCardData,
                     create: stockCardData,
                 });
