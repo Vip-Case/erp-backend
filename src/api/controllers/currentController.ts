@@ -70,38 +70,17 @@ export const CurrentController = {
 
     updateCurrent: async (ctx: Context) => {
         const { id } = ctx.params;
-        const data = ctx.body as {
-            current: CurrentCreateInput;
-            currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
-            currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
-            currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
-            currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-            currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
-            currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
-        };
-
         try {
-            const updateData = {
-                current: {
-                    ...data.current,
-                    priceListId: data.current.priceListId
-                },
-                currentAddress: data.currentAddress,
-                currentBranch: data.currentBranch,
-                currentCategoryItem: data.currentCategoryItem,
-                currentFinancial: data.currentFinancial,
-                currentRisk: data.currentRisk,
-                currentOfficials: data.currentOfficials,
-            };
-
-            const updatedCurrent = await currentService.updateCurrent(id, updateData);
+            const updatedCurrent = await currentService.updateCurrent(id, ctx.body);
             ctx.set.status = 200;
             return updatedCurrent;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Error updating current", details: error };
+            return {
+                error: "Error updating current",
+                details: error.message || "An unknown error occurred"
+            };
         }
-
     },
 
     deleteCurrent: async (ctx: Context) => {
