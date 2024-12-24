@@ -99,7 +99,7 @@ export const CurrentController = {
             return updatedCurrent;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Error updating current", details: error.message };
+            return { error: "Error updating current", details: error };
         }
 
     },
