@@ -169,7 +169,7 @@ export class currentService {
             });
 
             return updatedCurrent;
-        } catch (error: any) {
+        } catch (error) {
             logger.error("Error updating current:", error);
             throw new Error(`Could not update current: ${error.message}`);
         }
