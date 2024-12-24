@@ -116,39 +116,62 @@ export class currentService {
         }
     }
 
-    async updateCurrent(id: string, data: {
-        current: CurrentData;
-        currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
-        currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
-        currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
-        currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-        currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
-        currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
-
-    }): Promise<Current> {
+    async updateCurrent(id: string, data: any): Promise<Current> {
         try {
-            const updatedCurrent = await prisma.current.update({
+            // Restructure the incoming data
+            const updateData = {
+                current: {
+                    currentCode: data.currentCode,
+                    currentName: data.currentName,
+                    currentType: data.currentType,
+                    institution: data.institution,
+                    identityNo: data.identityNo,
+                    taxNumber: data.taxNumber,
+                    taxOffice: data.taxOffice,
+                    kepAddress: data.kepAddress,
+                    mersisNo: data.mersisNo,
+                    sicilNo: data.sicilNo,
+                    title: data.title,
+                    webSite: data.webSite,
+                    birthOfDate: data.birthOfDate,
+                    priceListId: data.priceListId
+                },
+                currentAddress: data.addresses ? {
+                    // Delete existing addresses
+                    deleteMany: {},
+                    // Create new ones
+                    create: data.addresses.map(address => ({
+                        ...address,
+                        id: undefined // Remove id to allow new creation
+                    }))
+                } : undefined,
+                currentCategoryItem: data.categories ? {
+                    // Delete existing categories
+                    deleteMany: {},
+                    // Create new ones
+                    create: data.categories.map(category => ({
+                        category: { connect: { id: category } }
+                    }))
+                } : undefined,
+            };
 
+            const updatedCurrent = await prisma.current.update({
                 where: { id },
                 data: {
-                    ...{ ...data.current, priceListId: undefined },
+                    ...updateData.current,
                     priceList: {
-                        connect: { id: data.current.priceListId }
+                        connect: { id: updateData.current.priceListId }
                     },
-                    currentAddress: data.currentAddress,
-                    currentBranch: data.currentBranch,
-                    currentCategoryItem: data.currentCategoryItem,
-                    currentFinancial: data.currentFinancial,
-                    currentRisk: data.currentRisk,
-                    currentOfficials: data.currentOfficials
+                    currentAddress: updateData.currentAddress,
+                    currentCategoryItem: updateData.currentCategoryItem
                 },
                 include: currentRelations
             });
 
             return updatedCurrent;
-        } catch (error) {
+        } catch (error: any) {
             logger.error("Error updating current:", error);
-            throw new Error("Could not update current");
+            throw new Error(`Could not update current: ${error.message}`);
         }
     }
 
