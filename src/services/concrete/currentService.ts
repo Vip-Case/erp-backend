@@ -116,7 +116,7 @@ export class currentService {
         }
     }
 
-    async updateCurrent(id: string, data: any): Promise<Current> {
+    async updateCurrent(id: string, data: any): Promise<any> {
         try {
             // Restructure the incoming data
             const updateData = {
@@ -139,7 +139,7 @@ export class currentService {
             };
 
             // Create transaction to handle all updates atomically
-            return await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async (tx) => {
                 // 1. Update main current record
                 const updatedCurrent = await tx.current.update({
                     where: { id },
@@ -160,13 +160,13 @@ export class currentService {
 
                     // Create new addresses
                     await Promise.all(
-                        data.addresses.map(address =>
+                        data.addresses.map((address: CurrentAddress) =>
                             tx.currentAddress.create({
                                 data: {
                                     addressName: address.addressName,
                                     addressType: address.addressType,
                                     address: address.address,
-                                    province: address.province,
+                                    city: address.province,
                                     district: address.district,
                                     countryCode: address.countryCode,
                                     postalCode: address.postalCode,
@@ -190,7 +190,7 @@ export class currentService {
 
                     // Create new category connections
                     await Promise.all(
-                        data.categories.map(categoryId =>
+                        data.categories.map((categoryId: string) =>
                             tx.currentCategoryItem.create({
                                 data: {
                                     category: { connect: { id: categoryId } },
