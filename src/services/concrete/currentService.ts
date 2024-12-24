@@ -119,48 +119,41 @@ export class currentService {
     async updateCurrent(id: string, data: any): Promise<any> {
         try {
             // Restructure the incoming data
-            const updateData = {
-                current: {
-                    currentCode: data.currentCode,
-                    currentName: data.currentName,
-                    currentType: data.currentType,
-                    institution: data.institution,
-                    identityNo: data.identityNo,
-                    taxNumber: data.taxNumber,
-                    taxOffice: data.taxOffice,
-                    kepAddress: data.kepAddress,
-                    mersisNo: data.mersisNo,
-                    sicilNo: data.sicilNo,
-                    title: data.title,
-                    webSite: data.webSite,
-                    birthOfDate: data.birthOfDate ? new Date(data.birthOfDate) : null,
-                    priceListId: data.priceListId
-                }
-            };
+            const { priceListId, ...updateData } = data;
 
             // Create transaction to handle all updates atomically
-            const result = await prisma.$transaction<Current>(async (tx): Promise<Current> => {
+            return await prisma.$transaction(async (tx) => {
                 // 1. Update main current record
                 const updatedCurrent = await tx.current.update({
                     where: { id },
                     data: {
-                        ...updateData.current,
+                        currentCode: data.currentCode,
+                        currentName: data.currentName,
+                        currentType: data.currentType,
+                        institution: data.institution,
+                        identityNo: data.identityNo,
+                        taxNumber: data.taxNumber,
+                        taxOffice: data.taxOffice,
+                        kepAddress: data.kepAddress,
+                        mersisNo: data.mersisNo,
+                        sicilNo: data.sicilNo,
+                        title: data.title,
+                        webSite: data.webSite,
+                        birthOfDate: data.birthOfDate ? new Date(data.birthOfDate) : null,
                         priceList: {
-                            connect: { id: data.priceListId }
+                            connect: { id: priceListId }
                         }
                     }
                 });
 
                 // 2. Handle addresses if provided
                 if (data.addresses && Array.isArray(data.addresses)) {
-                    // Delete existing addresses
                     await tx.currentAddress.deleteMany({
                         where: { currentCode: updatedCurrent.currentCode }
                     });
 
-                    // Create new addresses
                     await Promise.all(
-                        data.addresses.map((address: CurrentAddress) =>
+                        data.addresses.map((address) =>
                             tx.currentAddress.create({
                                 data: {
                                     addressName: address.addressName,
@@ -183,14 +176,12 @@ export class currentService {
 
                 // 3. Handle categories if provided
                 if (data.categories && Array.isArray(data.categories)) {
-                    // Delete existing categories
                     await tx.currentCategoryItem.deleteMany({
                         where: { currentCode: updatedCurrent.currentCode }
                     });
 
-                    // Create new category connections
                     await Promise.all(
-                        data.categories.map((categoryId: string) =>
+                        data.categories.map((categoryId) =>
                             tx.currentCategoryItem.create({
                                 data: {
                                     category: { connect: { id: categoryId } },
@@ -201,8 +192,11 @@ export class currentService {
                     );
                 }
 
-                // Return updated current with all relations
-                return result;
+                // Return updated current with relations
+                return await tx.current.findUnique({
+                    where: { id },
+                    include: currentRelations
+                });
             });
 
         } catch (error: any) {
