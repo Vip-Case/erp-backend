@@ -4,30 +4,6 @@ import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
-interface StockCardData {
-    productCode: string;
-    productName: string;
-    unit: StockUnits;
-    shortDescription?: string | null;
-    description?: string | null;
-    companyCode?: string | null;
-    branchCode?: string | null;
-    brandId?: string | null;
-    productType: ProductType;
-    gtip?: string | null;
-    pluCode?: string | null;
-    desi?: number | null;
-    adetBoleni?: number | null;
-    siraNo?: string | null;
-    raf?: string | null;
-    karMarji?: number | null;
-    riskQuantities?: number | null;
-    maliyet?: number | null;
-    maliyetKur?: string | null;
-    warehouseName?: string | null;
-    quantity?: number | null;
-}
-
 // Zod ile Stok Kartı Doğrulama Şeması
 const StockCardSchema = z.object({
     productCode: z.string().min(1, 'Ürün kodu boş olamaz'),
@@ -53,6 +29,7 @@ const StockCardSchema = z.object({
     productType: z.enum(['BasitUrun', 'VaryasyonluUrun', 'DijitalUrun', 'Hizmet']),
     categories: z.string().optional(),
     attributes: z.string().optional(),
+    vatRate: z.number().optional(),
     prices: z.string().optional(),
     barcodes: z.string().optional(),
     manufacturerName: z.string().nullable().optional(),
@@ -227,6 +204,7 @@ export const importStockCards = async (file: File) => {
                                 priceListId: priceList.id,
                                 stockCardId: stockCardId,
                                 price,
+                                vatRate: priceList.isVatIncluded ? stockCard.vatRate : 0
                             },
                         });
                     })
