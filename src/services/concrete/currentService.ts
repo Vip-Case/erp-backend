@@ -139,7 +139,7 @@ export class currentService {
             };
 
             // Create transaction to handle all updates atomically
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction<Current>(async (tx): Promise<Current> => {
                 // 1. Update main current record
                 const updatedCurrent = await tx.current.update({
                     where: { id },
@@ -202,10 +202,7 @@ export class currentService {
                 }
 
                 // Return updated current with all relations
-                return await tx.current.findUnique({
-                    where: { id },
-                    include: currentRelations
-                });
+                return result;
             });
 
         } catch (error: any) {
