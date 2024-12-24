@@ -133,44 +133,86 @@ export class currentService {
                     sicilNo: data.sicilNo,
                     title: data.title,
                     webSite: data.webSite,
-                    birthOfDate: data.birthOfDate,
+                    birthOfDate: data.birthOfDate ? new Date(data.birthOfDate) : null,
                     priceListId: data.priceListId
-                },
-                currentAddress: data.addresses ? {
-                    // Delete existing addresses
-                    deleteMany: {},
-                    // Create new ones
-                    create: data.addresses.map(address => ({
-                        ...address,
-                        id: undefined // Remove id to allow new creation
-                    }))
-                } : undefined,
-                currentCategoryItem: data.categories ? {
-                    // Delete existing categories
-                    deleteMany: {},
-                    // Create new ones
-                    create: data.categories.map(category => ({
-                        category: { connect: { id: category } }
-                    }))
-                } : undefined,
+                }
             };
 
-            const updatedCurrent = await prisma.current.update({
-                where: { id },
-                data: {
-                    ...updateData.current,
-                    priceList: {
-                        connect: { id: updateData.current.priceListId }
-                    },
-                    currentAddress: updateData.currentAddress,
-                    currentCategoryItem: updateData.currentCategoryItem
-                },
-                include: currentRelations
+            // Create transaction to handle all updates atomically
+            return await prisma.$transaction(async (tx) => {
+                // 1. Update main current record
+                const updatedCurrent = await tx.current.update({
+                    where: { id },
+                    data: {
+                        ...updateData.current,
+                        priceList: {
+                            connect: { id: data.priceListId }
+                        }
+                    }
+                });
+
+                // 2. Handle addresses if provided
+                if (data.addresses && Array.isArray(data.addresses)) {
+                    // Delete existing addresses
+                    await tx.currentAddress.deleteMany({
+                        where: { currentCode: updatedCurrent.currentCode }
+                    });
+
+                    // Create new addresses
+                    await Promise.all(
+                        data.addresses.map(address =>
+                            tx.currentAddress.create({
+                                data: {
+                                    addressName: address.addressName,
+                                    addressType: address.addressType,
+                                    address: address.address,
+                                    province: address.province,
+                                    district: address.district,
+                                    countryCode: address.countryCode,
+                                    postalCode: address.postalCode,
+                                    phone: address.phone,
+                                    phone2: address.phone2,
+                                    email: address.email,
+                                    email2: address.email2,
+                                    current: { connect: { currentCode: updatedCurrent.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                // 3. Handle categories if provided
+                if (data.categories && Array.isArray(data.categories)) {
+                    // Delete existing categories
+                    await tx.currentCategoryItem.deleteMany({
+                        where: { currentCode: updatedCurrent.currentCode }
+                    });
+
+                    // Create new category connections
+                    await Promise.all(
+                        data.categories.map(categoryId =>
+                            tx.currentCategoryItem.create({
+                                data: {
+                                    category: { connect: { id: categoryId } },
+                                    current: { connect: { currentCode: updatedCurrent.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
+
+                // Return updated current with all relations
+                return await tx.current.findUnique({
+                    where: { id },
+                    include: currentRelations
+                });
             });
 
-            return updatedCurrent;
-        } catch (error) {
+        } catch (error: any) {
             logger.error("Error updating current:", error);
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                throw new Error(`Database error: ${error.message}`);
+            }
             throw new Error(`Could not update current: ${error.message}`);
         }
     }
