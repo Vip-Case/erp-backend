@@ -71,23 +71,21 @@ export const CurrentController = {
     updateCurrent: async (ctx: Context) => {
         const { id } = ctx.params;
         const data = ctx.body as {
-            current: Prisma.CurrentUpdateInput;
-            priceListId: string;
-            currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
-            currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
-            currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
-            currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
-            currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
-            currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
+            current: CurrentCreateInput;
+            currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
+            currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
+            currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
+            currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
+            currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
+            currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
         };
 
         try {
             const updateData = {
                 current: {
-                    ...data.current
+                    ...data.current,
+                    priceListId: data.current.priceListId
                 },
-                priceListId: data.priceListId,
-                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,

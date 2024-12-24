@@ -117,43 +117,30 @@ export class currentService {
     }
 
     async updateCurrent(id: string, data: {
-        current: Prisma.CurrentUpdateInput;
-        priceListName: string;
-        currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
-        currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
-        currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
-        currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
-        currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
-        currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
+        current: CurrentData;
+        currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
+        currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
+        currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
+        currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
+        currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
+        currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
 
     }): Promise<Current> {
         try {
-            let priceListConnect = {};
-
-            if (data.priceListName) {
-                const priceList = await prisma.stockCardPriceList.findUnique({
-                    where: { priceListName: data.priceListName }
-                });
-
-                if (!priceList) {
-                    throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
-                }
-
-                priceListConnect = { connect: { id: priceList.id } };
-            }
             const updatedCurrent = await prisma.current.update({
 
                 where: { id },
                 data: {
-                    ...data.current,
-                    priceList: priceListConnect,
+                    ...{ ...data.current, priceListId: undefined },
+                    priceList: {
+                        connect: { id: data.current.priceListId }
+                    },
                     currentAddress: data.currentAddress,
                     currentBranch: data.currentBranch,
                     currentCategoryItem: data.currentCategoryItem,
                     currentFinancial: data.currentFinancial,
                     currentRisk: data.currentRisk,
                     currentOfficials: data.currentOfficials
-
                 },
                 include: currentRelations
             });
