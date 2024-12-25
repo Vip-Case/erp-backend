@@ -720,22 +720,24 @@ export class InvoiceService {
                     },
                 });
 
-                await prisma.currentMovement.create({
-                    data: {
-                        currentCode: data.currentCode,
-                        dueDate: data.paymentDate,
-                        description: `${newInvoice.invoiceNo} no'lu alış faturası için cari hareket`,
-                        debtAmount: 0,
-                        creditAmount: totalPaid,
-                        movementType: "Alacak",
-                        priceListId: data.priceListId,
-                        documentType: "Fatura",
-                        paymentType: "ÇokluÖdeme",
-                        documentNo: newInvoice.invoiceNo,
-                        companyCode: _companyCode?.companyCode || "",
-                        branchCode: data.branchCode,
-                    },
-                });
+                if (totalPaid > 0) {
+                    await prisma.currentMovement.create({
+                        data: {
+                            currentCode: data.currentCode,
+                            dueDate: data.paymentDate,
+                            description: `${newInvoice.invoiceNo} no'lu alış faturası için cari hareket`,
+                            debtAmount: 0,
+                            creditAmount: totalPaid,
+                            movementType: "Alacak",
+                            priceListId: data.priceListId,
+                            documentType: "Fatura",
+                            paymentType: "ÇokluÖdeme",
+                            documentNo: newInvoice.invoiceNo,
+                            companyCode: _companyCode?.companyCode || "",
+                            branchCode: data.branchCode,
+                        },
+                    });
+                }
             });
             return result;
         } catch (error) {
@@ -959,8 +961,8 @@ export class InvoiceService {
                         currentCode: data.currentCode,
                         dueDate: data.paymentDate,
                         description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
-                        debtAmount: 0,
-                        creditAmount: totalAmount,
+                        debtAmount: totalAmount,
+                        creditAmount: 0,
                         movementType: "Alacak",
                         priceListId: data.priceListId,
                         documentType: "Fatura",
@@ -971,22 +973,24 @@ export class InvoiceService {
                     },
                 });
 
-                await prisma.currentMovement.create({
-                    data: {
-                        currentCode: data.currentCode,
-                        dueDate: data.paymentDate,
-                        description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
-                        debtAmount: totalPaid,
-                        creditAmount: 0,
-                        movementType: "Borc",
-                        priceListId: data.priceListId,
-                        documentType: "Fatura",
-                        paymentType: "ÇokluÖdeme",
-                        documentNo: newInvoice.invoiceNo,
-                        companyCode: _companyCode?.companyCode || "",
-                        branchCode: data.branchCode,
-                    },
-                });
+                if (totalPaid > 0) {
+                    await prisma.currentMovement.create({
+                        data: {
+                            currentCode: data.currentCode,
+                            dueDate: data.paymentDate,
+                            description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
+                            debtAmount: 0,
+                            creditAmount: totalPaid,
+                            movementType: "Borc",
+                            priceListId: data.priceListId,
+                            documentType: "Fatura",
+                            paymentType: "ÇokluÖdeme",
+                            documentNo: newInvoice.invoiceNo,
+                            companyCode: _companyCode?.companyCode || "",
+                            branchCode: data.branchCode,
+                        },
+                    });
+                }
             });
             return result;
         } catch (error) {
@@ -1177,8 +1181,8 @@ export class InvoiceService {
                         currentCode: data.customer.code,
                         dueDate: new Date(),
                         description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
-                        debtAmount: 0,
-                        creditAmount: totalAmount,
+                        debtAmount: totalAmount,
+                        creditAmount: 0,
                         movementType: "Alacak",
                         documentType: "Fatura",
                         paymentType: "ÇokluÖdeme",
@@ -1193,8 +1197,8 @@ export class InvoiceService {
                             currentCode: data.customer.code,
                             dueDate: new Date(),
                             description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
-                            debtAmount: totalPaid,
-                            creditAmount: 0,
+                            debtAmount: 0,
+                            creditAmount: totalPaid,
                             movementType: "Borc",
                             documentType: "Fatura",
                             paymentType: "ÇokluÖdeme",
