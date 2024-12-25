@@ -1187,22 +1187,24 @@ export class InvoiceService {
                         branchCode: data.branchCode,
                     },
                 });
+                if (totalPaid > 0) {
+                    await prisma.currentMovement.create({
+                        data: {
+                            currentCode: data.customer.code,
+                            dueDate: new Date(),
+                            description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
+                            debtAmount: totalPaid,
+                            creditAmount: 0,
+                            movementType: "Borc",
+                            documentType: "Fatura",
+                            paymentType: "ÇokluÖdeme",
+                            documentNo: newInvoice.invoiceNo,
+                            companyCode: _companyCode?.companyCode || "",
+                            branchCode: data.branchCode,
+                        },
+                    });
+                }
 
-                await prisma.currentMovement.create({
-                    data: {
-                        currentCode: data.customer.code,
-                        dueDate: new Date(),
-                        description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
-                        debtAmount: totalPaid,
-                        creditAmount: 0,
-                        movementType: "Borc",
-                        documentType: "Fatura",
-                        paymentType: "ÇokluÖdeme",
-                        documentNo: newInvoice.invoiceNo,
-                        companyCode: _companyCode?.companyCode || "",
-                        branchCode: data.branchCode,
-                    },
-                });
             });
             return result;
         } catch (error) {
