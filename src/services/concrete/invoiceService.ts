@@ -1455,7 +1455,7 @@ export class InvoiceService {
             totalAmount: detail.totalPrice.toNumber(),
             priceListId: invoice.priceListId ?? null,
             currency: invoice.priceList?.currency ?? null,
-            isVatIncluded: invoice.priceList.isVatIncluded,
+            isVatIncluded: invoice.priceList?.isVatIncluded,
         }));
 
         const payments: InvoicePayments[] = [];
