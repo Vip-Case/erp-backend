@@ -1002,6 +1002,10 @@ export class InvoiceService {
     async createQuickSaleInvoiceWithRelations(data: QuickSaleResponse): Promise<any> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
+                let totalAmountt = data.payments.reduce((sum, p) => sum + p.amount, 0);
+                // data.paymensts içinden methodu openAccount olmayanları al ve amount'larını topla
+                let totalPaidd = data.payments.filter((p) => p.method !== "openAccount").reduce((sum, p) => sum + p.amount, 0);
+                totalAmountt = totalAmountt - totalPaidd;
                 const _invoiceNo = await this.handleSerialToggle(true);
                 // 1. Ana fatura oluşturuluyor
                 const newInvoice = await prisma.invoice.create({
@@ -1017,6 +1021,8 @@ export class InvoiceService {
                         totalVat: data.totalVat,
                         totalDiscount: 0,
                         totalNet: data.subtotal,
+                        totalPaid: totalPaidd,
+                        totalDebt: totalAmountt,
                         description: `${_invoiceNo} no'lu hızlı satış faturası`,
                     },
                 });
