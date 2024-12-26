@@ -1115,9 +1115,9 @@ export class InvoiceService {
                                 invoiceId: newInvoice.id,
                                 vaultId: payment.accountId,
                                 description: `${newInvoice.invoiceNo} no'lu hızlı satış için kasa hareketi`,
-                                entering: 0,
-                                emerging: payment.amount,
-                                vaultDirection: "Exit",
+                                entering: payment.amount,
+                                emerging: 0,
+                                vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
                             },
@@ -1126,7 +1126,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    decrement: payment.amount,
+                                    increment: payment.amount,
                                 },
                             },
                         });
@@ -1136,9 +1136,9 @@ export class InvoiceService {
                                 invoiceId: newInvoice.id,
                                 bankId: payment.accountId,
                                 description: `${newInvoice.invoiceNo} no'lu hızlı satış için banka hareketi`,
-                                entering: 0,
-                                emerging: payment.amount,
-                                bankDirection: "Exit",
+                                entering: payment.amount,
+                                emerging: 0,
+                                bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
                             },
@@ -1147,7 +1147,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    decrement: payment.amount,
+                                    increment: payment.amount,
                                 },
                             },
                         });
@@ -1157,9 +1157,9 @@ export class InvoiceService {
                                 invoiceId: newInvoice.id,
                                 posId: payment.accountId,
                                 description: `${newInvoice.invoiceNo} no'lu hızlı satış için pos hareketi`,
-                                entering: 0,
-                                emerging: payment.amount,
-                                posDirection: "Exit",
+                                entering: payment.amount,
+                                emerging: 0,
+                                posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
                             },
@@ -1168,7 +1168,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    decrement: payment.amount,
+                                    increment: payment.amount,
                                 },
                             },
                         });
