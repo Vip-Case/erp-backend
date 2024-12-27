@@ -54,7 +54,7 @@ export class BankMovementService {
 
     async updateBankMovement(id: string, bankMovement: Partial<BankMovement>): Promise<BankMovement> {
         try {
-            return await prisma.bankMovement.update({
+            const result = await prisma.bankMovement.update({
                 where: { id },
                 data: {
                     bankId: bankMovement.bankId,
@@ -87,6 +87,8 @@ export class BankMovementService {
 
                 } as Prisma.BankMovementUpdateInput,
             });
+            BankService.updateBankBalance(bankMovement.bankId, bankMovement.entering, bankMovement.emerging);
+            return result;
         } catch (error) {
             logger.error(`Error updating bankMovement with id ${id}`, error);
             throw error;
@@ -95,6 +97,7 @@ export class BankMovementService {
 
     async deleteBankMovement(id: string): Promise<boolean> {
         try {
+
             return await this.bankMovementRepository.delete(id);
         } catch (error) {
             logger.error(`Error deleting bankMovement with id ${id}`, error);
