@@ -86,7 +86,6 @@ export class VaultMovementService {
             return await prisma.vaultMovement.update({
                 where: { id },
                 data: {
-                    vaultId: vaultMovement.vaultId,
                     invoiceId: vaultMovement?.invoiceId,
                     receiptId: vaultMovement?.receiptId,
                     description: vaultMovement?.description,

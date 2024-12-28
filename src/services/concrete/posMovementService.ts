@@ -81,7 +81,6 @@ export class PosMovementService {
             const updatedPosMovement = await prisma.posMovement.update({
                 where: { id },
                 data: {
-                    posId: posMovement?.posId,
                     invoiceId: posMovement?.invoiceId,
                     receiptId: posMovement?.receiptId,
                     description: posMovement?.description,
