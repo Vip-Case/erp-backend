@@ -81,15 +81,15 @@ export class BankMovementService {
             const updatedBankMovement = await prisma.bankMovement.update({
                 where: { id },
                 data: {
-                    bankId: bankMovement.bankId,
-                    invoiceId: bankMovement.invoiceId,
-                    receiptId: bankMovement.receiptId,
-                    description: bankMovement.description,
-                    entering: bankMovement.entering,
-                    emerging: bankMovement.emerging,
-                    bankDirection: bankMovement.bankDirection,
-                    bankType: bankMovement.bankDirection,
-                    bankDocumentType: bankMovement.bankDirection,
+                    bankId: bankMovement?.bankId,
+                    invoiceId: bankMovement?.invoiceId,
+                    receiptId: bankMovement?.receiptId,
+                    description: bankMovement?.description,
+                    entering: bankMovement?.entering,
+                    emerging: bankMovement?.emerging,
+                    bankDirection: bankMovement?.bankDirection,
+                    bankType: bankMovement?.bankType,
+                    bankDocumentType: bankMovement?.bankDocumentType,
 
                     Bank: bankMovement.bankId ? {
                         connect: {

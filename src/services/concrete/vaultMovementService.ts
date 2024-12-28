@@ -87,14 +87,14 @@ export class VaultMovementService {
                 where: { id },
                 data: {
                     vaultId: vaultMovement.vaultId,
-                    invoiceId: vaultMovement.invoiceId,
-                    receiptId: vaultMovement.receiptId,
-                    description: vaultMovement.description,
-                    entering: vaultMovement.entering,
-                    emerging: vaultMovement.emerging,
-                    vaultDirection: vaultMovement.vaultDirection,
-                    vaultType: vaultMovement.vaultType,
-                    vaultDocumentType: vaultMovement.vaultDocumentType,
+                    invoiceId: vaultMovement?.invoiceId,
+                    receiptId: vaultMovement?.receiptId,
+                    description: vaultMovement?.description,
+                    entering: vaultMovement?.entering,
+                    emerging: vaultMovement?.emerging,
+                    vaultDirection: vaultMovement?.vaultDirection,
+                    vaultType: vaultMovement?.vaultType,
+                    vaultDocumentType: vaultMovement?.vaultDocumentType,
 
                     Vault: vaultMovement.vaultId ? {
                         connect: {
