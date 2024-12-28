@@ -1683,6 +1683,7 @@ export class InvoiceService {
             });
             return result;
         } catch (error) {
+            console.error(error);
             throw new Error("Error deleting invoice with relations and recreate", { cause: error });
         }
     }
