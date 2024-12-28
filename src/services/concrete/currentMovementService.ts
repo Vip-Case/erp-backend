@@ -29,7 +29,6 @@ export class CurrentMovementService {
                     description: currentMovement.description,
                     debtAmount: currentMovement.debtAmount,
                     creditAmount: currentMovement.creditAmount,
-                    balanceAmount: (currentMovement.debtAmount - currentMovement.creditAmount),
                     movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
