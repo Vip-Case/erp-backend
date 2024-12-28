@@ -104,6 +104,34 @@ const InvoiceController = {
         }
     },
 
+    // API to delete an sales invoice with relations and recreate
+    deleteSalesInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
+        try {
+            const invoice = await invoiceService.deleteSalesInvoiceWithRelationsAndRecreate(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations and recreate", details: error.message };
+        }
+    },
+
+    // API to delete an purchase invoice with relations and recreate
+    deletePurchaseInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
+        try {
+            const invoice = await invoiceService.deletePurchaseInvoiceWithRelationsAndRecreate(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations and recreate", details: error.message };
+        }
+    },
+
     // API to update an invoice with relations
     updateInvoiceWithRelations: async (ctx: Context) => {
         try {
@@ -141,8 +169,6 @@ const InvoiceController = {
             return { error: "Error updating invoice with relations", details: error.message };
         }
     },
-
-
 
     // API to delete an invoice with relations
     deleteInvoiceWithRelations: async (ctx: Context) => {
