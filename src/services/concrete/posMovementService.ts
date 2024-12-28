@@ -90,19 +90,19 @@ export class PosMovementService {
                     posType: posMovement?.posType,
                     posDocumentType: posMovement?.posDocumentType,
 
-                    Pos: posMovement.posId ? {
+                    pos: posMovement.posId ? {
                         connect: {
                             id: posMovement.posId
                         }
                     } : undefined,
 
-                    Invoice: posMovement.invoiceId ? {
+                    invoice: posMovement.invoiceId ? {
                         connect: {
                             id: posMovement.invoiceId
                         }
                     } : undefined,
 
-                    Receipt: posMovement.receiptId ? {
+                    receipt: posMovement.receiptId ? {
                         connect: {
                             id: posMovement.receiptId
                         }

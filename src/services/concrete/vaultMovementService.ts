@@ -95,19 +95,19 @@ export class VaultMovementService {
                     vaultType: vaultMovement?.vaultType,
                     vaultDocumentType: vaultMovement?.vaultDocumentType,
 
-                    Vault: vaultMovement.vaultId ? {
+                    vault: vaultMovement.vaultId ? {
                         connect: {
                             id: vaultMovement.vaultId
                         }
                     } : undefined,
 
-                    Invoice: vaultMovement.invoiceId ? {
+                    invoice: vaultMovement.invoiceId ? {
                         connect: {
                             id: vaultMovement.invoiceId
                         }
                     } : undefined,
 
-                    Receipt: vaultMovement.receiptId ? {
+                    receipt: vaultMovement.receiptId ? {
                         connect: {
                             id: vaultMovement.receiptId
                         }

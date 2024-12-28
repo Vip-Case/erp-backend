@@ -90,19 +90,19 @@ export class BankMovementService {
                     bankType: bankMovement?.bankType,
                     bankDocumentType: bankMovement?.bankDocumentType,
 
-                    Bank: bankMovement.bankId ? {
+                    bank: bankMovement.bankId ? {
                         connect: {
                             id: bankMovement.bankId
                         }
                     } : undefined,
 
-                    Invoice: bankMovement.invoiceId ? {
+                    invoice: bankMovement.invoiceId ? {
                         connect: {
                             id: bankMovement.invoiceId
                         }
                     } : undefined,
 
-                    Receipt: bankMovement.receiptId ? {
+                    receipt: bankMovement.receiptId ? {
                         connect: {
                             id: bankMovement.receiptId
                         }
