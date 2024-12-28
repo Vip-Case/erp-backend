@@ -8,6 +8,7 @@ bunx prisma generate || exit 1
 
 echo "⚙️ Applying Prisma migrations..."
 if bunx prisma migrate deploy; then
+  bunx prisma generate
   echo "✅ Migrations applied successfully."
 else
   echo "❌ Migration failed. Exiting..."

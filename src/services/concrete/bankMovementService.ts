@@ -54,7 +54,25 @@ export class BankMovementService {
 
     async updateBankMovement(id: string, bankMovement: Partial<BankMovement>): Promise<BankMovement> {
         try {
-            const result = await prisma.bankMovement.update({
+            // Eski bankMovement bilgilerini alıyoruz
+            const oldBankMovement = await this.bankMovementRepository.findById(id);
+            // Güncellenmemiş enterin ve emerging değerlerini alıyoruz
+            const entering: number = Number(oldBankMovement?.entering || 0);
+            const emerging: number = Number(oldBankMovement?.emerging || 0);
+            // Güncellenen enterin ve emerging değerlerini alıyoruz
+            const newEntering: number = Number(bankMovement.entering || 0);
+            const newEmerging: number = Number(bankMovement.emerging || 0);
+            // Eski değerlerden yeni değerleri çıkartarak farkı buluyoruz eğer negatif değer ise positive yaparak hesaplamayı yapıyoruz
+            const enteringDifference = newEntering - entering;
+            const emergingDifference = newEmerging - emerging;
+            const enteringValue = enteringDifference < 0 ? enteringDifference * -1 : enteringDifference;
+            const emergingValue = emergingDifference < 0 ? emergingDifference * -1 : emergingDifference;
+            // Önce yeni gelen veride bankId var mı kontrol ediyoruz eğer yoksa eski bankId yi alıyoruz eğer varsa yeni bankId yi alıyoruz
+            const bankId = bankMovement.bankId || oldBankMovement.bankId;
+            // Banka bakisini güncelliyoruz
+            BankService.updateBankBalance(bankId, new Prisma.Decimal(enteringValue), new Prisma.Decimal(emergingValue));
+            // Güncelleme işlemini yapıyoruz
+            const updatedBankMovement = await prisma.bankMovement.update({
                 where: { id },
                 data: {
                     bankId: bankMovement.bankId,
@@ -87,8 +105,17 @@ export class BankMovementService {
 
                 } as Prisma.BankMovementUpdateInput,
             });
-            BankService.updateBankBalance(bankMovement.bankId, bankMovement.entering, bankMovement.emerging);
-            return result;
+            // İlgili cari hareketini güncelliyoruz
+            const updatedCurrentMovement = await prisma.currentMovement.update({
+                where: {
+                    bankMovementId: id
+                },
+                data: {
+                    entering: bankMovement.entering,
+                    emerging: bankMovement.emerging,
+                }
+            })
+            return updatedBankMovement;
         } catch (error) {
             logger.error(`Error updating bankMovement with id ${id}`, error);
             throw error;

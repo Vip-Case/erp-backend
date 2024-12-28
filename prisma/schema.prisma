@@ -735,30 +735,35 @@ model CurrentOfficials {
 }
 
 model CurrentMovement {
-  id            String                       @id @default(cuid())
-  currentCode   String?                      @db.VarChar(50)
-  dueDate       DateTime?
-  description   String?                      @db.VarChar(250)
-  debtAmount    Decimal?                     @db.Decimal(15, 4)
-  creditAmount  Decimal?                     @db.Decimal(15, 4)
-  balanceAmount Decimal?                     @db.Decimal(15, 4)
-  priceListId   String?
-  movementType  CurrentMovementType
-  documentType  CurrentMovementDocumentType?
-  paymentType   CurrentPaymentType?
-  documentNo    String?
-  companyCode   String
-  branchCode    String
-  createdAt     DateTime                     @default(now())
-  updatedAt     DateTime                     @updatedAt
-  createdBy     String?
-  updatedBy     String?
+  id           String                       @id @default(cuid())
+  currentCode  String?                      @db.VarChar(50)
+  dueDate      DateTime?
+  description  String?                      @db.VarChar(250)
+  debtAmount   Decimal?                     @db.Decimal(15, 4)
+  creditAmount Decimal?                     @db.Decimal(15, 4)
+  priceListId  String?
+  movementType CurrentMovementType
+  documentType CurrentMovementDocumentType?
+  paymentType  CurrentPaymentType?
+  documentNo   String?
+  companyCode  String
+  branchCode   String
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+  createdBy    String?
+  updatedBy    String?
 
   company            Company             @relation(fields: [companyCode], references: [companyCode])
   branch             Branch              @relation(fields: [branchCode], references: [branchCode])
   stockCardPriceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
   current            Current?            @relation(fields: [currentCode], references: [currentCode])
   invoice            Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
+
+  VaultMovement VaultMovement[]
+
+  BankMovement BankMovement[]
+
+  PosMovement PosMovement[]
 }
 
 model CurrentCategory {
@@ -892,10 +897,12 @@ model VaultMovement {
   vaultDirection    VaultDirection
   vaultType         VaultType
   vaultDocumentType VaultDocumentType
+  currentMovementId String?
 
-  vault   Vault    @relation(fields: [vaultId], references: [id])
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
-  receipt Receipt? @relation(fields: [receiptId], references: [id])
+  vault           Vault            @relation(fields: [vaultId], references: [id])
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
+  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Bank {
@@ -911,20 +918,22 @@ model Bank {
 }
 
 model BankMovement {
-  id               String            @id @default(cuid())
-  bankId           String
-  invoiceId        String?
-  receiptId        String?
-  description      String
-  entering         Decimal           @db.Decimal(15, 2)
-  emerging         Decimal           @db.Decimal(15, 2)
-  bankDirection    VaultDirection
-  bankType         VaultType
-  bankDocumentType VaultDocumentType
+  id                String            @id @default(cuid())
+  bankId            String
+  invoiceId         String?
+  receiptId         String?
+  description       String
+  entering          Decimal           @db.Decimal(15, 2)
+  emerging          Decimal           @db.Decimal(15, 2)
+  bankDirection     VaultDirection
+  bankType          VaultType
+  bankDocumentType  VaultDocumentType
+  currentMovementId String?
 
-  bank    Bank     @relation(fields: [bankId], references: [id])
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
-  receipt Receipt? @relation(fields: [receiptId], references: [id])
+  bank            Bank             @relation(fields: [bankId], references: [id])
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
+  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Pos {
@@ -940,20 +949,22 @@ model Pos {
 }
 
 model PosMovement {
-  id              String            @id @default(cuid())
-  posId           String
-  invoiceId       String?
-  receiptId       String?
-  description     String
-  entering        Decimal           @db.Decimal(15, 2)
-  emerging        Decimal           @db.Decimal(15, 2)
-  posDirection    VaultDirection
-  posType         VaultType
-  posDocumentType VaultDocumentType
+  id                String            @id @default(cuid())
+  posId             String
+  invoiceId         String?
+  receiptId         String?
+  description       String
+  entering          Decimal           @db.Decimal(15, 2)
+  emerging          Decimal           @db.Decimal(15, 2)
+  posDirection      VaultDirection
+  posType           VaultType
+  posDocumentType   VaultDocumentType
+  currentMovementId String?
 
-  pos     Pos      @relation(fields: [posId], references: [id])
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
-  receipt Receipt? @relation(fields: [receiptId], references: [id])
+  pos             Pos              @relation(fields: [posId], references: [id])
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
+  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Order {

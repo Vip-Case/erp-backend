@@ -83,7 +83,6 @@ export class CurrentMovementService {
                     description: currentMovement.description,
                     debtAmount: currentMovement.debtAmount,
                     creditAmount: currentMovement.creditAmount,
-                    balanceAmount: debtAmount.equals(new Decimal(0)) ? creditAmount.negated() : debtAmount, movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
 
