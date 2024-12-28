@@ -74,15 +74,15 @@ export class CurrentMovementService {
 
     async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>): Promise<CurrentMovement> {
         try {
-            const debtAmount = currentMovement.debtAmount ?? new Decimal(0);
-            const creditAmount = currentMovement.creditAmount ?? new Decimal(0);
+            const debtAmount = currentMovement.debtAmount ?? new Decimal(0);    // Eğer debtAmount yoksa 0 yap
+            const creditAmount = currentMovement.creditAmount ?? new Decimal(0); // Eğer creditAmount yoksa 0 yap
             return await prisma.currentMovement.update({
                 where: { id },
                 data: {
                     dueDate: currentMovement.dueDate,
                     description: currentMovement.description,
-                    debtAmount: currentMovement.debtAmount,
-                    creditAmount: currentMovement.creditAmount,
+                    debtAmount: debtAmount,
+                    creditAmount: creditAmount,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
 
