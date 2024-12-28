@@ -760,10 +760,8 @@ model CurrentMovement {
   invoice            Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
 
   VaultMovement VaultMovement[]
-
-  BankMovement BankMovement[]
-
-  PosMovement PosMovement[]
+  BankMovement  BankMovement[]
+  PosMovement   PosMovement[]
 }
 
 model CurrentCategory {

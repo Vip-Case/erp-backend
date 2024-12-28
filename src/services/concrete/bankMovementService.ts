@@ -38,6 +38,12 @@ export class BankMovementService {
                         connect: {
                             id: bankMovement.receiptId
                         }
+                    } : undefined,
+
+                    currentMovement: bankMovement?.currentMovementId ? {
+                        connect: {
+                            id: bankMovement.currentMovementId
+                        }
                     } : undefined
 
                 } as Prisma.BankMovementCreateInput,
@@ -101,20 +107,16 @@ export class BankMovementService {
                         connect: {
                             id: bankMovement.receiptId
                         }
+                    } : undefined,
+
+                    currentMovement: bankMovement.currentMovementId ? {
+                        connect: {
+                            id: bankMovement.currentMovementId
+                        }
                     } : undefined
 
                 } as Prisma.BankMovementUpdateInput,
             });
-            // İlgili cari hareketini güncelliyoruz
-            const updatedCurrentMovement = await prisma.currentMovement.update({
-                where: {
-                    bankMovementId: id
-                },
-                data: {
-                    entering: bankMovement.entering,
-                    emerging: bankMovement.emerging,
-                }
-            })
             return updatedBankMovement;
         } catch (error) {
             logger.error(`Error updating bankMovement with id ${id}`, error);
