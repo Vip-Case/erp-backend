@@ -112,7 +112,7 @@ const InvoiceController = {
 
             if (!invoice) {
                 ctx.set.status = 404;
-                return { error: "Fatura bulunamadı veya işlem başarısız" };
+                return { error: "Fatura bulunamadı veya işlem başarısız", details: `${invoice}` };
             }
 
             ctx.set.status = 200;
