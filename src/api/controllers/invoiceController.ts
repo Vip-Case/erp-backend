@@ -109,12 +109,6 @@ const InvoiceController = {
         const data = ctx.body as InvoiceInfo
         try {
             const invoice = await invoiceService.deleteSalesInvoiceWithRelationsAndRecreate(id, data);
-
-            if (!invoice) {
-                ctx.set.status = 404;
-                return { error: "Fatura bulunamadı veya işlem başarısız", details: `${invoice}` };
-            }
-
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -136,8 +130,12 @@ const InvoiceController = {
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error deleting invoice with relations and recreate", details: error.message };
+            console.error("Satış faturası silme ve yeniden oluşturma hatası:", error);
+            ctx.set.status = error.status || 500;
+            return {
+                error: "Fatura silme ve yeniden oluşturma işlemi başarısız",
+                details: error.message,
+            };
         }
     },
 
