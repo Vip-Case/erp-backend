@@ -1170,42 +1170,6 @@ export class InvoiceService {
         }
     }
 
-    async deleteInvoiceWithRelations(id: string): Promise<boolean> {
-        try {
-            // 1. Faturayı getir ve `invoiceNo` değerini al
-            const existingInvoice = await prisma.invoice.findUnique({
-                where: { id },
-                select: { invoiceNo: true },
-            });
-
-            if (!existingInvoice || !existingInvoice.invoiceNo) {
-                throw new Error(`Invoice with ID '${id}' does not exist or has no invoiceNo.`);
-            }
-
-            const invoiceNo = existingInvoice.invoiceNo;
-
-            // 2. İlişkili verileri `invoiceNo` kullanarak sil
-            await prisma.$transaction([
-                prisma.invoiceDetail.deleteMany({ where: { invoiceId: id } }), // Invoice ID ile ilişkili
-                prisma.currentMovement.deleteMany({ where: { documentNo: invoiceNo } }), // InvoiceNo ile ilişkili
-                prisma.stockMovement.deleteMany({ where: { documentNo: invoiceNo } }), // InvoiceNo ile ilişkili
-                prisma.vaultMovement.deleteMany({ where: { invoiceId: id } }), // Vault hareketleri ID ile ilişkili
-                prisma.bankMovement.deleteMany({ where: { invoiceId: id } }), // Banka hareketleri ID ile ilişkili
-                prisma.posMovement.deleteMany({ where: { invoiceId: id } }), // Pos hareketleri ID ile ilişkili
-
-            ]);
-
-            // 3. Ana faturayı sil
-            await prisma.invoice.delete({ where: { id } });
-
-            console.log(`Invoice and all related records deleted successfully for invoiceNo: ${invoiceNo}`);
-            return true;
-        } catch (error) {
-            logger.error("Error deleting invoice with relations:", error);
-            throw new Error("Failed to delete invoice and its related records.");
-        }
-    }
-
     async getAllInvoicesWithRelations(): Promise<Invoice[]> {
         return await prisma.invoice.findMany({
             include: {
@@ -2018,6 +1982,214 @@ export class InvoiceService {
         }
     }
 
+    async deleteSalesInvoiceWithRelations(invoiceId: string, data: InvoiceInfo): Promise<any> {
+
+        if (!data.invoiceNo || data.invoiceNo.trim() === "") {
+            throw new Error("InvoiceNo is required and cannot be empty.");
+        }
+        const _companyCode = await prisma.company.findFirst({
+            select: { companyCode: true },
+        });
+
+        const _warehouseCode = await prisma.warehouse.findUnique({
+            where: { id: data.warehouseId },
+            select: { warehouseCode: true },
+        });
+        try {
+            const result = await prisma.$transaction(async (prisma) => {
+                await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                for (const payment of data.payments) {
+                    if (payment.method == "cash") {
+                        await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.vault.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    decrement: payment.amount,
+                                },
+                            },
+                        });
+                    } else if (payment.method == "bank") {
+                        await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.bank.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    decrement: payment.amount,
+                                },
+                            },
+                        });
+                    } else if (payment.method == "card") {
+                        await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.pos.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    decrement: payment.amount,
+                                },
+                            },
+                        });
+                    }
+                }
+                const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                for (const detail of oldInvoiceDetails) {
+                    const stockCard = await prisma.stockCard.findUnique({
+                        where: { productCode: detail.productCode },
+                    });
+
+                    if (!stockCard) {
+                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                    }
+
+                    const warehouse = await prisma.warehouse.findUnique({
+                        where: { id: data.warehouseId },
+                    });
+
+                    if (!warehouse) {
+                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                    }
+
+                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                        where: {
+                            stockCardId_warehouseId: {
+                                stockCardId: stockCard.id,
+                                warehouseId: data.warehouseId,
+                            },
+                        },
+                    });
+
+                    const productCode = stockCard.productCode;
+                    const quantity = detail.quantity;
+
+                    // Stok miktarını güncelleme
+
+                    if (stockCardWarehouse) {
+                        await prisma.stockCardWarehouse.update({
+                            where: { id: stockCardWarehouse.id },
+                            data: {
+                                quantity: stockCardWarehouse.quantity.plus(quantity),
+                            },
+                        });
+                    } else {
+                        await prisma.stockCardWarehouse.create({
+                            data: {
+                                stockCardId: stockCard.id,
+                                warehouseId: warehouse.id,
+                                quantity,
+                            },
+                        });
+                    }
+                }
+                await prisma.invoiceDetail.deleteMany({ where: { invoiceId: invoiceId } });
+                await prisma.invoice.delete({ where: { id: invoiceId } });
+            });
+            return result;
+        } catch (error) {
+            logger.error("Error deleting invoice with relations:", error);
+            throw new Error("Failed to delete invoice and its related records.");
+        }
+    }
+
+    async deletePurchaseInvoiceWithRelations(invoiceId: string, data: InvoiceInfo): Promise<any> {
+        if (!data.invoiceNo || data.invoiceNo.trim() === "") {
+            throw new Error("InvoiceNo is required and cannot be empty.");
+        }
+        const _companyCode = await prisma.company.findFirst({
+            select: { companyCode: true },
+        });
+
+        const _warehouseCode = await prisma.warehouse.findUnique({
+            where: { id: data.warehouseId },
+            select: { warehouseCode: true },
+        });
+        try {
+            const result = await prisma.$transaction(async (prisma) => {
+                await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                for (const payment of data.payments) {
+                    if (payment.method == "cash") {
+                        await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.vault.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    increment: payment.amount,
+                                },
+                            },
+                        });
+                    } else if (payment.method == "bank") {
+                        await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.bank.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    increment: payment.amount,
+                                },
+                            },
+                        });
+                    } else if (payment.method == "card") {
+                        await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.pos.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    increment: payment.amount,
+                                },
+                            },
+                        });
+                    }
+                }
+                const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                for (const detail of oldInvoiceDetails) {
+                    const stockCard = await prisma.stockCard.findUnique({
+                        where: { productCode: detail.productCode },
+                    });
+
+                    if (!stockCard) {
+                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                    }
+
+                    const warehouse = await prisma.warehouse.findUnique({
+                        where: { id: data.warehouseId },
+                    });
+
+                    if (!warehouse) {
+                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                    }
+
+                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                        where: {
+                            stockCardId_warehouseId: {
+                                stockCardId: stockCard.id,
+                                warehouseId: data.warehouseId,
+                            },
+                        },
+                    });
+
+                    const productCode = stockCard.productCode;
+                    const quantity = detail.quantity;
+
+                    // Stok miktarını güncelleme
+                    if (stockCardWarehouse) {
+                        await prisma.stockCardWarehouse.update({
+                            where: { id: stockCardWarehouse.id },
+                            data: {
+                                quantity: stockCardWarehouse.quantity.minus(quantity),
+                            },
+                        });
+                    } else {
+                        console.error("Ürün'ün stoğu bulunamadı.");
+                    }
+                }
+                await prisma.invoiceDetail.deleteMany({ where: { invoiceId: invoiceId } });
+                await prisma.invoice.delete({ where: { id: invoiceId } })
+            });
+        } catch (error) {
+            logger.error("Error deleting purchase invoice with relations:", error);
+            throw error;
+        }
+    }
 }
 
 export default InvoiceService;

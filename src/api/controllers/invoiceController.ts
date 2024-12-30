@@ -178,10 +178,24 @@ const InvoiceController = {
     },
 
     // API to delete an invoice with relations
-    deleteInvoiceWithRelations: async (ctx: Context) => {
+    deleteSalesInvoiceWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
         try {
-            const invoice = await invoiceService.deleteInvoiceWithRelations(id);
+            const invoice = await invoiceService.deleteSalesInvoiceWithRelations(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations", details: error.message };
+        }
+    },
+
+    deletePurchaseInvoiceWithRelations: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
+        try {
+            const invoice = await invoiceService.deletePurchaseInvoiceWithRelations(id, data);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
