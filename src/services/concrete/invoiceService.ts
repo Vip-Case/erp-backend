@@ -1410,7 +1410,7 @@ export class InvoiceService {
                 }
                 for (const detail of data.items) {
                     const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
+                        where: { productCode: detail.stockCardId },
                     });
 
                     if (!stockCard) {
@@ -1428,7 +1428,7 @@ export class InvoiceService {
                     const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
                         where: {
                             stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
+                                stockCardId: stockCard.id,
                                 warehouseId: data.warehouseId,
                             },
                         },
@@ -1740,7 +1740,7 @@ export class InvoiceService {
                 }
                 for (const detail of data.items) {
                     const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
+                        where: { productCode: detail.stockCardId },
                     });
 
                     if (!stockCard) {
@@ -1758,7 +1758,7 @@ export class InvoiceService {
                     const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
                         where: {
                             stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
+                                stockCardId: stockCard.id,
                                 warehouseId: data.warehouseId,
                             },
                         },
@@ -1828,7 +1828,7 @@ export class InvoiceService {
                 // Alış işlemleri
                 for (const detail of data.items) {
                     const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
+                        where: { productCode: detail.stockCardId },
                     });
 
                     if (!stockCard) {
@@ -1846,7 +1846,7 @@ export class InvoiceService {
                     const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
                         where: {
                             stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
+                                stockCardId: stockCard.id,
                                 warehouseId: data.warehouseId,
                             },
                         },
