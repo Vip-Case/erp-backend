@@ -274,7 +274,7 @@ const InvoiceController = {
             return invoice;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Hızlı satış oluşturulurken hata oluştu.", details: error.message };
+            return { error: "Fatura İptal Edilirken Hata Oluştu.", details: error.message };
         }
     },
 
@@ -287,7 +287,7 @@ const InvoiceController = {
             return invoice;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Hızlı satış oluşturulurken hata oluştu.", details: error.message };
+            return { error: "Fatura İptal Edilirken Hata Oluştu.", details: error.message };
         }
     },
 

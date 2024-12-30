@@ -119,6 +119,7 @@ export interface QuickSaleResponse {
 }
 
 export interface InvoiceInfo {
+    id: string | null;
     invoiceNo: string;
     gibInvoiceNo: string | null;
     invoiceDate: Date | null;
@@ -2197,9 +2198,10 @@ export class InvoiceService {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
                 const result = await prisma.$transaction(async (prisma) => {
+                    const invoiceDetail = this.getInvoiceInfoById(data.id)
                     await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
                     await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
-                    for (const payment of data.payments) {
+                    for (const payment of invoiceDetail.payments) {
                         if (payment.method == "cash") {
                             await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
                             await prisma.vault.update({
