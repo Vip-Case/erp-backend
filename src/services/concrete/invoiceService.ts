@@ -2205,11 +2205,6 @@ export class InvoiceService {
                     const _companyCode = await prisma.company.findFirst({
                         select: { companyCode: true },
                     });
-
-                    const _warehouseCode = await prisma.warehouse.findUnique({
-                        where: { id: invoiceDetail.warehouseId },
-                        select: { warehouseCode: true },
-                    });
                     if (!invoiceDetail) {
                         throw new Error("Invoice not found");
                     } else {
@@ -2303,7 +2298,7 @@ export class InvoiceService {
                             current: { connect: { currentCode: data.currentCode } },
                             company: _companyCode?.companyCode ? { connect: { companyCode: _companyCode.companyCode } } : undefined,
                             branch: data.branchCode ? { connect: { branchCode: data.branchCode } } : undefined,
-                            warehouse: _warehouseCode ? { connect: { warehouseCode: _warehouseCode.warehouseCode } } : undefined,
+                            warehouse: data.warehouseCode ? { connect: { warehouseCode: data.warehouseCode } } : undefined,
                             description: data.description,
                             paymentDate: data.paymentDate,
                             paymentDay: data.paymentDay,
@@ -2337,11 +2332,6 @@ export class InvoiceService {
                     const invoiceDetail = await this.getInvoiceInfoById(data.id)
                     const _companyCode = await prisma.company.findFirst({
                         select: { companyCode: true },
-                    });
-
-                    const _warehouseCode = await prisma.warehouse.findUnique({
-                        where: { warehouseCode: data.warehouseCode },
-                        select: { warehouseCode: true },
                     });
                     if (!invoiceDetail) {
                         throw new Error("Invoice not found");
@@ -2441,7 +2431,7 @@ export class InvoiceService {
                             current: { connect: { currentCode: data.currentCode } },
                             company: _companyCode?.companyCode ? { connect: { companyCode: _companyCode.companyCode } } : undefined,
                             branch: data.branchCode ? { connect: { branchCode: data.branchCode } } : undefined,
-                            warehouse: _warehouseCode ? { connect: { warehouseCode: _warehouseCode.warehouseCode } } : undefined,
+                            warehouse: data.warehouseCode ? { connect: { warehouseCode: data.warehouseCode } } : undefined,
                             description: data.description,
                             paymentDate: data.paymentDate,
                             paymentDay: data.paymentDay,
