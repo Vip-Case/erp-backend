@@ -2255,7 +2255,7 @@ export class InvoiceService {
                         }
 
                         const warehouse = await prisma.warehouse.findUnique({
-                            where: { id: data.warehouseId },
+                            where: { warehouseCode: data.warehouseCode },
                         });
 
                         if (!warehouse) {
