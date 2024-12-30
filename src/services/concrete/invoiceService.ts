@@ -2193,7 +2193,16 @@ export class InvoiceService {
 
     async cancelPurchaseInvoiceWithRelations(datas: InvoiceInfo[]): Promise<any> {
         try {
+
             for (const data of datas) {
+                const _companyCode = await prisma.company.findFirst({
+                    select: { companyCode: true },
+                });
+
+                const _warehouseCode = await prisma.warehouse.findUnique({
+                    where: { id: data.warehouseId },
+                    select: { warehouseCode: true },
+                });
                 if (!data.invoiceNo || data.invoiceNo.trim() === "") {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
@@ -2261,7 +2270,7 @@ export class InvoiceService {
                             where: {
                                 stockCardId_warehouseId: {
                                     stockCardId: stockCard.id,
-                                    warehouseId: data.warehouseId,
+                                    warehouseId: invoiceDetail.warehouseId,
                                 },
                             },
                         });
@@ -2319,6 +2328,14 @@ export class InvoiceService {
     async cancelSalesInvoiceWithRelations(datas: InvoiceInfo[]): Promise<any> {
         try {
             for (const data of datas) {
+                const _companyCode = await prisma.company.findFirst({
+                    select: { companyCode: true },
+                });
+
+                const _warehouseCode = await prisma.warehouse.findUnique({
+                    where: { id: data.warehouseId },
+                    select: { warehouseCode: true },
+                });
                 if (!data.invoiceNo || data.invoiceNo.trim() === "") {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
@@ -2386,7 +2403,7 @@ export class InvoiceService {
                             where: {
                                 stockCardId_warehouseId: {
                                     stockCardId: stockCard.id,
-                                    warehouseId: data.warehouseId,
+                                    warehouseId: invoiceDetail.warehouseId,
                                 },
                             },
                         });
