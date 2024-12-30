@@ -127,6 +127,7 @@ export interface InvoiceInfo {
     paymentDay: number | null;
     branchCode: string | undefined;
     warehouseId: string | undefined;
+    warehouseCode: string | null;
     description: string | null;
     currentCode: string | undefined;
     priceListId: string | undefined;
@@ -2339,7 +2340,7 @@ export class InvoiceService {
                     });
 
                     const _warehouseCode = await prisma.warehouse.findUnique({
-                        where: { id: invoiceDetail.warehouseId },
+                        where: { warehouseCode: data.warehouseCode },
                         select: { warehouseCode: true },
                     });
                     if (!invoiceDetail) {
