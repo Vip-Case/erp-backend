@@ -1485,7 +1485,7 @@ export class InvoiceService {
                 // Fatura detaylarını ekleme
                 for (const detail of data.items) {
                     const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
+                        where: { productCode: detail.stockCardId },
                         select: { productCode: true },
                     });
                     await prisma.invoiceDetail.create({
@@ -1808,7 +1808,7 @@ export class InvoiceService {
                 // Fatura detaylarını ekleme
                 for (const detail of data.items) {
                     const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
+                        where: { productCode: detail.stockCardId },
                         select: { productCode: true },
                     });
                     await prisma.invoiceDetail.create({
