@@ -1408,13 +1408,14 @@ export class InvoiceService {
                         });
                     }
                 }
-                for (const detail of data.items) {
+                const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                for (const detail of oldInvoiceDetails) {
                     const stockCard = await prisma.stockCard.findUnique({
-                        where: { productCode: detail.stockCardId },
+                        where: { productCode: detail.productCode },
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
@@ -1738,13 +1739,14 @@ export class InvoiceService {
                         });
                     }
                 }
-                for (const detail of data.items) {
+                const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                for (const detail of oldInvoiceDetails) {
                     const stockCard = await prisma.stockCard.findUnique({
-                        where: { productCode: detail.stockCardId },
+                        where: { productCode: detail.productCode },
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
