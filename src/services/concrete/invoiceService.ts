@@ -2198,10 +2198,11 @@ export class InvoiceService {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
                 const result = await prisma.$transaction(async (prisma) => {
-                    const invoiceDetail = this.getInvoiceInfoById(data.id)
-                    await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
-                    await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
-                    if (invoiceDetail.payments) {
+                    const invoiceId = data.id
+                    const invoiceDetail = await this.getInvoiceInfoById(data.id)
+                    if (!invoiceDetail) {
+                        throw new Error("Invoice not found");
+                    } else {
                         for (const payment of invoiceDetail.payments) {
                             if (payment.method == "cash") {
                                 await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
@@ -2236,6 +2237,8 @@ export class InvoiceService {
                             }
                         }
                     }
+                    await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                    await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
                     const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                     for (const detail of oldInvoiceDetails) {
                         const stockCard = await prisma.stockCard.findUnique({
@@ -2320,41 +2323,47 @@ export class InvoiceService {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
                 const result = await prisma.$transaction(async (prisma) => {
-                    await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
-                    await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
-                    for (const payment of data.payments) {
-                        if (payment.method == "cash") {
-                            await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
-                            await prisma.vault.update({
-                                where: { id: payment.accountId },
-                                data: {
-                                    balance: {
-                                        decrement: payment.amount,
+                    const invoiceId = data.id
+                    const invoiceDetail = await this.getInvoiceInfoById(data.id)
+                    if (!invoiceDetail) {
+                        throw new Error("Invoice not found");
+                    } else {
+                        for (const payment of invoiceDetail.payments) {
+                            if (payment.method == "cash") {
+                                await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                                await prisma.vault.update({
+                                    where: { id: payment.accountId },
+                                    data: {
+                                        balance: {
+                                            decrement: payment.amount,
+                                        },
                                     },
-                                },
-                            });
-                        } else if (payment.method == "bank") {
-                            await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
-                            await prisma.bank.update({
-                                where: { id: payment.accountId },
-                                data: {
-                                    balance: {
-                                        decrement: payment.amount,
+                                });
+                            } else if (payment.method == "bank") {
+                                await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                                await prisma.bank.update({
+                                    where: { id: payment.accountId },
+                                    data: {
+                                        balance: {
+                                            decrement: payment.amount,
+                                        },
                                     },
-                                },
-                            });
-                        } else if (payment.method == "card") {
-                            await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
-                            await prisma.pos.update({
-                                where: { id: payment.accountId },
-                                data: {
-                                    balance: {
-                                        decrement: payment.amount,
+                                });
+                            } else if (payment.method == "card") {
+                                await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                                await prisma.pos.update({
+                                    where: { id: payment.accountId },
+                                    data: {
+                                        balance: {
+                                            decrement: payment.amount,
+                                        },
                                     },
-                                },
-                            });
+                                });
+                            }
                         }
                     }
+                    await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                    await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
                     const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                     for (const detail of oldInvoiceDetails) {
                         const stockCard = await prisma.stockCard.findUnique({
@@ -2386,7 +2395,6 @@ export class InvoiceService {
                         const quantity = detail.quantity;
 
                         // Stok miktarını güncelleme
-
                         if (stockCardWarehouse) {
                             await prisma.stockCardWarehouse.update({
                                 where: { id: stockCardWarehouse.id },
