@@ -2195,20 +2195,20 @@ export class InvoiceService {
         try {
 
             for (const data of datas) {
-                const _companyCode = await prisma.company.findFirst({
-                    select: { companyCode: true },
-                });
-
-                const _warehouseCode = await prisma.warehouse.findUnique({
-                    where: { id: data.warehouseId },
-                    select: { warehouseCode: true },
-                });
                 if (!data.invoiceNo || data.invoiceNo.trim() === "") {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
                 const result = await prisma.$transaction(async (prisma) => {
                     const invoiceId = data.id
                     const invoiceDetail = await this.getInvoiceInfoById(data.id)
+                    const _companyCode = await prisma.company.findFirst({
+                        select: { companyCode: true },
+                    });
+
+                    const _warehouseCode = await prisma.warehouse.findUnique({
+                        where: { id: invoiceDetail.warehouseId },
+                        select: { warehouseCode: true },
+                    });
                     if (!invoiceDetail) {
                         throw new Error("Invoice not found");
                     } else {
@@ -2328,20 +2328,20 @@ export class InvoiceService {
     async cancelSalesInvoiceWithRelations(datas: InvoiceInfo[]): Promise<any> {
         try {
             for (const data of datas) {
-                const _companyCode = await prisma.company.findFirst({
-                    select: { companyCode: true },
-                });
-
-                const _warehouseCode = await prisma.warehouse.findUnique({
-                    where: { id: data.warehouseId },
-                    select: { warehouseCode: true },
-                });
                 if (!data.invoiceNo || data.invoiceNo.trim() === "") {
                     throw new Error("InvoiceNo is required and cannot be empty.");
                 }
                 const result = await prisma.$transaction(async (prisma) => {
                     const invoiceId = data.id
                     const invoiceDetail = await this.getInvoiceInfoById(data.id)
+                    const _companyCode = await prisma.company.findFirst({
+                        select: { companyCode: true },
+                    });
+
+                    const _warehouseCode = await prisma.warehouse.findUnique({
+                        where: { id: invoiceDetail.warehouseId },
+                        select: { warehouseCode: true },
+                    });
                     if (!invoiceDetail) {
                         throw new Error("Invoice not found");
                     } else {
