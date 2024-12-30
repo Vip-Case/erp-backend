@@ -122,7 +122,7 @@ const InvoiceController = {
             ctx.set.status = error.status || 500;
             return {
                 error: "Fatura silme ve yeniden oluşturma işlemi başarısız",
-                details: error,
+                details: error.message,
             };
         }
     },
