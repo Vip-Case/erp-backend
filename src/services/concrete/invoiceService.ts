@@ -1,4 +1,3 @@
-
 import { Invoice, InvoiceDetail, Prisma } from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
@@ -2188,6 +2187,250 @@ export class InvoiceService {
         } catch (error) {
             logger.error("Error deleting purchase invoice with relations:", error);
             throw error;
+        }
+    }
+
+    async cancelPurchaseInvoiceWithRelations(datas: InvoiceInfo[]): Promise<any> {
+        try {
+            for (const data of datas) {
+                if (!data.invoiceNo || data.invoiceNo.trim() === "") {
+                    throw new Error("InvoiceNo is required and cannot be empty.");
+                }
+                const result = await prisma.$transaction(async (prisma) => {
+                    await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                    await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                    for (const payment of data.payments) {
+                        if (payment.method == "cash") {
+                            await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                            await prisma.vault.update({
+                                where: { id: payment.accountId },
+                                data: {
+                                    balance: {
+                                        increment: payment.amount,
+                                    },
+                                },
+                            });
+                        } else if (payment.method == "bank") {
+                            await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                            await prisma.bank.update({
+                                where: { id: payment.accountId },
+                                data: {
+                                    balance: {
+                                        increment: payment.amount,
+                                    },
+                                },
+                            });
+                        } else if (payment.method == "card") {
+                            await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                            await prisma.pos.update({
+                                where: { id: payment.accountId },
+                                data: {
+                                    balance: {
+                                        increment: payment.amount,
+                                    },
+                                },
+                            });
+                        }
+                    }
+                    const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                    for (const detail of oldInvoiceDetails) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { productCode: detail.productCode },
+                        });
+
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        }
+
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
+
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
+
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: data.warehouseId,
+                                },
+                            },
+                        });
+
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
+
+                        // Stok miktarını güncelleme
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.minus(quantity),
+                                },
+                            });
+                        } else {
+                            console.error("Ürün'ün stoğu bulunamadı.");
+                        }
+                    }
+                    await prisma.invoiceDetail.deleteMany({ where: { invoiceId: invoiceId } });
+                    await prisma.invoice.update({
+                        where: { id: invoiceId },
+                        data: {
+                            invoiceNo: data.invoiceNo,
+                            gibInvoiceNo: data.gibInvoiceNo,
+                            invoiceDate: data.invoiceDate,
+                            invoiceType: "Cancel",
+                            documentType: "Invoice",
+                            current: { connect: { currentCode: data.currentCode } },
+                            company: _companyCode?.companyCode ? { connect: { companyCode: _companyCode.companyCode } } : undefined,
+                            branch: data.branchCode ? { connect: { branchCode: data.branchCode } } : undefined,
+                            warehouse: _warehouseCode ? { connect: { warehouseCode: _warehouseCode.warehouseCode } } : undefined,
+                            description: data.description,
+                            paymentDate: data.paymentDate,
+                            paymentDay: data.paymentDay,
+                            priceList: { connect: { id: data.priceListId } },
+                            totalAmount: data.totalAmount,
+                            totalVat: data.totalVat,
+                            totalPaid: data.totalPaid,
+                            totalDebt: data.totalDebt,
+                            totalBalance: data.totalAmount - data.totalPaid,
+                            totalDiscount: 0,
+                            totalNet: data.totalAmount - data.totalVat,
+                        },
+                    });
+                });
+                return result;
+            }
+        } catch (error) {
+            logger.error("Error deleting purchase invoice with relations:", error);
+            throw error;
+        }
+    }
+
+    async cancelSalesInvoiceWithRelations(datas: InvoiceInfo[]): Promise<any> {
+        try {
+            for (const data of datas) {
+                if (!data.invoiceNo || data.invoiceNo.trim() === "") {
+                    throw new Error("InvoiceNo is required and cannot be empty.");
+                }
+                const result = await prisma.$transaction(async (prisma) => {
+                    await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                    await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
+                    for (const payment of data.payments) {
+                        if (payment.method == "cash") {
+                            await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                            await prisma.vault.update({
+                                where: { id: payment.accountId },
+                                data: {
+                                    balance: {
+                                        decrement: payment.amount,
+                                    },
+                                },
+                            });
+                        } else if (payment.method == "bank") {
+                            await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                            await prisma.bank.update({
+                                where: { id: payment.accountId },
+                                data: {
+                                    balance: {
+                                        decrement: payment.amount,
+                                    },
+                                },
+                            });
+                        } else if (payment.method == "card") {
+                            await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                            await prisma.pos.update({
+                                where: { id: payment.accountId },
+                                data: {
+                                    balance: {
+                                        decrement: payment.amount,
+                                    },
+                                },
+                            });
+                        }
+                    }
+                    const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                    for (const detail of oldInvoiceDetails) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { productCode: detail.productCode },
+                        });
+
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        }
+
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
+
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
+
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: data.warehouseId,
+                                },
+                            },
+                        });
+
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
+
+                        // Stok miktarını güncelleme
+
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.plus(quantity),
+                                },
+                            });
+                        } else {
+                            await prisma.stockCardWarehouse.create({
+                                data: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: warehouse.id,
+                                    quantity,
+                                },
+                            });
+                        }
+                    }
+                    await prisma.invoice.update({
+                        where: { id: invoiceId },
+                        data: {
+                            invoiceNo: data.invoiceNo,
+                            gibInvoiceNo: data.gibInvoiceNo,
+                            invoiceDate: data.invoiceDate,
+                            invoiceType: "Cancel",
+                            documentType: "Invoice",
+                            current: { connect: { currentCode: data.currentCode } },
+                            company: _companyCode?.companyCode ? { connect: { companyCode: _companyCode.companyCode } } : undefined,
+                            branch: data.branchCode ? { connect: { branchCode: data.branchCode } } : undefined,
+                            warehouse: _warehouseCode ? { connect: { warehouseCode: _warehouseCode.warehouseCode } } : undefined,
+                            description: data.description,
+                            paymentDate: data.paymentDate,
+                            paymentDay: data.paymentDay,
+                            priceList: { connect: { id: data.priceListId } },
+                            totalAmount: data.totalAmount,
+                            totalVat: data.totalVat,
+                            totalPaid: data.totalPaid,
+                            totalDebt: data.totalDebt,
+                            totalBalance: data.totalAmount - data.totalPaid,
+                            totalDiscount: 0,
+                            totalNet: data.totalAmount - data.totalVat,
+                        },
+                    });
+                });
+                return result;
+            }
+        } catch (error) {
+            logger.error("Error deleting invoice with relations:", error);
+            throw new Error("Failed to delete invoice and its related records.");
         }
     }
 }

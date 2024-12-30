@@ -265,6 +265,32 @@ const InvoiceController = {
         }
     },
 
+    cancelPurchaseInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as any[]
+
+        try {
+            const invoice = await invoiceService.cancelPurchaseInvoiceWithRelations(data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Hızlı satış oluşturulurken hata oluştu.", details: error.message };
+        }
+    },
+
+    cancelSalesInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as any[]
+
+        try {
+            const invoice = await invoiceService.cancelSalesInvoiceWithRelations(data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Hızlı satış oluşturulurken hata oluştu.", details: error.message };
+        }
+    },
+
 };
 
 export default InvoiceController;
