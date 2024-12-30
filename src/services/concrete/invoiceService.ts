@@ -2201,37 +2201,39 @@ export class InvoiceService {
                     const invoiceDetail = this.getInvoiceInfoById(data.id)
                     await prisma.currentMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
                     await prisma.stockMovement.deleteMany({ where: { documentNo: data.invoiceNo } });
-                    for (const payment of invoiceDetail.payments) {
-                        if (payment.method == "cash") {
-                            await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
-                            await prisma.vault.update({
-                                where: { id: payment.accountId },
-                                data: {
-                                    balance: {
-                                        increment: payment.amount,
+                    if (invoiceDetail.payments) {
+                        for (const payment of invoiceDetail.payments) {
+                            if (payment.method == "cash") {
+                                await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                                await prisma.vault.update({
+                                    where: { id: payment.accountId },
+                                    data: {
+                                        balance: {
+                                            increment: payment.amount,
+                                        },
                                     },
-                                },
-                            });
-                        } else if (payment.method == "bank") {
-                            await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
-                            await prisma.bank.update({
-                                where: { id: payment.accountId },
-                                data: {
-                                    balance: {
-                                        increment: payment.amount,
+                                });
+                            } else if (payment.method == "bank") {
+                                await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                                await prisma.bank.update({
+                                    where: { id: payment.accountId },
+                                    data: {
+                                        balance: {
+                                            increment: payment.amount,
+                                        },
                                     },
-                                },
-                            });
-                        } else if (payment.method == "card") {
-                            await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
-                            await prisma.pos.update({
-                                where: { id: payment.accountId },
-                                data: {
-                                    balance: {
-                                        increment: payment.amount,
+                                });
+                            } else if (payment.method == "card") {
+                                await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                                await prisma.pos.update({
+                                    where: { id: payment.accountId },
+                                    data: {
+                                        balance: {
+                                            increment: payment.amount,
+                                        },
                                     },
-                                },
-                            });
+                                });
+                            }
                         }
                     }
                     const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
