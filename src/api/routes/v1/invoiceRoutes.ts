@@ -24,6 +24,7 @@ export const InvoiceRoutes = (app: Elysia) => {
       .get("/getInvoiceInfoById/:id", InvoiceController.getInvoiceInfoById, { tags: ["Invoices"] })
       .post("/createQuickSaleInvoiceWithRelations", InvoiceController.createQuickSaleInvoiceWithRelations, { tags: ["Invoices"] })
       .put("/updateQuickSaleInvoice/:id", InvoiceController.deleteQuickSaleInvoiceWithRelationsAndRecreate, { tags: ["Invoices"] })
+      .delete("/deleteQuickSaleInvoice/:id", InvoiceController.deleteQuickSaleInvoiceWithRelations, { tags: ["Invoices"] })
   );
   return app;
 };

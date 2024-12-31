@@ -2778,6 +2778,101 @@ export class InvoiceService {
         }
     }
 
+    async deleteQuickSaleInvoiceWithRelations(invoiceId: string, data: QuickSaleResponse): Promise<any> {
+        try {
+            const result = await prisma.$transaction(async (prisma) => {
+                await prisma.currentMovement.deleteMany({ where: { documentNo: data.id } });
+                await prisma.stockMovement.deleteMany({ where: { documentNo: data.id } });
+                for (const payment of data.payments) {
+                    if (payment.method == "cash") {
+                        await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.vault.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    decrement: payment.amount,
+                                },
+                            },
+                        });
+                    } else if (payment.method == "bank") {
+                        await prisma.bankMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.bank.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    decrement: payment.amount,
+                                },
+                            },
+                        });
+                    } else if (payment.method == "card") {
+                        await prisma.posMovement.deleteMany({ where: { invoiceId: invoiceId } });
+                        await prisma.pos.update({
+                            where: { id: payment.accountId },
+                            data: {
+                                balance: {
+                                    decrement: payment.amount,
+                                },
+                            },
+                        });
+                    }
+                }
+                const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
+                for (const detail of oldInvoiceDetails) {
+                    const stockCard = await prisma.stockCard.findUnique({
+                        where: { productCode: detail.productCode },
+                    });
+
+                    if (!stockCard) {
+                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                    }
+
+                    const warehouse = await prisma.warehouse.findUnique({
+                        where: { id: data.warehouseId },
+                    });
+
+                    if (!warehouse) {
+                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                    }
+
+                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                        where: {
+                            stockCardId_warehouseId: {
+                                stockCardId: stockCard.id,
+                                warehouseId: data.warehouseId,
+                            },
+                        },
+                    });
+
+                    const productCode = stockCard.productCode;
+                    const quantity = detail.quantity;
+
+                    // Stok miktarını güncelleme
+                    if (stockCardWarehouse) {
+                        await prisma.stockCardWarehouse.update({
+                            where: { id: stockCardWarehouse.id },
+                            data: {
+                                quantity: stockCardWarehouse.quantity.plus(quantity),
+                            },
+                        });
+                    } else {
+                        await prisma.stockCardWarehouse.create({
+                            data: {
+                                stockCardId: stockCard.id,
+                                warehouseId: warehouse.id,
+                                quantity,
+                            },
+                        });
+                    }
+                }
+                await prisma.invoiceDetail.deleteMany({ where: { invoiceId: invoiceId } });
+                await prisma.invoice.delete({ where: { id: invoiceId } });
+            });
+            return result;
+        } catch (error) {
+            logger.error("Error deleting quick sale invoice with relations:", error);
+            throw error;
+        }
+    }
 }
 
 export default InvoiceService;
