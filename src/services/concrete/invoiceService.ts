@@ -2598,7 +2598,7 @@ export class InvoiceService {
                     if (!detail.productId || !detail.quantity || !detail.unitPrice || !detail.totalAmount) continue;
 
                     const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.productId },
+                        where: { productCode: detail.productId },
                     });
 
                     if (!stockCard) {
