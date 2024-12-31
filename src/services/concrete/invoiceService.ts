@@ -2502,7 +2502,7 @@ export class InvoiceService {
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.1`);
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
@@ -2602,7 +2602,7 @@ export class InvoiceService {
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.productId}' does not exist.`);
+                        throw new Error(`StockCard with ID '${detail.productId}' does not exist.2`);
                     }
 
                     const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
