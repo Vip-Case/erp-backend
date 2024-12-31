@@ -306,9 +306,8 @@ const InvoiceController = {
 
     deleteQuickSaleInvoiceWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
-        const data = ctx.body as QuickSaleResponse
         try {
-            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelations(id, data);
+            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelations(id);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {

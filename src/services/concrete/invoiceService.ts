@@ -2778,11 +2778,12 @@ export class InvoiceService {
         }
     }
 
-    async deleteQuickSaleInvoiceWithRelations(invoiceId: string, data: QuickSaleResponse): Promise<any> {
+    async deleteQuickSaleInvoiceWithRelations(invoiceId: string): Promise<any> {
         try {
+            const data = await this.getInvoiceInfoById(invoiceId);
             const result = await prisma.$transaction(async (prisma) => {
-                await prisma.currentMovement.deleteMany({ where: { documentNo: data.id } });
-                await prisma.stockMovement.deleteMany({ where: { documentNo: data.id } });
+                await prisma.currentMovement.deleteMany({ where: { documentNo: data?.id } });
+                await prisma.stockMovement.deleteMany({ where: { documentNo: data?.id } });
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
                         await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
