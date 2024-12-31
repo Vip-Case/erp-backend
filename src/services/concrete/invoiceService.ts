@@ -1037,12 +1037,7 @@ export class InvoiceService {
         }
     }
 
-    async updateInvoiceWithRelations(
-        id: string,
-        invoice: Partial<Invoice>,
-        invoiceDetails: InvoiceDetail[],
-        vaultId?: string
-    ): Promise<Invoice> {
+    async updateInvoiceWithRelations(id: string, invoice: Partial<Invoice>, invoiceDetails: InvoiceDetail[], vaultId?: string): Promise<Invoice> {
         try {
             // 1. Faturayı bul ve `invoiceNo` değerini al
             const existingInvoice = await prisma.invoice.findUnique({
@@ -2455,18 +2450,24 @@ export class InvoiceService {
     }
 
     async deleteQuickSaleInvoiceWithRelationsAndRecreate(invoiceId: string, data: QuickSaleResponse): Promise<any> {
+        if (!data.id || !data.branchCode || !data.warehouseId || !data.customer.code) {
+            throw new Error("Required fields are missing");
+        }
+
         try {
             const result = await prisma.$transaction(async (prisma) => {
                 await prisma.currentMovement.deleteMany({ where: { documentNo: data.id } });
                 await prisma.stockMovement.deleteMany({ where: { documentNo: data.id } });
                 for (const payment of data.payments) {
+                    if (!payment.accountId || !payment.amount) continue;
+
                     if (payment.method == "cash") {
                         await prisma.vaultMovement.deleteMany({ where: { invoiceId: invoiceId } });
                         await prisma.vault.update({
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    decrement: payment.amount,
+                                    decrement: new Prisma.Decimal(payment.amount),
                                 },
                             },
                         });
@@ -2476,7 +2477,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    decrement: payment.amount,
+                                    decrement: new Prisma.Decimal(payment.amount),
                                 },
                             },
                         });
@@ -2486,7 +2487,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    decrement: payment.amount,
+                                    decrement: new Prisma.Decimal(payment.amount),
                                 },
                             },
                         });
@@ -2494,6 +2495,8 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+                    if (!detail.quantity) continue;
+
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
@@ -2527,7 +2530,7 @@ export class InvoiceService {
                         await prisma.stockCardWarehouse.update({
                             where: { id: stockCardWarehouse.id },
                             data: {
-                                quantity: stockCardWarehouse.quantity.plus(quantity),
+                                quantity: stockCardWarehouse.quantity.plus(new Prisma.Decimal(quantity)),
                             },
                         });
                     } else {
@@ -2535,7 +2538,7 @@ export class InvoiceService {
                             data: {
                                 stockCardId: stockCard.id,
                                 warehouseId: warehouse.id,
-                                quantity,
+                                quantity: new Prisma.Decimal(quantity),
                             },
                         });
                     }
@@ -2548,18 +2551,18 @@ export class InvoiceService {
                     where: { id: invoiceId },
                     data: {
                         invoiceNo: _invoiceNo ?? data.id,
-                        invoiceDate: data.date,
+                        invoiceDate: new Date(data.date),
                         branch: { connect: { branchCode: data.branchCode } },
                         warehouse: { connect: { id: data.warehouseId } },
                         invoiceType: "Sales",
                         documentType: "Order",
                         current: { connect: { currentCode: data.customer.code } },
-                        totalAmount: data.total,
-                        totalVat: data.totalVat,
-                        totalDiscount: 0,
-                        totalNet: data.subtotal,
-                        totalPaid: data.payments.reduce((sum, p) => sum + p.amount, 0),
-                        totalDebt: data.payments.filter(p => p.method === "openAccount").reduce((sum, p) => sum + p.amount, 0),
+                        totalAmount: new Prisma.Decimal(data.total),
+                        totalVat: new Prisma.Decimal(data.totalVat),
+                        totalDiscount: new Prisma.Decimal(0),
+                        totalNet: new Prisma.Decimal(data.subtotal),
+                        totalPaid: new Prisma.Decimal(data.payments.reduce((sum, p) => sum + (p.amount || 0), 0)),
+                        totalDebt: new Prisma.Decimal(data.payments.filter(p => p.method === "openAccount").reduce((sum, p) => sum + (p.amount || 0), 0)),
                         description: `${_invoiceNo} no'lu hızlı satış faturası`,
                     },
                 });
@@ -2567,26 +2570,33 @@ export class InvoiceService {
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
                 for (const detail of data.items) {
+                    if (!detail.productId || !detail.quantity || !detail.unitPrice || !detail.vatRate || !detail.totalAmount || !detail.vatAmount) continue;
+
                     const _productCode = await prisma.stockCard.findUnique({
                         where: { id: detail.productId },
                         select: { productCode: true },
                     });
+
+                    if (!_productCode?.productCode) continue;
+
                     await prisma.invoiceDetail.create({
                         data: {
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: parseFloat(detail.vatRate.toString()),
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
+                            quantity: new Prisma.Decimal(detail.quantity),
+                            unitPrice: new Prisma.Decimal(detail.unitPrice),
+                            vatRate: new Prisma.Decimal(detail.vatRate),
+                            netPrice: new Prisma.Decimal(detail.totalAmount - detail.vatAmount),
+                            totalPrice: new Prisma.Decimal(detail.totalAmount),
+                            discount: new Prisma.Decimal(0),
                             invoice: { connect: { id: invoiceId } },
-                            stockCard: { connect: { productCode: _productCode?.productCode } },
+                            stockCard: { connect: { productCode: _productCode.productCode } },
                         },
                     });
                 }
 
                 // Satış işlemleri
                 for (const detail of data.items) {
+                    if (!detail.productId || !detail.quantity || !detail.unitPrice || !detail.totalAmount) continue;
+
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { id: detail.productId },
                     });
@@ -2612,7 +2622,7 @@ export class InvoiceService {
                         await prisma.stockCardWarehouse.update({
                             where: { id: stockCardWarehouse.id },
                             data: {
-                                quantity: stockCardWarehouse.quantity.minus(quantity),
+                                quantity: stockCardWarehouse.quantity.minus(new Prisma.Decimal(quantity)),
                             },
                         });
                     } else {
@@ -2641,22 +2651,25 @@ export class InvoiceService {
                             documentNo: _invoiceNo ?? data.id,
                             gcCode: "Cikis",
                             description: `${_invoiceNo} no'lu hızlı satış için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit, // Birim
+                            quantity: new Prisma.Decimal(quantity),
+                            unitPrice: new Prisma.Decimal(detail.unitPrice),
+                            totalPrice: new Prisma.Decimal(detail.totalAmount),
+                            unitOfMeasure: stockCard.unit,
                         },
                     });
                 }
+
                 for (const payment of data.payments) {
+                    if (!payment.accountId || !payment.amount) continue;
+
                     if (payment.method == "cash") {
                         await prisma.vaultMovement.create({
                             data: {
                                 invoiceId: invoiceId,
                                 vaultId: payment.accountId,
                                 description: `${_invoiceNo} no'lu hızlı satış için kasa hareketi`,
-                                entering: payment.amount,
-                                emerging: 0,
+                                entering: new Prisma.Decimal(payment.amount),
+                                emerging: new Prisma.Decimal(0),
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
@@ -2666,7 +2679,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    increment: payment.amount,
+                                    increment: new Prisma.Decimal(payment.amount),
                                 },
                             },
                         });
@@ -2676,8 +2689,8 @@ export class InvoiceService {
                                 invoiceId: invoiceId,
                                 bankId: payment.accountId,
                                 description: `${_invoiceNo} no'lu hızlı satış için banka hareketi`,
-                                entering: payment.amount,
-                                emerging: 0,
+                                entering: new Prisma.Decimal(payment.amount),
+                                emerging: new Prisma.Decimal(0),
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
@@ -2687,7 +2700,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    increment: payment.amount,
+                                    increment: new Prisma.Decimal(payment.amount),
                                 },
                             },
                         });
@@ -2697,8 +2710,8 @@ export class InvoiceService {
                                 invoiceId: invoiceId,
                                 posId: payment.accountId,
                                 description: `${_invoiceNo} no'lu hızlı satış için pos hareketi`,
-                                entering: payment.amount,
-                                emerging: 0,
+                                entering: new Prisma.Decimal(payment.amount),
+                                emerging: new Prisma.Decimal(0),
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
@@ -2708,7 +2721,7 @@ export class InvoiceService {
                             where: { id: payment.accountId },
                             data: {
                                 balance: {
-                                    increment: payment.amount,
+                                    increment: new Prisma.Decimal(payment.amount),
                                 },
                             },
                         });
@@ -2718,17 +2731,19 @@ export class InvoiceService {
                 const _companyCode = await prisma.company.findFirst({
                     select: { companyCode: true },
                 });
+
                 // data.paymensts içindeki tüm amount'ları topla
-                const totalAmount = data.payments.reduce((sum, p) => sum + p.amount, 0);
+                const totalAmount = data.payments.reduce((sum, p) => sum + (p.amount || 0), 0);
                 // data.paymensts içinden methodu openAccount olmayanları al ve amount'larını topla
-                const totalPaid = data.payments.filter((p) => p.method !== "openAccount").reduce((sum, p) => sum + p.amount, 0);
+                const totalPaid = data.payments.filter((p) => p.method !== "openAccount").reduce((sum, p) => sum + (p.amount || 0), 0);
+
                 await prisma.currentMovement.create({
                     data: {
                         currentCode: data.customer.code,
                         dueDate: new Date(),
                         description: `${_invoiceNo} no'lu satış faturası için cari hareket`,
-                        debtAmount: totalAmount,
-                        creditAmount: 0,
+                        debtAmount: new Prisma.Decimal(totalAmount),
+                        creditAmount: new Prisma.Decimal(0),
                         movementType: "Borc",
                         documentType: "Fatura",
                         paymentType: "ÇokluÖdeme",
@@ -2737,14 +2752,15 @@ export class InvoiceService {
                         branchCode: data.branchCode,
                     },
                 });
+
                 if (totalPaid > 0) {
                     await prisma.currentMovement.create({
                         data: {
                             currentCode: data.customer.code,
                             dueDate: new Date(),
                             description: `${_invoiceNo} no'lu satış faturası için cari hareket`,
-                            debtAmount: 0,
-                            creditAmount: totalPaid,
+                            debtAmount: new Prisma.Decimal(0),
+                            creditAmount: new Prisma.Decimal(totalPaid),
                             movementType: "Alacak",
                             documentType: "Fatura",
                             paymentType: "ÇokluÖdeme",
@@ -2761,6 +2777,7 @@ export class InvoiceService {
             throw error;
         }
     }
+
 }
 
 export default InvoiceService;
