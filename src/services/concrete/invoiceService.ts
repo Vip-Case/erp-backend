@@ -2572,7 +2572,7 @@ export class InvoiceService {
                 for (const detail of data.items) {
 
                     const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.productId },
+                        where: { productCode: detail.productId },
                         select: { productCode: true },
                     });
 
