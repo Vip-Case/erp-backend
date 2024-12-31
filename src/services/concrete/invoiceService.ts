@@ -2281,7 +2281,6 @@ export class InvoiceService {
                             console.error("Ürün'ün stoğu bulunamadı.");
                         }
                     }
-                    await prisma.invoiceDetail.deleteMany({ where: { invoiceId: invoiceId } });
                     await prisma.invoice.update({
                         where: { id: invoiceId },
                         data: {
@@ -2378,7 +2377,7 @@ export class InvoiceService {
                         }
 
                         const warehouse = await prisma.warehouse.findUnique({
-                            where: { id: data.warehouseId },
+                            where: { warehouseCode: data.warehouseCode },
                         });
 
                         if (!warehouse) {
