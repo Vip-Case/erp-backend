@@ -2570,14 +2570,15 @@ export class InvoiceService {
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
                 for (const detail of data.items) {
-                    if (!detail.productId || !detail.quantity || !detail.unitPrice || !detail.vatRate || !detail.totalAmount || !detail.vatAmount) continue;
 
                     const _productCode = await prisma.stockCard.findUnique({
                         where: { id: detail.productId },
                         select: { productCode: true },
                     });
 
-                    if (!_productCode?.productCode) continue;
+                    if (!_productCode) {
+                        throw new Error(`StockCard with ID '${detail.productId}' does not exist.3`);
+                    }
 
                     await prisma.invoiceDetail.create({
                         data: {
@@ -2595,8 +2596,6 @@ export class InvoiceService {
 
                 // Satış işlemleri
                 for (const detail of data.items) {
-                    if (!detail.productId || !detail.quantity || !detail.unitPrice || !detail.totalAmount) continue;
-
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productId },
                     });
@@ -2660,8 +2659,6 @@ export class InvoiceService {
                 }
 
                 for (const payment of data.payments) {
-                    if (!payment.accountId || !payment.amount) continue;
-
                     if (payment.method == "cash") {
                         await prisma.vaultMovement.create({
                             data: {
