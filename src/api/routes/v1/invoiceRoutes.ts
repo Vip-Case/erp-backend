@@ -23,6 +23,7 @@ export const InvoiceRoutes = (app: Elysia) => {
       .get("/getLastInvoiceNoByType/:type", InvoiceController.getLastInvoiceNoByType, { tags: ["Invoices"] })
       .get("/getInvoiceInfoById/:id", InvoiceController.getInvoiceInfoById, { tags: ["Invoices"] })
       .post("/createQuickSaleInvoiceWithRelations", InvoiceController.createQuickSaleInvoiceWithRelations, { tags: ["Invoices"] })
+      .put("/updateQuickSaleInvoice/:id", InvoiceController.deleteQuickSaleInvoiceWithRelationsAndRecreate, { tags: ["Invoices"] })
   );
   return app;
 };

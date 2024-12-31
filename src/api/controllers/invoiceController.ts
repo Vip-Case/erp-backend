@@ -291,6 +291,19 @@ const InvoiceController = {
         }
     },
 
+    deleteQuickSaleInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as QuickSaleResponse
+        try {
+            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelationsAndRecreate(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations", details: error.message };
+        }
+    },
+
 };
 
 export default InvoiceController;
