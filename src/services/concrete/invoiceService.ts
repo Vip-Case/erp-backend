@@ -2445,7 +2445,7 @@ export class InvoiceService {
             }
         } catch (error) {
             logger.error("Error deleting invoice with relations:", error);
-            throw new Error("Failed to delete invoice and its related records.");
+            throw error
         }
     }
 
