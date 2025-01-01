@@ -210,7 +210,7 @@ export class StockCardService {
                     stockStatus: data.stockCard?.stockStatus,
                     hasExpirationDate: data.stockCard?.hasExpirationDate,
                     allowNegativeStock: data.stockCard?.allowNegativeStock,
-                    maliyetFiyat: data.stockCard?.maliyet,
+                    maliyet: data.stockCard?.maliyet,
                     maliyetDoviz: data.stockCard?.maliyetDoviz,
 
                     company: data.stockCard.companyCode ? {
