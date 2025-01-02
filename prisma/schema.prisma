@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum AddressType {
   Fatura
   Sevk
@@ -66,7 +65,7 @@ enum CurrentMovementDocumentType {
 }
 
 enum CurrentPaymentType {
-  // ÇokluÖdeme
+  ÇokluÖdeme
   Kasa
   POS
   Banka
@@ -258,29 +257,29 @@ model StockCard {
 }
 
 model StockCardEFatura {
-  id            String    @id @default(cuid())
-  productCode   String    @unique @db.VarChar(100)
-  productName   String    @db.VarChar(150)
-  stockCardId   String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  productCode String   @unique @db.VarChar(100)
+  productName String   @db.VarChar(150)
+  stockCardId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   StockCard StockCard[]
 }
 
 model StockCardManufacturer {
-  id            String    @id @default(cuid())
-  productCode   String    @db.VarChar(100)
-  productName   String    @db.VarChar(150)
-  barcode       String    @unique @db.VarChar(100)
-  brandId       String?   @db.VarChar(100)
-  stockCardId   String
-  currentId     String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  brand         Brand?    @relation(fields: [brandId], references: [id])
-  current       Current   @relation(fields: [currentId], references: [id])
-  stockCard     StockCard @relation(fields: [stockCardId], references: [id])
+  id          String    @id @default(cuid())
+  productCode String    @db.VarChar(100)
+  productName String    @db.VarChar(150)
+  barcode     String    @unique @db.VarChar(100)
+  brandId     String?   @db.VarChar(100)
+  stockCardId String
+  currentId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  brand       Brand?    @relation(fields: [brandId], references: [id])
+  current     Current   @relation(fields: [currentId], references: [id])
+  stockCard   StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model Brand {
@@ -295,7 +294,6 @@ model Brand {
   updatedByUser         User?                   @relation("BrandUpdatedBy", fields: [updatedBy], references: [username])
   stockCard             StockCard[]
   stockCardManufacturer StockCardManufacturer[]
-  user                  User?                   @relation(fields: [createdBy], references: [username])
 }
 
 model StockCardPriceList {
@@ -725,11 +723,9 @@ model CurrentMovement {
   stockCardPriceList StockCardPriceList?          @relation(fields: [priceListId], references: [id])
   updatedByUser      User?                        @relation("CurrentMovementUpdatedBy", fields: [updatedBy], references: [username])
 
-
   VaultMovement VaultMovement[]
   BankMovement  BankMovement[]
   PosMovement   PosMovement[]
-
 }
 
 model CurrentCategory {
@@ -751,72 +747,68 @@ model CurrentCategoryItem {
 }
 
 model User {
-  id                             String                  @id @default(cuid())
-  username                       String                  @unique @db.VarChar(50)
-  password                       String                  @db.VarChar(100)
-  email                          String                  @unique @db.VarChar(100)
-  firstName                      String                  @db.VarChar(50)
-  lastName                       String                  @db.VarChar(50)
-  phone                          String                  @db.VarChar(50)
-  address                        String                  @db.VarChar(250)
-  isActive                       Boolean                 @default(true)
-  companyCode                    String
-  createdAt                      DateTime                @default(now())
-  updatedAt                      DateTime                @updatedAt
+  id          String   @id @default(cuid())
+  username    String   @unique @db.VarChar(50)
+  password    String   @db.VarChar(100)
+  email       String   @unique @db.VarChar(100)
+  firstName   String   @db.VarChar(50)
+  lastName    String   @db.VarChar(50)
+  phone       String   @db.VarChar(50)
+  address     String   @db.VarChar(250)
+  isActive    Boolean  @default(true)
+  companyCode String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   createdBy   String?
   updatedBy   String?
 
   company Company? @relation(fields: [companyCode], references: [companyCode])
 
-  role       Role[]
-  permission Permission[]
-  createdByBank                  Bank[]                  @relation("BankCreatedBy")
-  updatedByBank                  Bank[]                  @relation("BankUpdatedBy")
-  createdByBankMovement          BankMovement[]          @relation("BankMovementCreatedBy")
-  updatedByBankMovement          BankMovement[]          @relation("BankMovementUpdatedBy")
-  createdByBranch                Branch[]                @relation("BranchCreatedBy")
-  updatedByBranch                Branch[]                @relation("BranchUpdatedBy")
-  createdByBrand                 Brand[]                 @relation("BrandCreatedBy")
-  updatedByBrand                 Brand[]                 @relation("BrandUpdatedBy")
-  createdByCurrent               Current[]               @relation("CurrentCreatedBy")
-  updatedByCurrent               Current[]               @relation("CurrentUpdatedBy")
-  createdByCurrentMovement       CurrentMovement[]       @relation("CurrentMovementCreatedBy")
-  updatedByCurrentMovement       CurrentMovement[]       @relation("CurrentMovementUpdatedBy")
-  createdByInvoice               Invoice[]               @relation("InvoiceCreatedBy")
-  updatedByInvoice               Invoice[]               @relation("InvoiceUpdatedBy")
-  createdByInvoiceDetail         InvoiceDetail[]         @relation("InvoiceDetailCreatedBy")
-  updatedByInvoiceDetail         InvoiceDetail[]         @relation("InvoiceDetailUpdatedBy")
-  createdByMarketPlace           MarketPlace[]           @relation("MarketPlaceCreatedBy")
-  updatedByMarketPlace           MarketPlace[]           @relation("MarketPlaceUpdatedBy")
-  createdByMarketPlaceProducts   MarketPlaceProducts[]   @relation("MarketPlaceProductsCreatedBy")
-  updatedByMarketPlaceProducts   MarketPlaceProducts[]   @relation("MarketPlaceProductsUpdatedBy")
-  Notification                   Notification[]
-  createdByPos                   Pos[]                   @relation("PosCreatedBy")
-  updatedByPos                   Pos[]                   @relation("PosUpdatedBy")
-  createdByPosMovement           PosMovement[]           @relation("PosMovementCreatedBy")
-  updatedByPosMovement           PosMovement[]           @relation("PosMovementUpdatedBy")
-  createdByReceipt               Receipt[]               @relation("ReceiptCreatedBy")
-  updatedByReceipt               Receipt[]               @relation("ReceiptUpdatedBy")
-  createdByReceiptDetail         ReceiptDetail[]         @relation("ReceiptDetailCreatedBy")
-  updatedByReceiptDetail         ReceiptDetail[]         @relation("ReceiptDetailUpdatedBy")
-  createdByRoles                 Role[]                  @relation("RoleCreatedBy")
-  updatedByRoles                 Role[]                  @relation("RoleUpdatedBy")
-  createdByStockCard             StockCard[]             @relation("StockCardCreatedBy")
-  updatedByStockCard             StockCard[]             @relation("StockCardUpdatedBy")
-  createdByStockMovement         StockMovement[]         @relation("StockMovementCreatedBy")
-  updatedByStockMovement         StockMovement[]         @relation("StockMovementUpdatedBy")
-  createdByStore                 Store[]                 @relation("StoreCreatedBy")
-  updatedByStore                 Store[]                 @relation("StoreUpdatedBy")
-  company                        Company                 @relation(fields: [companyCode], references: [companyCode])
-  createdByVault                 Vault[]                 @relation("VaultCreatedBy")
-  updatedByVault                 Vault[]                 @relation("VaultUpdatedBy")
-  createdByVaultMovement         VaultMovement[]         @relation("VaultMovementCreatedBy")
-  updatedByVaultMovement         VaultMovement[]         @relation("VaultMovementUpdatedBy")
-  createdByWarehouse             Warehouse[]             @relation("WarehouseCreatedBy")
-  updatedByWarehouse             Warehouse[]             @relation("WarehouseUpdatedBy")
-
-  Notification Notification[]
-  Brand        Brand[]
+  role                         Role[]
+  permission                   Permission[]
+  createdByBank                Bank[]                @relation("BankCreatedBy")
+  updatedByBank                Bank[]                @relation("BankUpdatedBy")
+  createdByBankMovement        BankMovement[]        @relation("BankMovementCreatedBy")
+  updatedByBankMovement        BankMovement[]        @relation("BankMovementUpdatedBy")
+  createdByBranch              Branch[]              @relation("BranchCreatedBy")
+  updatedByBranch              Branch[]              @relation("BranchUpdatedBy")
+  createdByBrand               Brand[]               @relation("BrandCreatedBy")
+  updatedByBrand               Brand[]               @relation("BrandUpdatedBy")
+  createdByCurrent             Current[]             @relation("CurrentCreatedBy")
+  updatedByCurrent             Current[]             @relation("CurrentUpdatedBy")
+  createdByCurrentMovement     CurrentMovement[]     @relation("CurrentMovementCreatedBy")
+  updatedByCurrentMovement     CurrentMovement[]     @relation("CurrentMovementUpdatedBy")
+  createdByInvoice             Invoice[]             @relation("InvoiceCreatedBy")
+  updatedByInvoice             Invoice[]             @relation("InvoiceUpdatedBy")
+  createdByInvoiceDetail       InvoiceDetail[]       @relation("InvoiceDetailCreatedBy")
+  updatedByInvoiceDetail       InvoiceDetail[]       @relation("InvoiceDetailUpdatedBy")
+  createdByMarketPlace         MarketPlace[]         @relation("MarketPlaceCreatedBy")
+  updatedByMarketPlace         MarketPlace[]         @relation("MarketPlaceUpdatedBy")
+  createdByMarketPlaceProducts MarketPlaceProducts[] @relation("MarketPlaceProductsCreatedBy")
+  updatedByMarketPlaceProducts MarketPlaceProducts[] @relation("MarketPlaceProductsUpdatedBy")
+  Notification                 Notification[]
+  createdByPos                 Pos[]                 @relation("PosCreatedBy")
+  updatedByPos                 Pos[]                 @relation("PosUpdatedBy")
+  createdByPosMovement         PosMovement[]         @relation("PosMovementCreatedBy")
+  updatedByPosMovement         PosMovement[]         @relation("PosMovementUpdatedBy")
+  createdByReceipt             Receipt[]             @relation("ReceiptCreatedBy")
+  updatedByReceipt             Receipt[]             @relation("ReceiptUpdatedBy")
+  createdByReceiptDetail       ReceiptDetail[]       @relation("ReceiptDetailCreatedBy")
+  updatedByReceiptDetail       ReceiptDetail[]       @relation("ReceiptDetailUpdatedBy")
+  createdByRoles               Role[]                @relation("RoleCreatedBy")
+  updatedByRoles               Role[]                @relation("RoleUpdatedBy")
+  createdByStockCard           StockCard[]           @relation("StockCardCreatedBy")
+  updatedByStockCard           StockCard[]           @relation("StockCardUpdatedBy")
+  createdByStockMovement       StockMovement[]       @relation("StockMovementCreatedBy")
+  updatedByStockMovement       StockMovement[]       @relation("StockMovementUpdatedBy")
+  createdByStore               Store[]               @relation("StoreCreatedBy")
+  updatedByStore               Store[]               @relation("StoreUpdatedBy")
+  createdByVault               Vault[]               @relation("VaultCreatedBy")
+  updatedByVault               Vault[]               @relation("VaultUpdatedBy")
+  createdByVaultMovement       VaultMovement[]       @relation("VaultMovementCreatedBy")
+  updatedByVaultMovement       VaultMovement[]       @relation("VaultMovementUpdatedBy")
+  createdByWarehouse           Warehouse[]           @relation("WarehouseCreatedBy")
+  updatedByWarehouse           Warehouse[]           @relation("WarehouseUpdatedBy")
 }
 
 model Invoice {
@@ -919,8 +911,7 @@ model VaultMovement {
   vault             Vault             @relation(fields: [vaultId], references: [id])
 
   currentMovementId String?
-  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
-
+  currentMovement   CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Bank {
@@ -938,25 +929,25 @@ model Bank {
 }
 
 model BankMovement {
-  id               String            @id @default(cuid())
-  bankId           String
-  invoiceId        String?
-  receiptId        String?
-  description      String
-  entering         Decimal           @db.Decimal(15, 2)
-  emerging         Decimal           @db.Decimal(15, 2)
-  bankDirection    VaultDirection
-  bankType         VaultType
-  bankDocumentType VaultDocumentType
+  id                String            @id @default(cuid())
+  bankId            String
+  invoiceId         String?
+  receiptId         String?
+  description       String
+  entering          Decimal           @db.Decimal(15, 2)
+  emerging          Decimal           @db.Decimal(15, 2)
+  bankDirection     VaultDirection
+  bankType          VaultType
+  bankDocumentType  VaultDocumentType
   currentMovementId String?
-  createdBy        String?
-  updatedBy        String?
-  bank             Bank              @relation(fields: [bankId], references: [id])
-  createdByUser    User?             @relation("BankMovementCreatedBy", fields: [createdBy], references: [username])
-  invoice          Invoice?          @relation(fields: [invoiceId], references: [id])
-  receipt          Receipt?          @relation(fields: [receiptId], references: [id])
-  updatedByUser    User?             @relation("BankMovementUpdatedBy", fields: [updatedBy], references: [username])
-  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
+  createdBy         String?
+  updatedBy         String?
+  bank              Bank              @relation(fields: [bankId], references: [id])
+  createdByUser     User?             @relation("BankMovementCreatedBy", fields: [createdBy], references: [username])
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id])
+  receipt           Receipt?          @relation(fields: [receiptId], references: [id])
+  updatedByUser     User?             @relation("BankMovementUpdatedBy", fields: [updatedBy], references: [username])
+  currentMovement   CurrentMovement?  @relation(fields: [currentMovementId], references: [id])
 }
 
 model Pos {
@@ -974,25 +965,25 @@ model Pos {
 }
 
 model PosMovement {
-  id              String            @id @default(cuid())
-  posId           String
-  invoiceId       String?
-  receiptId       String?
-  description     String
-  entering        Decimal           @db.Decimal(15, 2)
-  emerging        Decimal           @db.Decimal(15, 2)
-  posDirection    VaultDirection
-  posType         VaultType
-  posDocumentType VaultDocumentType
+  id                String            @id @default(cuid())
+  posId             String
+  invoiceId         String?
+  receiptId         String?
+  description       String
+  entering          Decimal           @db.Decimal(15, 2)
+  emerging          Decimal           @db.Decimal(15, 2)
+  posDirection      VaultDirection
+  posType           VaultType
+  posDocumentType   VaultDocumentType
   currentMovementId String?
-  createdBy       String?
-  updatedBy       String?
-  createdByUser   User?             @relation("PosMovementCreatedBy", fields: [createdBy], references: [username])
-  invoice         Invoice?          @relation(fields: [invoiceId], references: [id])
-  pos             Pos               @relation(fields: [posId], references: [id])
-  receipt         Receipt?          @relation(fields: [receiptId], references: [id])
-  updatedByUser   User?             @relation("PosMovementUpdatedBy", fields: [updatedBy], references: [username])
-  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
+  createdBy         String?
+  updatedBy         String?
+  createdByUser     User?             @relation("PosMovementCreatedBy", fields: [createdBy], references: [username])
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id])
+  pos               Pos               @relation(fields: [posId], references: [id])
+  receipt           Receipt?          @relation(fields: [receiptId], references: [id])
+  updatedByUser     User?             @relation("PosMovementUpdatedBy", fields: [updatedBy], references: [username])
+  currentMovement   CurrentMovement?  @relation(fields: [currentMovementId], references: [id])
 }
 
 model Order {
@@ -1097,11 +1088,11 @@ model Store {
 }
 
 model MarketPlaceCategories {
-  id                          String                  @id @default(cuid())
+  id                          String                @id @default(cuid())
   categoryName                String?
   marketPlaceCategoryId       String?
   marketPlaceCategoryParentId String?
-  products MarketPlaceProducts[] @relation("ProductsOnCategories")
+  products                    MarketPlaceProducts[] @relation("ProductsOnCategories")
 
   // Alt ve üst kategori ilişkileri
   subCategories  MarketPlaceCategories[] @relation("CategoryParent")
@@ -1192,4 +1183,3 @@ model Notification {
   updatedAt DateTime  @updatedAt
   user      User?     @relation(fields: [readBy], references: [username])
 }
-
