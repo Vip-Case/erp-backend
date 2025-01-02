@@ -65,7 +65,7 @@ enum CurrentMovementDocumentType {
 }
 
 enum CurrentPaymentType {
-  ÇokluÖdeme
+  CokluOdeme
   Kasa
   POS
   Banka

@@ -20,7 +20,7 @@ CREATE TYPE "CurrentMovementType" AS ENUM ('Borc', 'Alacak');
 CREATE TYPE "CurrentMovementDocumentType" AS ENUM ('Devir', 'Fatura', 'IadeFatura', 'Kasa', 'MusteriSeneti', 'BorcSeneti', 'MusteriCeki', 'BorcCeki', 'KarsiliksizCek', 'Muhtelif');
 
 -- CreateEnum
-CREATE TYPE "CurrentPaymentType" AS ENUM ('ÇokluÖdeme', 'Kasa', 'POS', 'Banka', 'Cek', 'Senet', 'Diger');
+CREATE TYPE "CurrentPaymentType" AS ENUM ('CokluOdeme', 'Kasa', 'POS', 'Banka', 'Cek', 'Senet', 'Diger');
 
 -- CreateEnum
 CREATE TYPE "ReceiptType" AS ENUM ('Devir', 'Sayim', 'Nakil', 'Giris', 'Cikis', 'Fire');
