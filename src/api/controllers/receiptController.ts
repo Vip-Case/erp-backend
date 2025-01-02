@@ -10,8 +10,13 @@ export const ReceiptController = {
 
     createReceipt: async (ctx: Context) => {
         const receiptData: Receipt = ctx.body as Receipt;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const receipt = await receiptService.createReceipt(receiptData);
+            const receipt = await receiptService.createReceipt(receiptData, bearerToken);
             ctx.set.status = 200;
             return receipt;
         } catch (error: any) {

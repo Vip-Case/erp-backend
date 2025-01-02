@@ -4,6 +4,8 @@ import { Prisma, PosMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import PosService from "./posService";
+import { extractUsernameFromToken } from "./extractUsernameService";
+
 export class PosMovementService {
     private posMovementRepository: BaseRepository<PosMovement>;
 
@@ -11,8 +13,9 @@ export class PosMovementService {
         this.posMovementRepository = new BaseRepository<PosMovement>(prisma.posMovement);
     }
 
-    async createPosMovement(posMovement: PosMovement): Promise<PosMovement> {
+    async createPosMovement(posMovement: PosMovement, bearerToken: string): Promise<PosMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdPosMovement = await prisma.posMovement.create({
                 data: {
                     description: posMovement.description,
@@ -21,6 +24,11 @@ export class PosMovementService {
                     posDirection: posMovement.posDirection,
                     posType: posMovement.posType,
                     posDocumentType: posMovement.posDocumentType,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     pos: posMovement.posId ? {
                         connect: {

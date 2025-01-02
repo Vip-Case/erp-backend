@@ -16,11 +16,12 @@ export const PermissionController = {
 
     create: async (ctx: any) => {
         const { permissionName, description, route } = ctx.body;
+        
         try {
             const permission = await permissionService.createPermission({
                 permissionName,
                 description,
-                route,
+                route
             });
             ctx.set.status = 201;
             return permission;

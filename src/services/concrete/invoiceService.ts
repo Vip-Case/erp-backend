@@ -4,6 +4,7 @@ import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { BaseRepository } from "../../repositories/baseRepository";
 import { time } from "console";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export const InvoiceRelations = {
     invoiceDetail: true
@@ -139,7 +140,7 @@ export interface InvoiceInfo {
 }
 
 export interface InvoiceItems {
-    stockCardId: string | undefined;
+    stockCardId: string | null;
     quantity: number | null;
     unitPrice: number | null;
     vatRate: number | null;
@@ -193,8 +194,9 @@ export class InvoiceService {
         return this.invoiceRepository.findById(id);
     }
 
-    async createInvoice(invoice: Invoice): Promise<Invoice> {
+    async createInvoice(invoice: Invoice, bearerToken: string): Promise<Invoice> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const Invoice = await prisma.invoice.create({
                 data: {
                     invoiceNo: invoice.invoiceNo,
@@ -215,7 +217,11 @@ export class InvoiceService {
                     totalDebt: invoice.totalDebt,
                     totalBalance: invoice.totalBalance,
                     canceledAt: invoice.canceledAt,
-
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
                     priceList: invoice.priceListId ? {
                         connect: {
                             id: invoice.priceListId

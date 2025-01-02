@@ -12,6 +12,7 @@ export class CompanyService {
     }
 
     async createCompany(company: Company): Promise<Company> {
+
         try {
             return await this.companyRepository.create(company);
         } catch (error) {

@@ -10,8 +10,14 @@ export const BankMovementController = {
 
     createBankMovement: async (ctx: Context) => {
         const bankMovementData: BankMovement = ctx.body as BankMovement;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+        
         try {
-            const bankMovement = await bankMovementService.createBankMovement(bankMovementData);
+            const bankMovement = await bankMovementService.createBankMovement(bankMovementData, bearerToken);
             ctx.set.status = 200;
             return bankMovement;
         } catch (error: any) {

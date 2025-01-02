@@ -3,6 +3,7 @@ import prisma from "../../config/prisma";
 import { Prisma, StockMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class StockMovementService {
     private stockMovementRepository: BaseRepository<StockMovement>;
@@ -11,8 +12,9 @@ export class StockMovementService {
         this.stockMovementRepository = new BaseRepository<StockMovement>(prisma.stockMovement);
     }
 
-    async createStockMovement(stockMovementData: any): Promise<StockMovement> {
+    async createStockMovement(stockMovementData: any, bearerToken: string): Promise<StockMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const stockMovement = await prisma.stockMovement.create({
                 data: {
                     movementType: stockMovementData.movementType,
@@ -25,7 +27,11 @@ export class StockMovementService {
                     unitPrice: stockMovementData.unitPrice,
                     totalPrice: stockMovementData.totalPrice,
                     unitOfMeasure: stockMovementData.unitOfMeasure,
-
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
                             warehouseCode: stockMovementData.warehouseCode

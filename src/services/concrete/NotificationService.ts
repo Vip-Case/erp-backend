@@ -36,53 +36,60 @@ export class NotificationService {
      * @param criticalLevel - Kritik stok seviyesi (varsayılan: 50)
      * @param warningLevel - Uyarı stok seviyesi (varsayılan: 20)
      */
-    async checkStockLevels(bearerToken: string, criticalLevel: number = 50, warningLevel: number = 20): Promise<void> {
+    /**
+     * Stok kartlarının risk seviyelerini kontrol eder ve bildirim oluşturur
+     */
+    async checkStockLevels(): Promise<void> {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
-
-            // Düşük stok seviyesine sahip ürünleri bul
-            const lowStockItems = await this.prisma.stockCardWarehouse.findMany({
+            // Stok kartları ve ilişkili depoları al
+            const stockCardData = await this.prisma.stockCard.findMany({
                 where: {
-                    quantity: {
-                        lte: criticalLevel
+                    riskQuantities: {
+                        not: null // Risk miktarı atanmış ürünler
                     }
                 },
                 include: {
-                    stockCard: {
+                    stockCardWarehouse: {
                         select: {
-                            productCode: true,
-                            productName: true
+                            quantity: true,
+                            warehouseId: true
                         }
                     }
                 }
             });
 
-            // Her düşük stoklu ürün için bildirim oluştur
-            for (const item of lowStockItems) {
-                const severity = item.quantity.toNumber() <= warningLevel ? 'CRITICAL' : 'WARNING';
-                const message = `Stok Uyarısı: ${item.stockCard.productName} (${item.stockCard.productCode}) ürününün stok seviyesi ${item.quantity} adete düşmüştür.`;
+            let notificationCount = 0;
 
-                await this.prisma.notification.create({
-                    data: {
-                        title: 'Düşük Stok Uyarısı',
-                        message,
-                        type: 'STOCK_ALERT',
-                        severity,
-                        read: false,
-                        createdAt: new Date(),
-                        user: {
-                            connect: {
-                                username: username
+            for (const stockCard of stockCardData) {
+                const { riskQuantities, productCode, productName, stockCardWarehouse } = stockCard;
+
+                for (const warehouse of stockCardWarehouse) {
+                    if (warehouse.quantity.toNumber() <= riskQuantities!.toNumber()) {
+                        const severity = warehouse.quantity.toNumber() === 0 ? 'CRITICAL' : 'WARNING';
+                        const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouse.warehouseId} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
+
+                        // Bildirim oluştur
+                        await this.prisma.notification.create({
+                            data: {
+                                title: 'Düşük Stok Uyarısı',
+                                message,
+                                type: 'STOCK_ALERT',
+                                severity,
+                                read: false,
+                                createdAt: new Date()
                             }
-                        }
+                        });
+
+                        logger.info(`Bildirim oluşturuldu: ${message}`);
+                        notificationCount++;
                     }
-                });
+                }
             }
 
-            logger.info(`${lowStockItems.length} adet düşük stok bildirimi oluşturuldu`);
+            logger.info(`${notificationCount} adet düşük stok bildirimi oluşturuldu.`);
         } catch (error) {
             logger.error('Stok seviyesi kontrolü sırasında hata:', error);
-            throw new Error('Stok seviyesi bildirimleri oluşturulurken bir hata oluştu');
+            throw new Error('Stok seviyesi bildirimleri oluşturulurken bir hata oluştu.');
         }
     }
 

@@ -10,8 +10,14 @@ export const BankController = {
 
     createBank: async (ctx: Context) => {
         const bankData: Bank = ctx.body as Bank;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+        
         try {
-            const bank = await bankService.createBank(bankData);
+            const bank = await bankService.createBank(bankData, bearerToken);
             ctx.set.status = 200;
             return bank;
         } catch (error: any) {

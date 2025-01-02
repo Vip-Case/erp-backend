@@ -39,19 +39,61 @@ interface Product {
 }
 
 export class WooCommerceService {
-  private wooCommerce: WooCommerceAdapter;
+  private static instance: WooCommerceService;
+  private wooCommerce!: WooCommerceAdapter;
 
-  constructor() {
-    const baseUrl = process.env.WC_URL;
-    const consumerKey = process.env.WC_CONSUMER_KEY;
-    const consumerSecret = process.env.WC_CONSUMER_SECRET;
+  constructor(private storeId: string) { }
 
-    if (!baseUrl || !consumerKey || !consumerSecret) {
-      throw new Error("WooCommerce bağlantı bilgileri eksik! Lütfen .env dosyasını kontrol edin.");
-    }
-
-    this.wooCommerce = new WooCommerceAdapter(baseUrl, consumerKey, consumerSecret);
+  public static async getInstance(storeId: string): Promise<WooCommerceService> {
+    const service = new WooCommerceService(storeId);
+    await service.initializeWooCommerce();
+    return service;
   }
+
+  public async initializeWooCommerce(): Promise<void> {
+    try {
+      console.log("Initializing WooCommerce connection...");
+
+      const store = await prisma.store.findUnique({
+        where: { id: this.storeId },
+      });
+
+      // Hata mesajlarını güncelleyerek daha fazla bilgi sağlayın
+      if (!store) {
+        throw new Error(`Store bulunamadı. Sağlanan Store ID: ${this.storeId}`);
+      }
+
+      if (!store.apiCredentials) {
+        throw new Error(
+          `Store (${store.id}) için apiCredentials eksik! Lütfen bağlantı bilgilerini kontrol edin.`
+        );
+      }
+
+      let apiCredentials;
+      try {
+        apiCredentials = JSON.parse(store.apiCredentials);
+      } catch (error) {
+        throw new Error(
+          `Store (${store.id}) için apiCredentials JSON formatında değil: ${store.apiCredentials}`
+        );
+      }
+
+      const { baseUrl, consumerKey, consumerSecret } = apiCredentials;
+
+      if (!baseUrl || !consumerKey || !consumerSecret) {
+        throw new Error(
+          `Store (${store.id}) için eksik bağlantı bilgileri: baseUrl: ${baseUrl}, consumerKey: ${consumerKey}, consumerSecret: ${consumerSecret}`
+        );
+      }
+
+      this.wooCommerce = new WooCommerceAdapter(baseUrl, consumerKey, consumerSecret);
+      console.log("WooCommerce bağlantısı başarıyla başlatıldı.");
+    } catch (error) {
+      console.error("WooCommerce bağlantısı başlatılamadı:", error);
+      throw new Error("WooCommerce servisi başlatılamadı.");
+    }
+  }
+
 
   // WooCommerce'den tüm ürünleri çekmek için yeni bir yardımcı metot
   private async fetchAllProducts(): Promise<Product[]> {
@@ -293,6 +335,12 @@ export class WooCommerceService {
       });
     }
 
+    if (existingProduct) {
+      console.log(`Ürün güncellendi: ${product.name} (SKU: ${product.sku}, ID: ${existingProduct.id})`);
+    } else {
+      console.log(`Yeni ürün eklendi: ${product.name} (SKU: ${product.sku})`);
+    }
+
     if (product.attributes?.length) {
       for (const attribute of product.attributes) {
         const valueString = Array.from(new Set(attribute.options.map((v) => v.trim()))).join(", ");
@@ -352,55 +400,126 @@ export class WooCommerceService {
     return marketplaceProduct;
   }
 
-  async syncProducts(storeId: string | null): Promise<void> {
+  async syncProducts(input: { storeId: string }): Promise<void> {
     try {
-      const store = storeId
-        ? await prisma.store.findFirst({ where: { id: storeId } })
-        : null;
-
-      const products = await this.fetchAllProducts();
-
-      for (const product of products) {
-        await this.processProduct(product, store);
+      // Gerekli parametreleri doğrula
+      if (!input.storeId) {
+        throw new Error("storeId eksik. Lütfen geçerli bir storeId sağlayın.");
       }
 
-      console.log("All products synchronized.");
+      // WooCommerce bağlantısını başlat
+      await this.initializeWooCommerce();
+
+      // WooCommerce ürünlerini çek
+      const products = await this.fetchAllProducts();
+
+      // Store bilgilerini al
+      const store = await prisma.store.findUnique({
+        where: { id: input.storeId },
+      });
+
+      if (!store) {
+        throw new Error("Store bulunamadı. Lütfen geçerli bir storeId sağlayın.");
+      }
+
+      for (const product of products) {
+        try {
+          await this.processProduct(product, store);
+          console.log(`Ürün işleme tamamlandı: ${product.name} (SKU: ${product.sku})`);
+        } catch (productError) {
+          console.error(`Ürün işlenirken hata oluştu: ${product.name} (SKU: ${product.sku})`, productError);
+        }
+      }
+
+      console.log(`Store (${store.name}) ürün senkronizasyonu tamamlandı.`);
     } catch (error) {
-      console.error("Error syncing products:", error);
+      console.error("Ürün senkronizasyon hatası:", error);
       throw new Error("Senkronizasyon sırasında bir hata oluştu.");
     }
   }
 
-
-  async addToStockCard(productIds: string[] = [], branchCode?: string): Promise<void> {
+  async addToStockCard(productIds: string[] = [], branchCode?: string,
+    warehouseId?: string,
+    useWooCommercePrice: boolean = true,
+    useWooCommerceQuantity: boolean = true,
+    includeAll: boolean = false): Promise<void> {
     try {
+      // WooCommerce istemcisi kontrolü
+      if (!this.wooCommerce) {
+        throw new Error("WooCommerce istemcisi başlatılmamış.");
+      }
+
       // Seçilen ürünleri veritabanından al
-      const selectedProducts = await prisma.marketPlaceProducts.findMany({
-        where: {
-          id: { in: productIds },
-        },
-        include: {
-          marketPlaceBrands: true,
-          store: {
-            include: {
-              marketPlace: {
-                include: {
-                  company: true, // MarketPlace ile ilişkili company bilgisi alınır
+      const selectedProducts = includeAll
+        ? await prisma.marketPlaceProducts.findMany({
+          include: {
+            marketPlaceBrands: true,
+            store: {
+              include: {
+                marketPlace: {
+                  include: {
+                    company: true, // MarketPlace ile ilişkili company bilgisi alınır
+                  },
                 },
               },
             },
+            marketPlaceAttributes: true,
           },
-          marketPlaceAttributes: true,
-        },
-      });
+        })
+        : await prisma.marketPlaceProducts.findMany({
+          where: {
+            id: { in: productIds },
+          },
+          include: {
+            marketPlaceBrands: true,
+            store: {
+              include: {
+                marketPlace: {
+                  include: {
+                    company: true, // MarketPlace ile ilişkili company bilgisi alınır
+                  },
+                },
+              },
+            },
+            marketPlaceAttributes: true,
+          },
+        });
+
+        console.log("Seçilen ürünler:", selectedProducts);
 
       if (!selectedProducts.length) {
         console.log("Seçilen ürünler bulunamadı.");
         return;
       }
 
+      // Warehouse doğrulama
+      if (warehouseId) {
+        const warehouseExists = await prisma.warehouse.findUnique({
+          where: { id: warehouseId },
+        });
+
+        if (!warehouseExists) {
+          throw new Error(`Warehouse bulunamadı: ${warehouseId}`);
+        }
+      }
+
+      // WooCommerce PriceList kontrolü
+      const wooCommercePriceList = await prisma.stockCardPriceList.findFirst({
+        where: { priceListName: "Woocommerce" },
+      });
+
+      if (!wooCommercePriceList) {
+        throw new Error("WooCommerce PriceList bulunamadı. Lütfen WooCommerce isimli bir fiyat listesi oluşturun.");
+      }
+
+      // WooCommerce'den miktar ve fiyat bilgilerini al
+      const wooCommerceData = (useWooCommercePrice || useWooCommerceQuantity)
+        ? await this.fetchWooCommerceQuantitiesAndPrices()
+        : {};
+
       // StockCard oluşturma veya güncelleme döngüsü
       for (const product of selectedProducts) {
+        console.log("İşlenen ürün:", product.productName);
         if (!product.productSku || !product.productName) {
           const errorMessage = `Hatalı ürün: ${product.productName}. productSku eksik.`;
           console.error(errorMessage);
@@ -438,6 +557,11 @@ export class WooCommerceService {
 
         let stockCard;
         if (!existingStockCard) {
+          console.log("StockCard oluşturuluyor:", {
+            productCode: product.productSku,
+            productName: product.productName
+          });
+
           // StockCard oluştur
           stockCard = await prisma.stockCard.create({
             data: {
@@ -461,6 +585,10 @@ export class WooCommerceService {
           });
           console.log(`StockCard oluşturuldu: ${product.productName} (SKU: ${product.productSku})`);
         } else {
+          console.log("StockCard güncelleniyor:", {
+          productCode: product.productSku,
+          productName: product.productName,
+           });
           // StockCard güncelle
           stockCard = await prisma.stockCard.update({
             where: { productCode: product.productSku },
@@ -484,6 +612,65 @@ export class WooCommerceService {
           });
           console.log(`StockCard güncellendi: ${product.productName} (SKU: ${product.productSku})`);
         }
+
+        // PriceListItem kontrol ve oluşturma
+        const wooData = wooCommerceData[product.productSku] || {};
+        const price = useWooCommercePrice ? wooData.price || 0 : 0; // WooCommerce'den veya varsayılan değer
+        const quantity = useWooCommerceQuantity ? wooData.quantity || 0 : 0;
+
+        // PriceListItem kontrol ve oluşturma
+        const priceListItem = await prisma.stockCardPriceListItems.findFirst({
+          where: {
+            stockCardId: stockCard.id,
+            priceListId: wooCommercePriceList.id,
+          },
+        });
+
+        if (!priceListItem) {
+          await prisma.stockCardPriceListItems.create({
+            data: {
+              stockCardId: stockCard.id,
+              priceListId: wooCommercePriceList.id,
+              price: price, // Varsayılan fiyat
+              vatRate: 18, // Varsayılan KDV
+            },
+          });
+          console.log(`PriceListItem oluşturuldu: ${product.productName} (PriceList: WooCommerce)`);
+        } else {
+          // Fiyatı güncelle
+          await prisma.stockCardPriceListItems.update({
+            where: { id: priceListItem.id },
+            data: { price },
+          });
+          console.log(`PriceListItem güncellendi: ${product.productName} - Price: ${price}`);
+        }
+
+        // StockCardWarehouse kontrol ve oluşturma
+        const warehouseRecord = await prisma.stockCardWarehouse.findFirst({
+          where: {
+            stockCardId: stockCard.id,
+            warehouseId: warehouseId || "",
+          },
+        });
+
+        if (!warehouseRecord) {
+          await prisma.stockCardWarehouse.create({
+            data: {
+              stockCardId: stockCard.id,
+              warehouseId: warehouseId || "",
+              quantity: quantity,
+            },
+          });
+          console.log(`StockCardWarehouse oluşturuldu: ${product.productName} (Warehouse ID: ${warehouseId})`);
+        } else {
+          // Miktarı güncelle
+          await prisma.stockCardWarehouse.update({
+            where: { id: warehouseRecord.id },
+            data: { quantity },
+          });
+          console.log(`StockCardWarehouse güncellendi: ${product.productName} - Quantity: ${quantity}`);
+        }
+
 
         // MarketPlaceAttributes ile StockCardAttribute ve StockCardAttributeItems oluştur
         if (product.marketPlaceAttributes && product.marketPlaceAttributes.length > 0) {
@@ -537,6 +724,8 @@ export class WooCommerceService {
       throw new Error("StockCard ekleme işlemi başarısız oldu.");
     }
 
+
+
     function mapProductType(productType: string | null): ProductType {
       switch (productType) {
         case "variable":
@@ -551,50 +740,60 @@ export class WooCommerceService {
     }
   }
 
-  async addStockCardToStockCardWarehouse() {
+  // WooCommerce'den ürün miktarlarını almak için yardımcı metot
+  async fetchWooCommerceQuantitiesAndPrices(): Promise<{ [sku: string]: { price: number; quantity: number } }> {
+    const data: { [sku: string]: { price: number; quantity: number } } = {};
     try {
-      const stockCards = await prisma.stockCard.findMany({
-        include: {
-          stockCardWarehouse: true, // StockCardWarehouse ilişkisini dahil et
-        },
-      });
-
-      // Varsayılan Warehouse ID'sini alıyoruz (örneğin, ID'si 'cm4jx3uh2003u12scm0pm229r')
-      const defaultWarehouseId = 'cm4jx3uh2003u12scm0pm229r'; // Burada istediğiniz Warehouse ID'sini kullanabilirsiniz.
-
-      for (const stockCard of stockCards) {
-        // Eğer StockCardWarehouse kaydında yoksa, yeni bir kayıt oluştur
-        const existingWarehouseRecord = await prisma.stockCardWarehouse.findUnique({
-          where: {
-            stockCardId_warehouseId: {
-              stockCardId: stockCard.id,
-              warehouseId: defaultWarehouseId, // Varsayılan Warehouse ID'sini kullanıyoruz
-            },
-          },
-        });
-
-        if (!existingWarehouseRecord) {
-          // Yeni StockCardWarehouse kaydını oluşturuyoruz
-          await prisma.stockCardWarehouse.create({
-            data: {
-              stockCardId: stockCard.id,
-              warehouseId: defaultWarehouseId, // Geçerli warehouseId'yi kullanıyoruz
-              quantity: 100, // Varsayılan miktar
-            },
-          });
-          console.log(`Product with ID ${stockCard.id} added to StockCardWarehouse at Warehouse ${defaultWarehouseId}.`);
-        } else {
-          console.log(`Product with ID ${stockCard.id} already exists in StockCardWarehouse for Warehouse ${defaultWarehouseId}.`);
+      let page = 1;
+      let products;
+  
+      do {
+        products = await this.wooCommerce.getProducts({ per_page: 100, page });
+        console.log(`WooCommerce sayfa ${page} verileri:`, products);
+  
+        for (const product of products) {
+          if (product.sku) {
+            data[product.sku] = {
+              price: product.price || 0,
+              quantity: product.stock_quantity || 0,
+            };
+            console.log(`Ürün eklendi: SKU: ${product.sku}, Price: ${product.price}, Quantity: ${product.stock_quantity}`);
+  
+            if (product.type === "variable" && product.id) {
+              const variations = await this.wooCommerce.getProductVariations(product.id);
+              for (const variation of variations) {
+                if (variation.sku) {
+                  data[variation.sku] = {
+                    price: variation.price || 0,
+                    quantity: variation.stock_quantity || 0,
+                  };
+                  console.log(`Varyasyon eklendi: SKU: ${variation.sku}, Price: ${variation.price}, Quantity: ${variation.stock_quantity}`);
+                }
+              }
+            }
+          }
         }
-      }
+  
+        page++;
+      } while (products.length > 0);
+  
+      console.log("WooCommerce verileri başarıyla çekildi:", data);
     } catch (error) {
-      console.error("An error occurred:", error);
+      console.error("WooCommerce verileri alınırken hata oluştu:", error);
     }
+    return data;
   }
-
+  
   // WooCommerce ürünlerini StockCard ile senkronize et
   async syncStockCardWithWooCommerce(): Promise<void> {
     try {
+      // WooCommerce bağlantısını başlat
+      await this.initializeWooCommerce();
+
+      if (!this.wooCommerce) {
+        throw new Error("WooCommerce servisi başlatılmadı. Lütfen initializeWooCommerce'i çağırın.");
+      }
+
       // Tüm StockCard'ları veritabanından çekiyoruz
       const stockCards = await prisma.stockCard.findMany({
         include: {

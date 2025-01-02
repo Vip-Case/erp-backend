@@ -1,105 +1,92 @@
 import { Context } from "elysia";
 import OrderService from "../../services/concrete/orderService";
 
-interface WebhookData {
-  id: string; // WooCommerce'den gelen sipariş ID'si
-  [key: string]: any; // Diğer dinamik alanlar
-}
-
 const OrderController = {
+  // Sipariş oluşturma
   createOrder: async (ctx: Context) => {
     try {
-      const webhookData = ctx.body;
-      const transformedData = OrderService.transformWooCommerceOrder(webhookData);
-      const newOrder = await OrderService.createOrder(transformedData);
+      // Gelen webhook verisini al
+      const webhookData = ctx.body as Record<string, any>;
 
-      ctx.set.status = 201;
-      return { message: "Sipariş başarıyla oluşturuldu.", data: newOrder };
+      if (!webhookData) {
+        throw new Error("Webhook verisi eksik.");
+      }
+
+      // Gelen veriyi dönüştür
+      const transformedData = OrderService.transformWooCommerceOrder(webhookData);
+      
+      // Sipariş oluşturma servisini çağır
+      const order = await OrderService.createOrder(transformedData);
+
+      return {
+        status: 201,
+        body: {
+          message: "Sipariş başarıyla oluşturuldu.",
+          data: order,
+        },
+      };
     } catch (error: any) {
-      console.error("Sipariş oluşturma hatası:", error);
-      ctx.set.status = 500;
-      return { error: "Sipariş oluşturulamadı.", details: error.message };
+      console.error("Sipariş oluşturma hatası:", error.message || error);
+      return {
+        status: 500,
+        body: {
+          error: "Sipariş oluşturulamadı.",
+          details: error.message || "Bilinmeyen bir hata oluştu.",
+        },
+      };
     }
   },
 
+  // Sipariş güncelleme
   updateOrder: async (ctx: Context) => {
     try {
-        const webhookData = ctx.body as WebhookData;
-
-        console.log("Gelen Webhook Verisi:", webhookData);
-        
-
-        // WooCommerce Webhook Doğrulama İsteği
-        if (webhookData.webhook_id) {
-            console.log("WooCommerce Webhook doğrulama isteği alındı:", webhookData);
-            ctx.set.status = 200; // Başarıyla yanıt döndür
-            return { message: "Webhook doğrulandı." };
-        }
-
-        // Gerçek Sipariş Güncelleme Verisi
-        if (!webhookData || (!webhookData.id && typeof webhookData.id !== "number")) {
-          console.error("Geçersiz Webhook Verisi:", webhookData);
-          ctx.set.status = 400;
-          return { error: "Geçersiz webhook verisi veya ID eksik." };
-        }
-
-        console.log("Doğru Webhook Verisi Alındı:", webhookData);
-
-        // WooCommerce webhook verisini dönüştür
-        const transformedData = OrderService.transformWooCommerceOrder(webhookData);
-
-        // Siparişi güncelle
-        const updatedOrder = await OrderService.updateOrder(webhookData.id.toString(), transformedData);
-
-        ctx.set.status = 200;
-        return { message: "Sipariş başarıyla güncellendi.", data: updatedOrder };
-    } catch (error: any) {
-        console.error("Webhook sipariş güncelleme hatası:", error);
-        ctx.set.status = 500;
-        return { error: "Sipariş güncellenemedi.", details: error.message };
+      const webhookData = ctx.body as Record<string, any>;
+      if (!webhookData.id) {
+      throw new Error("Webhook verisinde 'id' eksik.");
     }
-},
 
+      const transformedData = OrderService.transformWooCommerceOrder(webhookData);
+      const updatedOrder = await OrderService.updateOrder(webhookData.id.toString(), transformedData);
 
+      return { status: 200, body: { message: "Sipariş başarıyla güncellendi.", data: updatedOrder } };
+    } catch (error: any) {
+      console.error("Sipariş güncelleme hatası:", error);
+      return { status: 500, body: { error: "Sipariş güncellenemedi.", details: error.message } };
+    }
+  },
+
+  // Tüm siparişleri getir
   getAllOrders: async (ctx: Context) => {
     try {
       const orders = await OrderService.getAllOrders();
-
-      ctx.set.status = 200;
-      return orders;
+      return { status: 200, body: orders };
     } catch (error: any) {
       console.error("Tüm siparişleri getirme hatası:", error);
-      ctx.set.status = 500;
-      return { error: "Siparişler alınamadı.", details: error.message };
+      return { status: 500, body: { error: "Siparişler alınamadı.", details: error.message } };
     }
   },
 
+  // Tüm siparişleri detaylı getir
   getAllOrdersWithDetails: async (ctx: Context) => {
     try {
       const orders = await OrderService.getAllOrdersWithDetails();
-
-      ctx.set.status = 200;
-      return orders;
+      return { status: 200, body: orders };
     } catch (error: any) {
-      console.error("Tüm siparişleri getirme hatası:", error);
-      ctx.set.status = 500;
-      return { error: "Siparişler alınamadı.", details: error.message };
+      console.error("Tüm sipariş detaylarını getirme hatası:", error);
+      return { status: 500, body: { error: "Siparişler alınamadı.", details: error.message } };
     }
   },
 
+  // Tüm siparişlerin bilgi listesini getir
   getAllOrdersWithInfos: async (ctx: Context) => {
     try {
       const orders = await OrderService.getAllOrdersWithInfos();
-
-      ctx.set.status = 200;
-      return orders;
+      return { status: 200, body: orders };
     } catch (error: any) {
-      console.error("Tüm siparişleri getirme hatası:", error);
-      ctx.set.status = 500;
-      return { error: "Siparişler alınamadı.", details: error.message };
+      console.error("Tüm sipariş bilgilerini getirme hatası:", error);
+      return { status: 500, body: { error: "Siparişler alınamadı.", details: error.message } };
     }
   },
-
 };
 
 export default OrderController;

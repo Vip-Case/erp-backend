@@ -10,8 +10,13 @@ export const PosMovementController = {
 
     createPosMovement: async (ctx: Context) => {
         const posMovementData: PosMovement = ctx.body as PosMovement;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const posMovement = await posMovementService.createPosMovement(posMovementData);
+            const posMovement = await posMovementService.createPosMovement(posMovementData, bearerToken);
             ctx.set.status = 200;
             return posMovement;
         } catch (error: any) {

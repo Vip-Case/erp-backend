@@ -8,23 +8,13 @@ export const NotificationController = {
     // Stok seviyesi kontrolü ve bildirim oluşturma
     checkStockLevels: async (ctx: Context) => {
         try {
-            const authHeader = ctx.request.headers.get("Authorization");
-            if (!authHeader) {
-                return ctx.error(401, "Authorization header is missing");
-            }
-
-            const { criticalLevel, warningLevel } = ctx.query;
-            
-            await notificationService.checkStockLevels(
-                authHeader,
-                criticalLevel ? Number(criticalLevel) : undefined,
-                warningLevel ? Number(warningLevel) : undefined
-            );
+            // Stok seviyelerini kontrol et ve bildirim oluştur
+            await notificationService.checkStockLevels();
 
             ctx.set.status = 200;
             return { message: "Stok seviyeleri kontrol edildi ve bildirimler oluşturuldu" };
         } catch (error: any) {
-            ctx.set.status = error.message.includes('token') ? 401 : 500;
+            ctx.set.status = 500;
             return { error: "Stok seviyesi kontrolü sırasında hata", details: error.message };
         }
     },

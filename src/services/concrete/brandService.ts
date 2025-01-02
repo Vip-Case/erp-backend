@@ -2,6 +2,7 @@ import prisma from "../../config/prisma";
 import { Brand } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class BrandService {
     private brandRepository: BaseRepository<Brand>;
@@ -10,9 +11,13 @@ export class BrandService {
         this.brandRepository = new BaseRepository<Brand>(prisma.brand);
     }
 
-    async createBrand(brand: Brand): Promise<Brand> {
+    async createBrand(brand: Brand, bearerToken: string): Promise<Brand> {
         try {
-            return await this.brandRepository.create(brand);
+            const username = extractUsernameFromToken(bearerToken);
+            return await this.brandRepository.create({
+                ...brand,
+                createdBy: username,
+            });
         } catch (error) {
             logger.error("Error creating brand", error);
             throw error;

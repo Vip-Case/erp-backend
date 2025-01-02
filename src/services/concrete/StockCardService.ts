@@ -15,6 +15,7 @@ import {
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { asyncHandler } from '../../utils/asyncHandler';
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 interface SearchCriteria {
     query?: string; // Genel bir arama için
@@ -28,13 +29,19 @@ interface SearchCriteria {
 export class StockCardService {
 
 
-    async createStockCard(stockCard: StockCard, warehouseIds: string[] | undefined): Promise<StockCard> {
+    async createStockCard(stockCard: StockCard, warehouseIds: string[] | undefined, bearerToken: string): Promise<StockCard> {
         try {
             if (warehouseIds = undefined) {
+                const username = extractUsernameFromToken(bearerToken);
                 const resultWithoutWarehouse = await prisma.stockCard.create({
                     data: {
                         ...stockCard,
 
+                        createdByUser: {
+                            connect: {
+                                username: username
+                                }
+                        },
                         company: stockCard.companyCode ? {
                             connect: { companyCode: stockCard.companyCode },
                         } : undefined,
@@ -50,10 +57,16 @@ export class StockCardService {
                 });
                 return resultWithoutWarehouse;
             } else {
+                const username = extractUsernameFromToken(bearerToken);
                 const resultWithWarehouse = await prisma.stockCard.create({
                     data: {
                         ...stockCard,
 
+                        createdByUser: {
+                            connect: {
+                                username: username
+                                }
+                        },
                         company: stockCard.companyCode ? {
                             connect: { companyCode: stockCard.companyCode },
                         } : undefined,

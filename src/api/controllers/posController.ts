@@ -10,8 +10,14 @@ export const PosController = {
 
     createPos: async (ctx: Context) => {
         const posData: Pos = ctx.body as Pos;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const pos = await posService.createPos(posData);
+            const pos = await posService.createPos(posData, bearerToken);
             ctx.set.status = 200;
             return pos;
         } catch (error: any) {

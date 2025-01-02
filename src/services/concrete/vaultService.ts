@@ -4,6 +4,7 @@ import { Prisma, Vault } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import { Decimal } from "@prisma/client/runtime/library";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class VaultService {
     private vaultRepository: BaseRepository<Vault>;
@@ -12,13 +13,19 @@ export class VaultService {
         this.vaultRepository = new BaseRepository<Vault>(prisma.vault);
     }
 
-    async createVault(vault: Vault): Promise<Vault> {
+    async createVault(vault: Vault, bearerToken: string): Promise<Vault> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdVault = await prisma.vault.create({
                 data: {
                     vaultName: vault.vaultName,
                     balance: vault.balance,
                     currency: vault.currency,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     branch: vault.branchCode ? {
                         connect: { branchCode: vault.branchCode },
