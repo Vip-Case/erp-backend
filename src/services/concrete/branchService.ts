@@ -3,6 +3,7 @@ import prisma from "../../config/prisma";
 import { Branch, Prisma } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export interface BranchData {
     branchName: string;
@@ -17,7 +18,6 @@ export interface BranchData {
     companyCode: string;
     warehouseId: string;
 }
-
 export class BranchService {
     private branchRepository: BaseRepository<Branch>;
 
@@ -25,8 +25,9 @@ export class BranchService {
         this.branchRepository = new BaseRepository<Branch>(prisma.branch);
     }
 
-    async createBranch(branch: BranchData): Promise<Branch> {
+    async createBranch(branch: Branch, bearerToken: string): Promise<Branch> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdBranch = await prisma.branch.create({
                 data: {
                     branchName: branch.branchName,
@@ -38,6 +39,11 @@ export class BranchService {
                     phone: branch.phone,
                     email: branch.email,
                     website: branch.website,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     company: branch.companyCode ? {
                         connect: { companyCode: branch.companyCode },

@@ -10,8 +10,13 @@ const InvoiceController = {
 
     createInvoice: async (ctx: Context) => {
         const invoiceData = ctx.body as Invoice;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const invoice = await invoiceService.createInvoice(invoiceData);
+            const invoice = await invoiceService.createInvoice(invoiceData, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {

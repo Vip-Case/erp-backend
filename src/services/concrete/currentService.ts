@@ -12,6 +12,7 @@ import {
 } from "@prisma/client";
 import logger from "../../utils/logger";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 const currentRelations = {
     priceList: true,
@@ -78,8 +79,17 @@ export class currentService {
         currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
         currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
 
-    }): Promise<Current> {
+    }, bearerToken: string): Promise<Current> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
+            // priceListName ile id'yi buluyoruz
+            const priceList = await prisma.stockCardPriceList.findUnique({
+                where: { priceListName: data.priceListName }
+            });
+
+            if (!priceList) {
+                throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
+            }
 
             const newCurrent = await prisma.current.create({
                 data: {
@@ -92,7 +102,12 @@ export class currentService {
                     currentCategoryItem: data.currentCategoryItem,
                     currentFinancial: data.currentFinancial,
                     currentRisk: data.currentRisk,
-                    currentOfficials: data.currentOfficials
+                    currentOfficials: data.currentOfficials,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                 },
                 include: currentRelations

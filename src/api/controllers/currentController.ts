@@ -46,6 +46,12 @@ export const CurrentController = {
             currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
         };
 
+        const bearerToken = ctx.request.headers.get("Authorization");
+            
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+        
         try {
             const createData = {
                 current: {
@@ -59,7 +65,7 @@ export const CurrentController = {
                 currentRisk: data.currentRisk,
                 currentOfficials: data.currentOfficials,
             };
-            const newCurrent = await currentService.createCurrent(createData);
+            const newCurrent = await currentService.createCurrent(createData, bearerToken);
             ctx.set.status = 200;
             return newCurrent;
         } catch (error: any) {

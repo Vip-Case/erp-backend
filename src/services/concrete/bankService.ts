@@ -4,6 +4,7 @@ import { Prisma, Bank } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import { Decimal } from "@prisma/client/runtime/library";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class BankService {
     private bankRepository: BaseRepository<Bank>;
@@ -12,13 +13,19 @@ export class BankService {
         this.bankRepository = new BaseRepository<Bank>(prisma.bank);
     }
 
-    async createBank(bank: Bank): Promise<Bank> {
+    async createBank(bank: Bank, bearerToken: string): Promise<Bank> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdBank = await prisma.bank.create({
                 data: {
                     bankName: bank.bankName,
                     balance: bank.balance,
                     currency: bank.currency,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     branch: bank.branchCode ? {
                         connect: { branchCode: bank.branchCode },

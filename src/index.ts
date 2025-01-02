@@ -14,7 +14,7 @@ import BankMovementRoutes from './api/routes/v1/bankMovementRoutes';
 import PosMovementRoutes from './api/routes/v1/posMovementRoutes';
 import PermissionRoutes from './api/routes/v1/permissionRoute';
 import syncPermissionsWithRoutes from './utils/permissionSync';
-import wooCommerceRoutes from './api/routes/v1/productRoutes';
+import wooCommerceRoutes from './api/routes/v1/wooCommerceRoutes';
 import StockCardRoutes from './api/routes/v1/stockCardRoutes';
 import PriceListRoutes from './api/routes/v1/priceListRoutes';
 import AttributeRoutes from './api/routes/v1/attributeRoutes';
@@ -44,6 +44,10 @@ import NotificationRoutes from './api/routes/v1/notificationRoutes';
 import { NotificationService } from './services/concrete/NotificationService';
 import logger from './utils/logger';
 import InvoiceService from './services/concrete/invoiceService';
+import OrderInvoiceRoutes from './api/routes/v1/orderInvoiceRoutes';
+import DynamicRoutes from './api/routes/v1/dynamicRoutes';
+import MarketPlaceRoutes from './api/routes/v1/marketPlaceRoutes';
+import StoreRoutes from './api/routes/v1/storeRoutes';
 
 dotenv.config();
 
@@ -54,7 +58,6 @@ if (!process.env.JWT_SECRET) {
 const prisma = new PrismaClient();
 
 const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
-console.log("SECRET_KEY:", process.env.CORS_URL);
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia()
@@ -75,14 +78,14 @@ app.onRequest(async (ctx) => {
     ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
     return; // İleri işlem yapmadan middleware'den çık
   }
-  const publicRoutes = ["/auth/login", "/auth/register"];
+  const publicRoutes = ["/auth/login", "/auth/register", "/webhook/order-created", "/webhook/order-update"];
   const route = new URL(ctx.request.url).pathname;
 
   // Public route kontrolü
-  if (publicRoutes.includes(route)) {
+  if (publicRoutes.some(r => route.startsWith(r))) {
     console.log("Public route, skipping auth.");
     return;
-  }
+}
 
   const authHeader = ctx.request.headers.get("Authorization");
   if (!authHeader) {
@@ -95,6 +98,7 @@ app.onRequest(async (ctx) => {
 
     // Kullanıcı bilgilerini ctx.request'e bağlama
     (ctx.request as any).user = {
+      username: decoded.username,
       userId: decoded.userId,
       isAdmin: decoded.isAdmin || false,
       permissions: decoded.permissions || [],
@@ -106,13 +110,14 @@ app.onRequest(async (ctx) => {
   }
 });
 
+
 app.onRequest(async (ctx) => {
   if (ctx.request.method === "OPTIONS") {
     ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
     return; // İleri işlem yapmadan middleware'den çık
   }
   const route = new URL(ctx.request.url).pathname; // Geçerli rota
-  const publicRoutes = ["/auth/login", "/auth/register"]; // Public rotalar
+  const publicRoutes = ["/auth/login", "/auth/register", "/webhook/order-created", "/webhook/order-update"]; // Public rotalar
 
   // Public rotalarda izin kontrolü yapılmaz
   if (publicRoutes.includes(route)) {
@@ -161,15 +166,14 @@ app.onRequest(async (ctx) => {
 const notificationService = new NotificationService();
 cron.schedule('*/30 * * * *', async () => {
   try {
-    logger.info('Stok seviyesi kontrolü başlatılıyor...');
-    await notificationService.checkStockLevels(
-      process.env.SYSTEM_TOKEN || '', // Sistem tarafından yapılan kontroller için token
-      process.env.CRITICAL_STOCK_LEVEL ? Number(process.env.CRITICAL_STOCK_LEVEL) : undefined,
-      process.env.WARNING_STOCK_LEVEL ? Number(process.env.WARNING_STOCK_LEVEL) : undefined
-    );
-    logger.info('Stok seviyesi kontrolü tamamlandı');
+      logger.info('Stok seviyesi kontrolü başlatılıyor...');
+      
+      // Stok seviyelerini kontrol et
+      await notificationService.checkStockLevels();
+      
+      logger.info('Stok seviyesi kontrolü tamamlandı');
   } catch (error) {
-    logger.error('Stok seviyesi kontrolü sırasında hata:', error);
+      logger.error('Stok seviyesi kontrolü sırasında hata:', error);
   }
 });
 console.log("Bildirimler kontrol ediliyor...");
@@ -280,10 +284,13 @@ const routes = [
   BankMovementRoutes,
   PosRoutes,
   PosMovementRoutes,
-  NotificationRoutes,
+  MarketPlaceRoutes,
+  StoreRoutes
 ];
 
+app.use(NotificationRoutes(app));
 wooCommerceRoutes(app);
+OrderInvoiceRoutes(app);
 
 routes.forEach((route) => app.use(route));
 

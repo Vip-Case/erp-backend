@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 enum AddressType {
   Fatura
   Sevk
@@ -65,7 +66,7 @@ enum CurrentMovementDocumentType {
 }
 
 enum CurrentPaymentType {
-  ÇokluÖdeme
+  // ÇokluÖdeme
   Kasa
   POS
   Banka
@@ -102,9 +103,9 @@ enum StockUnits {
 enum ProductType {
   BasitUrun
   VaryasyonluUrun
-  VaryasyonUrun
   DijitalUrun
   Hizmet
+  VaryasyonUrun
 }
 
 enum InstitutionType {
@@ -129,202 +130,196 @@ enum CurrentType {
 }
 
 enum VaultDirection {
-  Introduction //Giriş
-  Exit //Çıkış
-  ReceivedVirement //Alınan virman
+  Introduction
+  Exit
+  ReceivedVirement
 }
 
 enum VaultType {
-  DebtTransfer //borç devri
-  ServiceChargeCollection //hizmet masraf tahsilatı
-  CompanyCreditCardWithdrawals //firma kredi kartından para çekme
-  BuyingForeignCurrency //döviz alma
-  InputReceipt //giriş fişi
-  PurchaseInvoicePayment //Alış Faturası Ödemesi
-  BankWithdrawals //bankadan para çekme
-  ReceivingValuableAssets //değerli kıymet alma
-  ReceivableTransfer //Alacak Devri
-  ServiceChargePayment //Hizmet Masraf Ödemesi
-  CompanyCreditCardDeposit //Firma Kredi Kartına Para Yatırma
-  CurrencyExchange //Döviz Bozdurma
-  LoanPayment //Kredi Ödemesi
-  LoanWithdrawal //Kredi Çekme
-  ExitReceipt //Çıkış Fişi
-  SalesInvoicePayment //Satış Faturası Ödemesi
-  PaymentToBank //Bankaya Ödeme
-  PreciousMetalExchange //Değerli Kıymet Bozdurma
-  ReceivedVirement //Alınan Virman
-  OutgoingVirement //Gönderilen Virman
-  InGoingVirement //Gelen Virman
-  POSWithdrawals //POS'tan Para Çekme
-  CashCollection //Nakit Tahsilat
-  BankCollection //Banka Tahsilatı
-  POSCollection //POS Tahsilatı
+  DebtTransfer
+  ServiceChargeCollection
+  CompanyCreditCardWithdrawals
+  BuyingForeignCurrency
+  InputReceipt
+  BankWithdrawals
+  ReceivingValuableAssets
+  ReceivableTransfer
+  ServiceChargePayment
+  CompanyCreditCardDeposit
+  CurrencyExchange
+  LoanPayment
+  ExitReceipt
+  PaymentToBank
+  PreciousMetalExchange
+  LoanWithdrawal
+  ReceivedVirement
+  OutgoingVirement
+  InGoingVirement
+  POSWithdrawals
+  PurchaseInvoicePayment
+  SalesInvoicePayment
+  CashCollection
+  BankCollection
+  POSCollection
 }
 
 enum VaultDocumentType {
-  General //Genel
-  Accounting //Muhasebe
-  Official //Resmi
+  General
+  Accounting
+  Official
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  roleName    String   @unique @db.VarChar(50)
-  description String   @db.VarChar(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
+  id            String       @id @default(cuid())
+  roleName      String       @unique @db.VarChar(50)
+  description   String       @db.VarChar(100)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  createdByUser User?        @relation("RoleCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser User?        @relation("RoleUpdatedBy", fields: [updatedBy], references: [username])
+  permission    Permission[] @relation("PermissionToRole")
 
-  user       User[]
-  permission Permission[]
+  User User[]
 }
 
 model Permission {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
+  permissionName String           @unique @db.VarChar(50)
+  description    String           @db.VarChar(100)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   groupId        String?
-  permissionName String   @unique @db.VarChar(50)
-  route          String?  @unique
-  description    String   @db.VarChar(100)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  route          String?          @unique
+  group          PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
+  role           Role[]           @relation("PermissionToRole")
 
-  role  Role[]
-  user  User[]
-  group PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
+  user User[]
 }
 
 model PermissionGroup {
-  id          String   @id @default(cuid())
-  groupName   String   @unique @db.VarChar(50)
-  description String?  @db.VarChar(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id          String       @id @default(cuid())
+  groupName   String       @unique @db.VarChar(50)
+  description String?      @db.VarChar(100)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   permissions Permission[] @relation("PermissionToGroup")
 }
 
 model StockCard {
-  id                 String      @id @default(cuid())
-  productCode        String      @unique @db.VarChar(100)
-  productName        String      @db.VarChar(150)
-  unit               StockUnits  @default(Adet)
-  shortDescription   String?     @db.VarChar(150)
-  description        String?     @db.VarChar(250)
-  companyCode        String?     @db.VarChar(50)
-  branchCode         String?     @db.VarChar(50)
-  brandId            String?     @db.VarChar(100)
-  productType        ProductType @default(BasitUrun)
-  gtip               String?     @db.VarChar(50)
-  pluCode            String?     @db.VarChar(50)
-  desi               Decimal?    @db.Decimal(15, 4)
-  adetBoleni         Decimal?    @db.Decimal(15, 4)
-  siraNo             String?     @db.VarChar(50)
-  raf                String?     @db.VarChar(50)
-  karMarji           Decimal?    @db.Decimal(15, 4)
-  riskQuantities     Decimal?    @db.Decimal(15, 4)
-  maliyet            Decimal?    @db.Decimal(15, 4)
-  maliyetDoviz       String?     @db.VarChar(3)
-  stockStatus        Boolean     @default(true)
-  hasExpirationDate  Boolean     @default(false)
-  allowNegativeStock Boolean     @default(false)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  createdBy          String?
-  updatedBy          String?
-
-  company Company? @relation(fields: [companyCode], references: [companyCode])
-  branch  Branch?  @relation(fields: [branchCode], references: [branchCode])
-  brand   Brand?   @relation(fields: [brandId], references: [id])
-
+  id                      String                    @id @default(cuid())
+  productCode             String                    @unique @db.VarChar(100)
+  productName             String                    @db.VarChar(150)
+  unit                    StockUnits                @default(Adet)
+  shortDescription        String?                   @db.VarChar(150)
+  description             String?                   @db.Text
+  companyCode             String?                   @db.VarChar(50)
+  branchCode              String?                   @db.VarChar(50)
+  brandId                 String?                   @db.VarChar(100)
+  productType             ProductType               @default(BasitUrun)
+  gtip                    String?                   @db.VarChar(50)
+  pluCode                 String?                   @db.VarChar(50)
+  desi                    Decimal?                  @db.Decimal(15, 4)
+  adetBoleni              Decimal?                  @db.Decimal(15, 4)
+  siraNo                  String?                   @db.VarChar(50)
+  raf                     String?                   @db.VarChar(50)
+  karMarji                Decimal?                  @db.Decimal(15, 4)
+  riskQuantities          Decimal?                  @db.Decimal(15, 4)
+  maliyet                 Decimal?                  @db.Decimal(15, 4)
+  maliyetDoviz            String?                   @db.VarChar(3)
+  stockStatus             Boolean                   @default(true)
+  hasExpirationDate       Boolean                   @default(false)
+  allowNegativeStock      Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  createdBy               String?
+  updatedBy               String?
+  invoiceDetail           InvoiceDetail[]
+  orderItems              OrderItem[]
+  receiptDetail           ReceiptDetail[]
+  branch                  Branch?                   @relation(fields: [branchCode], references: [branchCode])
+  brand                   Brand?                    @relation(fields: [brandId], references: [id])
+  company                 Company?                  @relation(fields: [companyCode], references: [companyCode])
+  createdByUser           User?                     @relation("StockCardCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser           User?                     @relation("StockCardUpdatedBy", fields: [updatedBy], references: [username])
+  stockCardAttributeItems StockCardAttributeItems[]
   barcodes                StockCardBarcode[]
   stockCardCategoryItem   StockCardCategoryItem[]
+  stockCardEFatura        StockCardEFatura[]
+  stockCardManufacturer   StockCardManufacturer[]
+  stockCardMarketNames    StockCardMarketNames[]
   stockCardPriceLists     StockCardPriceListItems[]
   taxRates                StockCardTaxRate[]
   variations              StockCardVariation[]
-  stockMovement           StockMovement[]
-  invoiceDetail           InvoiceDetail[]
   stockCardWarehouse      StockCardWarehouse[]
-  receiptDetail           ReceiptDetail[]
-  stockCardEFatura        StockCardEFatura[]
-  stockCardManufacturer   StockCardManufacturer[]
-  stockCardAttributeItems StockCardAttributeItems[]
-  stockCardMarketNames    StockCardMarketNames[]
-  orderItems              OrderItem[]
-  Store                   Store[]
+  stockMovement           StockMovement[]
+  Store                   Store[]                   @relation("StockCardToStore")
 }
 
 model StockCardEFatura {
-  id          String   @id @default(cuid())
-  productCode String   @unique @db.VarChar(100)
-  productName String   @db.VarChar(150)
-  stockCardId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
+  id            String    @id @default(cuid())
+  productCode   String    @unique @db.VarChar(100)
+  productName   String    @db.VarChar(150)
+  stockCardId   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  stockCard StockCard @relation(fields: [stockCardId], references: [id])
+  StockCard StockCard[]
 }
 
 model StockCardManufacturer {
-  id          String   @id @default(cuid())
-  productCode String   @db.VarChar(100)
-  productName String   @db.VarChar(150)
-  barcode     String   @unique @db.VarChar(100)
-  brandId     String?  @db.VarChar(100)
-  stockCardId String
-  currentId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  stockCard StockCard @relation(fields: [stockCardId], references: [id])
-  current   Current   @relation(fields: [currentId], references: [id])
-  brand     Brand?    @relation(fields: [brandId], references: [id])
+  id            String    @id @default(cuid())
+  productCode   String    @db.VarChar(100)
+  productName   String    @db.VarChar(150)
+  barcode       String    @unique @db.VarChar(100)
+  brandId       String?   @db.VarChar(100)
+  stockCardId   String
+  currentId     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  brand         Brand?    @relation(fields: [brandId], references: [id])
+  current       Current   @relation(fields: [currentId], references: [id])
+  stockCard     StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model Brand {
-  id        String   @id @default(cuid())
-  brandName String   @unique @db.VarChar(100)
-  brandCode String   @unique @db.VarChar(50)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
-
-  stockCardManufacturer StockCardManufacturer[]
+  id                    String                  @id @default(cuid())
+  brandName             String                  @unique @db.VarChar(100)
+  brandCode             String                  @unique @db.VarChar(50)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  createdBy             String?
+  updatedBy             String?
+  createdByUser         User?                   @relation("BrandCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser         User?                   @relation("BrandUpdatedBy", fields: [updatedBy], references: [username])
   stockCard             StockCard[]
+  stockCardManufacturer StockCardManufacturer[]
   user                  User?                   @relation(fields: [createdBy], references: [username])
 }
 
 model StockCardPriceList {
-  id            String  @id @default(cuid())
-  priceListName String  @unique @db.VarChar(100)
-  currency      String  @db.VarChar(3)
-  isVatIncluded Boolean @default(true)
-  isActive      Boolean @default(true)
-
+  id                      String                    @id @default(cuid())
+  priceListName           String                    @unique @db.VarChar(100)
+  currency                String                    @db.VarChar(3)
+  isVatIncluded           Boolean                   @default(true)
+  isActive                Boolean                   @default(true)
   current                 Current[]
-  stockMovement           StockMovement[]
   currentMovement         CurrentMovement[]
   invoice                 Invoice[]
   stockCardPriceListItems StockCardPriceListItems[]
+  stockMovement           StockMovement[]
 }
 
 model StockCardPriceListItems {
-  id          String   @id @default(cuid())
-  priceListId String
-  stockCardId String
-  price       Decimal  @db.Decimal(15, 4)
-  vatRate     Decimal? @db.Decimal(15, 4)
-  barcode     String?  @db.VarChar(100)
-
-  stockCard StockCard          @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  priceList StockCardPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
-
+  id                 String               @id @default(cuid())
+  priceListId        String
+  stockCardId        String
+  price              Decimal              @db.Decimal(15, 4)
+  barcode            String?              @db.VarChar(100)
+  vatRate            Decimal?             @db.Decimal(15, 4)
+  priceList          StockCardPriceList   @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  stockCard          StockCard            @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
   stockCardVariation StockCardVariation[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
 
@@ -337,11 +332,10 @@ model StockCardBarcode {
 }
 
 model StockCardMarketNames {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   stockCardId String
-  marketName  String @db.VarChar(100)
-
-  stockCard StockCard @relation(fields: [stockCardId], references: [id])
+  marketName  String    @db.VarChar(100)
+  stockCard   StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model StockCardCategory {
@@ -371,36 +365,33 @@ model StockCardTaxRate {
 }
 
 model StockCardAttribute {
-  id            String @id @default(cuid())
-  attributeName String @db.VarChar(100)
-  value         String
-
+  id                      String                    @id @default(cuid())
+  attributeName           String                    @db.VarChar(100)
+  value                   String
   stockCardAttributeItems StockCardAttributeItems[]
 }
 
 model StockCardAttributeItems {
-  id          String @id @default(cuid())
+  id          String             @id @default(cuid())
   attributeId String
   stockCardId String
-
-  attribute StockCardAttribute @relation(fields: [attributeId], references: [id])
-  stockCard StockCard          @relation(fields: [stockCardId], references: [id])
+  attribute   StockCardAttribute @relation(fields: [attributeId], references: [id])
+  stockCard   StockCard          @relation(fields: [stockCardId], references: [id])
 }
 
 model StockCardVariation {
-  id             String @id @default(cuid())
-  stockCardId    String
-  variationName  String @db.VarChar(100)
-  variationCode  String @unique @db.VarChar(100)
-  variationValue String @db.VarChar(100)
-
+  id                      String                    @id @default(cuid())
+  stockCardId             String
+  variationName           String                    @db.VarChar(100)
+  variationCode           String                    @unique @db.VarChar(100)
+  variationValue          String                    @db.VarChar(100)
   stockCard               StockCard                 @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  stockCardPriceListItems StockCardPriceListItems[] @relation("StockCardPriceListItemsToStockCardVariation")
   stockCardBarcode        StockCardBarcode[]        @relation("StockCardBarcodeToStockCardVariation")
+  stockCardPriceListItems StockCardPriceListItems[] @relation("StockCardPriceListItemsToStockCardVariation")
 }
 
 model StockMovement {
-  id               String             @id @default(cuid())
+  id               String              @id @default(cuid())
   productCode      String
   warehouseCode    String
   branchCode       String
@@ -409,238 +400,227 @@ model StockMovement {
   invoiceType      InvoiceType?
   movementType     StokManagementType
   documentNo       String?
-  gcCode           GCCode?
   type             String?
   description      String?
-  quantity         Decimal?           @db.Decimal(15, 4)
-  unitPrice        Decimal?           @db.Decimal(15, 4)
-  totalPrice       Decimal?           @db.Decimal(15, 4)
-  unitOfMeasure    String?            @db.VarChar(50)
+  quantity         Decimal?            @db.Decimal(15, 4)
+  unitPrice        Decimal?            @db.Decimal(15, 4)
+  totalPrice       Decimal?            @db.Decimal(15, 4)
+  unitOfMeasure    String?             @db.VarChar(50)
   outWarehouseCode String?
   priceListId      String?
-  createdAt        DateTime           @default(now())
+  createdAt        DateTime            @default(now())
   createdBy        String?
-  updatedAt        DateTime?          @updatedAt
+  updatedAt        DateTime?           @updatedAt
   updatedBy        String?
-
-  stockCard    StockCard           @relation(fields: [productCode], references: [productCode])
-  warehouse    Warehouse           @relation("StockMovementWarehouse", fields: [warehouseCode], references: [warehouseCode])
-  branch       Branch              @relation(fields: [branchCode], references: [branchCode])
-  outWarehouse Warehouse?          @relation("StockMovementOutWarehouse", fields: [outWarehouseCode], references: [warehouseCode])
-  priceList    StockCardPriceList? @relation(fields: [priceListId], references: [id])
-  current      Current?            @relation(fields: [currentCode], references: [currentCode])
-  invoice      Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
+  gcCode           GCCode?
+  branch           Branch              @relation(fields: [branchCode], references: [branchCode])
+  createdByUser    User?               @relation("StockMovementCreatedBy", fields: [createdBy], references: [username])
+  current          Current?            @relation(fields: [currentCode], references: [currentCode])
+  invoice          Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
+  outWarehouse     Warehouse?          @relation("StockMovementOutWarehouse", fields: [outWarehouseCode], references: [warehouseCode])
+  priceList        StockCardPriceList? @relation(fields: [priceListId], references: [id])
+  stockCard        StockCard           @relation(fields: [productCode], references: [productCode])
+  updatedByUser    User?               @relation("StockMovementUpdatedBy", fields: [updatedBy], references: [username])
+  warehouse        Warehouse           @relation("StockMovementWarehouse", fields: [warehouseCode], references: [warehouseCode])
 }
 
 model Company {
-  id          String   @id @default(cuid())
-  companyName String   @unique @db.VarChar(100)
-  name        String?  @db.VarChar(100)
-  surname     String?  @db.VarChar(100)
-  companyCode String?  @unique @db.VarChar(50)
-  taxNumber   String?  @unique @db.VarChar(50)
-  taxOffice   String?  @db.VarChar(50)
-  kepAddress  String?  @db.VarChar(50)
-  mersisNo    String?  @db.VarChar(50)
-  sicilNo     String?  @db.VarChar(50)
-  address     String?  @db.VarChar(300)
-  countryCode String?  @db.VarChar(3)
-  city        String?  @db.VarChar(50)
-  district    String?  @db.VarChar(50)
-  postalCode  String?  @db.VarChar(10)
-  phone       String?  @db.VarChar(50)
-  email       String?  @db.VarChar(100)
-  website     String?  @db.VarChar(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  branch          Branch[]
-  warehouse       Warehouse[]
-  stockCard       StockCard[]
+  id              String            @id @default(cuid())
+  companyName     String            @unique @db.VarChar(100)
+  name            String?           @db.VarChar(100)
+  surname         String?           @db.VarChar(100)
+  companyCode     String?           @unique @db.VarChar(50)
+  taxNumber       String?           @unique @db.VarChar(50)
+  taxOffice       String?           @db.VarChar(50)
+  kepAddress      String?           @db.VarChar(50)
+  mersisNo        String?           @db.VarChar(50)
+  sicilNo         String?           @db.VarChar(50)
+  address         String?           @db.VarChar(300)
+  countryCode     String?           @db.VarChar(3)
+  city            String?           @db.VarChar(50)
+  district        String?           @db.VarChar(50)
+  postalCode      String?           @db.VarChar(10)
+  phone           String?           @db.VarChar(50)
+  email           String?           @db.VarChar(100)
+  website         String?           @db.VarChar(100)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   currentMovement CurrentMovement[]
   invoice         Invoice[]
+  MarketPlace     MarketPlace[]
+  stockCard       StockCard[]
+  User            User[]
+  warehouse       Warehouse[]
 
-  User User[]
-
-  MarketPlace MarketPlace[]
+  Branch Branch[]
 }
 
 model Branch {
-  id          String   @id @default(cuid())
-  branchName  String   @unique @db.VarChar(100)
-  branchCode  String   @unique @db.VarChar(50)
-  address     String   @db.VarChar(250)
-  countryCode String   @db.VarChar(3)
-  city        String   @db.VarChar(50)
-  district    String   @db.VarChar(50)
-  phone       String   @db.VarChar(50)
-  email       String   @db.VarChar(100)
-  website     String   @db.VarChar(100)
-  companyCode String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  company Company @relation(fields: [companyCode], references: [companyCode])
-
+  id              String            @id @default(cuid())
+  branchName      String            @unique @db.VarChar(100)
+  branchCode      String            @unique @db.VarChar(50)
+  address         String            @db.VarChar(250)
+  countryCode     String            @db.VarChar(3)
+  city            String            @db.VarChar(50)
+  district        String            @db.VarChar(50)
+  phone           String            @db.VarChar(50)
+  email           String            @db.VarChar(100)
+  website         String            @db.VarChar(100)
+  companyCode     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  Bank            Bank[]
+  company         Company           @relation(fields: [companyCode], references: [companyCode])
+  createdByUser   User?             @relation("BranchCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser   User?             @relation("BranchUpdatedBy", fields: [updatedBy], references: [username])
   warehouse       BranchWarehouse[]
+  currentBranch   CurrentBranch[]
+  currentMovement CurrentMovement[]
+  outInvoice      Invoice[]         @relation("InvoiceBranch")
+  invoice         Invoice[]         @relation("InvoiceOutBranch")
+  Pos             Pos[]
+  receipt         Receipt[]
   stockCard       StockCard[]
   stockMovement   StockMovement[]
-  currentMovement CurrentMovement[]
-
-  invoice       Invoice[]       @relation("InvoiceOutBranch")
-  outInvoice    Invoice[]       @relation("InvoiceBranch")
-  receipt       Receipt[]
-  currentBranch CurrentBranch[]
-  vault         Vault[]
-
-  Bank Bank[]
-
-  Pos Pos[]
+  vault           Vault[]
 }
 
 model Warehouse {
-  id            String   @id @default(cuid())
-  warehouseName String   @unique @db.VarChar(100)
-  warehouseCode String   @unique @db.VarChar(50)
-  address       String   @db.VarChar(250)
-  countryCode   String   @db.VarChar(3)
-  city          String   @db.VarChar(50)
-  district      String   @db.VarChar(50)
-  phone         String   @db.VarChar(50)
-  email         String   @db.VarChar(100)
-  companyCode   String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  createdBy     String?
-  updatedBy     String?
-
-  company Company @relation(fields: [companyCode], references: [companyCode])
-
-  branch         BranchWarehouse[]
-  stockMovements StockMovement[]   @relation("StockMovementWarehouse")
-  outMovements   StockMovement[]   @relation("StockMovementOutWarehouse")
-
+  id                 String               @id @default(cuid())
+  warehouseName      String               @unique @db.VarChar(100)
+  warehouseCode      String               @unique @db.VarChar(50)
+  address            String               @db.VarChar(250)
+  countryCode        String               @db.VarChar(3)
+  city               String               @db.VarChar(50)
+  district           String               @db.VarChar(50)
+  phone              String               @db.VarChar(50)
+  email              String               @db.VarChar(100)
+  companyCode        String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdBy          String?
+  updatedBy          String?
+  branch             BranchWarehouse[]
   invoice            Invoice[]
+  inReceipt          Receipt[]            @relation("ReceiptInWarehouse")
+  outReceipt         Receipt[]            @relation("ReceiptOutWarehouse")
   stockCardWarehouse StockCardWarehouse[]
-
-  outReceipt Receipt[] @relation("ReceiptOutWarehouse")
-  inReceipt  Receipt[] @relation("ReceiptInWarehouse")
-
-  StockTake StockTake[]
+  outMovements       StockMovement[]      @relation("StockMovementOutWarehouse")
+  stockMovements     StockMovement[]      @relation("StockMovementWarehouse")
+  StockTake          StockTake[]
+  company            Company              @relation(fields: [companyCode], references: [companyCode])
+  createdByUser      User?                @relation("WarehouseCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser      User?                @relation("WarehouseUpdatedBy", fields: [updatedBy], references: [username])
 }
 
 model BranchWarehouse {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   branchId    String
   warehouseId String
-
-  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  branch      Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@unique([branchId, warehouseId])
 }
 
 model StockCardWarehouse {
-  id          String  @id @default(cuid())
+  id          String    @id @default(cuid())
   stockCardId String
   warehouseId String
-  quantity    Decimal @db.Decimal(15, 4)
-
-  stockCard StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quantity    Decimal   @db.Decimal(15, 4)
+  stockCard   StockCard @relation(fields: [stockCardId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@unique([stockCardId, warehouseId])
 }
 
 model StockTake {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   stockCardIds String[]
   warehouseId  String
-
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id])
 }
 
 model Receipt {
-  id           String      @id @default(cuid())
-  receiptType  ReceiptType
-  receiptDate  DateTime    @default(now())
-  documentNo   String      @db.VarChar(50)
-  branchCode   String      @db.VarChar(50)
-  isTransfer   Boolean     @default(false)
-  outWarehouse String?
-  inWarehouse  String?
-  description  String?
-
+  id                  String          @id @default(cuid())
+  receiptType         ReceiptType
+  receiptDate         DateTime        @default(now())
+  documentNo          String          @db.VarChar(50)
+  branchCode          String          @db.VarChar(50)
+  isTransfer          Boolean         @default(false)
+  outWarehouse        String?
+  inWarehouse         String?
+  description         String?
+  createdBy           String?
+  updatedBy           String?
+  BankMovement        BankMovement[]
+  PosMovement         PosMovement[]
   branch              Branch          @relation(fields: [branchCode], references: [branchCode])
-  outReceiptWarehouse Warehouse?      @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
+  createdByUser       User?           @relation("ReceiptCreatedBy", fields: [createdBy], references: [username])
   inReceiptWarehouse  Warehouse?      @relation("ReceiptInWarehouse", fields: [inWarehouse], references: [warehouseCode])
+  outReceiptWarehouse Warehouse?      @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
+  updatedByUser       User?           @relation("ReceiptUpdatedBy", fields: [updatedBy], references: [username])
   receiptDetail       ReceiptDetail[]
-
-  vaultMovement VaultMovement[]
-
-  BankMovement BankMovement[]
-
-  PosMovement PosMovement[]
+  vaultMovement       VaultMovement[]
 }
 
 model ReceiptDetail {
-  id          String   @id @default(cuid())
-  receiptId   String
-  stockCardId String
-  quantity    Decimal  @db.Decimal(15, 4)
-  unitPrice   Decimal  @db.Decimal(15, 4)
-  totalPrice  Decimal  @db.Decimal(15, 4)
-  vatRate     Decimal  @db.Decimal(15, 4)
-  discount    Decimal  @db.Decimal(15, 4)
-  netPrice    Decimal  @db.Decimal(15, 4)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  receipt   Receipt   @relation(fields: [receiptId], references: [id])
-  stockCard StockCard @relation(fields: [stockCardId], references: [id])
+  id            String    @id @default(cuid())
+  receiptId     String
+  stockCardId   String
+  quantity      Decimal   @db.Decimal(15, 4)
+  unitPrice     Decimal   @db.Decimal(15, 4)
+  totalPrice    Decimal   @db.Decimal(15, 4)
+  vatRate       Decimal   @db.Decimal(15, 4)
+  discount      Decimal   @db.Decimal(15, 4)
+  netPrice      Decimal   @db.Decimal(15, 4)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  createdByUser User?     @relation("ReceiptDetailCreatedBy", fields: [createdBy], references: [username])
+  receipt       Receipt   @relation(fields: [receiptId], references: [id])
+  stockCard     StockCard @relation(fields: [stockCardId], references: [id])
+  updatedByUser User?     @relation("ReceiptDetailUpdatedBy", fields: [updatedBy], references: [username])
 }
 
 model Current {
-  id          String          @id @default(cuid())
-  currentCode String          @unique @db.VarChar(50)
-  currentName String          @db.VarChar(100)
-  currentType CurrentType     @default(AliciSatici)
-  institution InstitutionType @default(Sahis)
-  identityNo  String?         @db.VarChar(50)
-  taxNumber   String?         @db.VarChar(50)
-  taxOffice   String?         @db.VarChar(50)
-  title       String?         @db.VarChar(100)
-  name        String?         @db.VarChar(50)
-  surname     String?         @db.VarChar(50)
-  webSite     String?         @db.VarChar(100)
-  birthOfDate DateTime?
-  kepAddress  String?         @db.VarChar(50)
-  mersisNo    String?         @db.VarChar(50)
-  sicilNo     String?         @db.VarChar(50)
-  priceListId String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  priceList StockCardPriceList @relation(fields: [priceListId], references: [id])
-
-  stockMovement         StockMovement[]
-  currentMovement       CurrentMovement[]
-  invoice               Invoice[]
-  currentCategoryItem   CurrentCategoryItem[]
-  stockCardManufacturer StockCardManufacturer[]
+  id                    String                  @id @default(cuid())
+  currentCode           String                  @unique @db.VarChar(50)
+  currentName           String                  @db.VarChar(100)
+  currentType           CurrentType             @default(AliciSatici)
+  institution           InstitutionType         @default(Sahis)
+  identityNo            String?                 @db.VarChar(50)
+  taxNumber             String?                 @db.VarChar(50)
+  taxOffice             String?                 @db.VarChar(50)
+  title                 String?                 @db.VarChar(100)
+  name                  String?                 @db.VarChar(50)
+  surname               String?                 @db.VarChar(50)
+  webSite               String?                 @db.VarChar(100)
+  birthOfDate           DateTime?
+  kepAddress            String?                 @db.VarChar(50)
+  mersisNo              String?                 @db.VarChar(50)
+  sicilNo               String?                 @db.VarChar(50)
+  priceListId           String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  createdBy             String?
+  updatedBy             String?
+  createdByUser         User?                   @relation("CurrentCreatedBy", fields: [createdBy], references: [username])
+  priceList             StockCardPriceList      @relation(fields: [priceListId], references: [id])
+  updatedByUser         User?                   @relation("CurrentUpdatedBy", fields: [updatedBy], references: [username])
   currentAddress        CurrentAddress[]
-  currentFinancial      CurrentFinancial[]
-  currentRisk           CurrentRisk[]
-  currentOfficials      CurrentOfficials[]
   currentBranch         CurrentBranch[]
+  currentCategoryItem   CurrentCategoryItem[]
+  currentFinancial      CurrentFinancial[]
+  currentMovement       CurrentMovement[]
+  currentOfficials      CurrentOfficials[]
+  currentRisk           CurrentRisk?
+  invoice               Invoice[]
+  stockCardManufacturer StockCardManufacturer[]
+  stockMovement         StockMovement[]
 }
 
 model CurrentBranch {
@@ -649,11 +629,8 @@ model CurrentBranch {
   branchCode  String   @db.VarChar(50)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  current Current @relation(fields: [currentCode], references: [currentCode])
-  branch  Branch  @relation(fields: [branchCode], references: [branchCode])
+  branch      Branch   @relation(fields: [branchCode], references: [branchCode])
+  current     Current  @relation(fields: [currentCode], references: [currentCode])
 }
 
 model CurrentAddress {
@@ -672,10 +649,7 @@ model CurrentAddress {
   email2      String      @db.VarChar(100)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  current Current @relation(fields: [currentCode], references: [currentCode])
+  current     Current     @relation(fields: [currentCode], references: [currentCode])
 }
 
 model CurrentFinancial {
@@ -688,10 +662,7 @@ model CurrentFinancial {
   accountNo      Decimal? @db.Decimal(15, 4)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  createdBy      String?
-  updatedBy      String?
-
-  current Current @relation(fields: [currentCode], references: [currentCode])
+  current        Current  @relation(fields: [currentCode], references: [currentCode])
 }
 
 model CurrentRisk {
@@ -711,10 +682,7 @@ model CurrentRisk {
   posKullanim              Boolean? @default(false)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
-  createdBy                String?
-  updatedBy                String?
-
-  current Current @relation(fields: [currentCode], references: [currentCode])
+  current                  Current  @relation(fields: [currentCode], references: [currentCode])
 }
 
 model CurrentOfficials {
@@ -728,40 +696,40 @@ model CurrentOfficials {
   note        String   @db.VarChar(250)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  current Current @relation(fields: [currentCode], references: [currentCode])
+  current     Current  @relation(fields: [currentCode], references: [currentCode])
 }
 
 model CurrentMovement {
-  id           String                       @id @default(cuid())
-  currentCode  String?                      @db.VarChar(50)
-  dueDate      DateTime?
-  description  String?                      @db.VarChar(250)
-  debtAmount   Decimal?                     @db.Decimal(15, 4)
-  creditAmount Decimal?                     @db.Decimal(15, 4)
-  priceListId  String?
-  movementType CurrentMovementType
-  documentType CurrentMovementDocumentType?
-  paymentType  CurrentPaymentType?
-  documentNo   String?
-  companyCode  String
-  branchCode   String
-  createdAt    DateTime                     @default(now())
-  updatedAt    DateTime                     @updatedAt
-  createdBy    String?
-  updatedBy    String?
+  id                 String                       @id @default(cuid())
+  currentCode        String?                      @db.VarChar(50)
+  dueDate            DateTime?
+  description        String?                      @db.VarChar(250)
+  debtAmount         Decimal?                     @db.Decimal(15, 4)
+  creditAmount       Decimal?                     @db.Decimal(15, 4)
+  priceListId        String?
+  movementType       CurrentMovementType
+  documentType       CurrentMovementDocumentType?
+  documentNo         String?
+  companyCode        String
+  branchCode         String
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  createdBy          String?
+  updatedBy          String?
+  paymentType        CurrentPaymentType?
+  branch             Branch                       @relation(fields: [branchCode], references: [branchCode])
+  company            Company                      @relation(fields: [companyCode], references: [companyCode])
+  createdByUser      User?                        @relation("CurrentMovementCreatedBy", fields: [createdBy], references: [username])
+  current            Current?                     @relation(fields: [currentCode], references: [currentCode])
+  invoice            Invoice?                     @relation(fields: [documentNo], references: [invoiceNo])
+  stockCardPriceList StockCardPriceList?          @relation(fields: [priceListId], references: [id])
+  updatedByUser      User?                        @relation("CurrentMovementUpdatedBy", fields: [updatedBy], references: [username])
 
-  company            Company             @relation(fields: [companyCode], references: [companyCode])
-  branch             Branch              @relation(fields: [branchCode], references: [branchCode])
-  stockCardPriceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
-  current            Current?            @relation(fields: [currentCode], references: [currentCode])
-  invoice            Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
 
   VaultMovement VaultMovement[]
   BankMovement  BankMovement[]
   PosMovement   PosMovement[]
+
 }
 
 model CurrentCategory {
@@ -783,18 +751,18 @@ model CurrentCategoryItem {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  username    String   @unique @db.VarChar(50)
-  password    String   @db.VarChar(100)
-  email       String   @unique @db.VarChar(100)
-  firstName   String   @db.VarChar(50)
-  lastName    String   @db.VarChar(50)
-  phone       String   @db.VarChar(50)
-  address     String   @db.VarChar(250)
-  isActive    Boolean  @default(true)
-  companyCode String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                             String                  @id @default(cuid())
+  username                       String                  @unique @db.VarChar(50)
+  password                       String                  @db.VarChar(100)
+  email                          String                  @unique @db.VarChar(100)
+  firstName                      String                  @db.VarChar(50)
+  lastName                       String                  @db.VarChar(50)
+  phone                          String                  @db.VarChar(50)
+  address                        String                  @db.VarChar(250)
+  isActive                       Boolean                 @default(true)
+  companyCode                    String
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
   createdBy   String?
   updatedBy   String?
 
@@ -802,14 +770,58 @@ model User {
 
   role       Role[]
   permission Permission[]
+  createdByBank                  Bank[]                  @relation("BankCreatedBy")
+  updatedByBank                  Bank[]                  @relation("BankUpdatedBy")
+  createdByBankMovement          BankMovement[]          @relation("BankMovementCreatedBy")
+  updatedByBankMovement          BankMovement[]          @relation("BankMovementUpdatedBy")
+  createdByBranch                Branch[]                @relation("BranchCreatedBy")
+  updatedByBranch                Branch[]                @relation("BranchUpdatedBy")
+  createdByBrand                 Brand[]                 @relation("BrandCreatedBy")
+  updatedByBrand                 Brand[]                 @relation("BrandUpdatedBy")
+  createdByCurrent               Current[]               @relation("CurrentCreatedBy")
+  updatedByCurrent               Current[]               @relation("CurrentUpdatedBy")
+  createdByCurrentMovement       CurrentMovement[]       @relation("CurrentMovementCreatedBy")
+  updatedByCurrentMovement       CurrentMovement[]       @relation("CurrentMovementUpdatedBy")
+  createdByInvoice               Invoice[]               @relation("InvoiceCreatedBy")
+  updatedByInvoice               Invoice[]               @relation("InvoiceUpdatedBy")
+  createdByInvoiceDetail         InvoiceDetail[]         @relation("InvoiceDetailCreatedBy")
+  updatedByInvoiceDetail         InvoiceDetail[]         @relation("InvoiceDetailUpdatedBy")
+  createdByMarketPlace           MarketPlace[]           @relation("MarketPlaceCreatedBy")
+  updatedByMarketPlace           MarketPlace[]           @relation("MarketPlaceUpdatedBy")
+  createdByMarketPlaceProducts   MarketPlaceProducts[]   @relation("MarketPlaceProductsCreatedBy")
+  updatedByMarketPlaceProducts   MarketPlaceProducts[]   @relation("MarketPlaceProductsUpdatedBy")
+  Notification                   Notification[]
+  createdByPos                   Pos[]                   @relation("PosCreatedBy")
+  updatedByPos                   Pos[]                   @relation("PosUpdatedBy")
+  createdByPosMovement           PosMovement[]           @relation("PosMovementCreatedBy")
+  updatedByPosMovement           PosMovement[]           @relation("PosMovementUpdatedBy")
+  createdByReceipt               Receipt[]               @relation("ReceiptCreatedBy")
+  updatedByReceipt               Receipt[]               @relation("ReceiptUpdatedBy")
+  createdByReceiptDetail         ReceiptDetail[]         @relation("ReceiptDetailCreatedBy")
+  updatedByReceiptDetail         ReceiptDetail[]         @relation("ReceiptDetailUpdatedBy")
+  createdByRoles                 Role[]                  @relation("RoleCreatedBy")
+  updatedByRoles                 Role[]                  @relation("RoleUpdatedBy")
+  createdByStockCard             StockCard[]             @relation("StockCardCreatedBy")
+  updatedByStockCard             StockCard[]             @relation("StockCardUpdatedBy")
+  createdByStockMovement         StockMovement[]         @relation("StockMovementCreatedBy")
+  updatedByStockMovement         StockMovement[]         @relation("StockMovementUpdatedBy")
+  createdByStore                 Store[]                 @relation("StoreCreatedBy")
+  updatedByStore                 Store[]                 @relation("StoreUpdatedBy")
+  company                        Company                 @relation(fields: [companyCode], references: [companyCode])
+  createdByVault                 Vault[]                 @relation("VaultCreatedBy")
+  updatedByVault                 Vault[]                 @relation("VaultUpdatedBy")
+  createdByVaultMovement         VaultMovement[]         @relation("VaultMovementCreatedBy")
+  updatedByVaultMovement         VaultMovement[]         @relation("VaultMovementUpdatedBy")
+  createdByWarehouse             Warehouse[]             @relation("WarehouseCreatedBy")
+  updatedByWarehouse             Warehouse[]             @relation("WarehouseUpdatedBy")
 
   Notification Notification[]
   Brand        Brand[]
 }
 
 model Invoice {
-  id                String        @id @default(cuid())
-  invoiceNo         String        @unique @db.VarChar(50)
+  id                String              @id @default(cuid())
+  invoiceNo         String              @unique @db.VarChar(50)
   gibInvoiceNo      String?
   invoiceDate       DateTime?
   invoiceType       InvoiceType?
@@ -820,67 +832,70 @@ model Invoice {
   outBranchCode     String?
   warehouseCode     String
   description       String?
-  genelIskontoTutar Decimal?      @db.Decimal(15, 4)
-  genelIskontoOran  Decimal?      @db.Decimal(15, 4)
+  genelIskontoTutar Decimal?            @db.Decimal(15, 4)
+  genelIskontoOran  Decimal?            @db.Decimal(15, 4)
   paymentDate       DateTime?
   paymentDay        Int?
   priceListId       String?
-  totalAmount       Decimal?      @db.Decimal(15, 4)
-  totalVat          Decimal?      @db.Decimal(15, 4)
-  totalDiscount     Decimal?      @db.Decimal(15, 4)
-  totalNet          Decimal?      @db.Decimal(15, 4)
-  totalPaid         Decimal?      @db.Decimal(15, 4)
-  totalDebt         Decimal?      @db.Decimal(15, 4)
-  totalBalance      Decimal?      @db.Decimal(15, 4)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  totalAmount       Decimal?            @db.Decimal(15, 4)
+  totalVat          Decimal?            @db.Decimal(15, 4)
+  totalDiscount     Decimal?            @db.Decimal(15, 4)
+  totalNet          Decimal?            @db.Decimal(15, 4)
+  totalPaid         Decimal?            @db.Decimal(15, 4)
+  totalDebt         Decimal?            @db.Decimal(15, 4)
+  totalBalance      Decimal?            @db.Decimal(15, 4)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   canceledAt        DateTime?
   createdBy         String?
   updatedBy         String?
-
-  current   Current?            @relation(fields: [currentCode], references: [currentCode])
-  company   Company?            @relation(fields: [companyCode], references: [companyCode])
-  branch    Branch?             @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
-  warehouse Warehouse?          @relation(fields: [warehouseCode], references: [warehouseCode])
-  priceList StockCardPriceList? @relation(fields: [priceListId], references: [id])
-  outBranch Branch?             @relation("InvoiceOutBranch", fields: [outBranchCode], references: [branchCode])
-
-  invoiceDetail   InvoiceDetail[]
-  stockMovement   StockMovement[]
-  currentMovement CurrentMovement[]
-  vaultMovement   VaultMovement[]
-  BankMovement    BankMovement[]
-  PosMovement     PosMovement[]
+  BankMovement      BankMovement[]
+  currentMovement   CurrentMovement[]
+  branch            Branch              @relation("InvoiceBranch", fields: [branchCode], references: [branchCode])
+  company           Company?            @relation(fields: [companyCode], references: [companyCode])
+  createdByUser     User?               @relation("InvoiceCreatedBy", fields: [createdBy], references: [username])
+  current           Current?            @relation(fields: [currentCode], references: [currentCode])
+  outBranch         Branch?             @relation("InvoiceOutBranch", fields: [outBranchCode], references: [branchCode])
+  priceList         StockCardPriceList? @relation(fields: [priceListId], references: [id])
+  updatedByUser     User?               @relation("InvoiceUpdatedBy", fields: [updatedBy], references: [username])
+  warehouse         Warehouse           @relation(fields: [warehouseCode], references: [warehouseCode])
+  invoiceDetail     InvoiceDetail[]
+  PosMovement       PosMovement[]
+  stockMovement     StockMovement[]
+  vaultMovement     VaultMovement[]
 }
 
 model InvoiceDetail {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  productCode String
-  quantity    Decimal  @db.Decimal(15, 4)
-  unitPrice   Decimal  @db.Decimal(15, 4)
-  totalPrice  Decimal  @db.Decimal(15, 4)
-  vatRate     Decimal  @db.Decimal(15, 4)
-  discount    Decimal  @db.Decimal(15, 4)
-  netPrice    Decimal  @db.Decimal(15, 4)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
-
-  invoice   Invoice   @relation(fields: [invoiceId], references: [id])
-  stockCard StockCard @relation(fields: [productCode], references: [productCode])
+  id            String    @id @default(cuid())
+  invoiceId     String
+  productCode   String
+  quantity      Decimal   @db.Decimal(15, 4)
+  unitPrice     Decimal   @db.Decimal(15, 4)
+  totalPrice    Decimal   @db.Decimal(15, 4)
+  vatRate       Decimal   @db.Decimal(15, 4)
+  discount      Decimal   @db.Decimal(15, 4)
+  netPrice      Decimal   @db.Decimal(15, 4)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  createdByUser User?     @relation("InvoiceDetailCreatedBy", fields: [createdBy], references: [username])
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  stockCard     StockCard @relation(fields: [productCode], references: [productCode])
+  updatedByUser User?     @relation("InvoiceDetailUpdatedBy", fields: [updatedBy], references: [username])
 }
 
 model Vault {
-  id         String  @id @default(cuid())
-  vaultName  String  @db.VarChar(50)
-  branchCode String
-  balance    Decimal @db.Decimal(15, 2)
-  currency   String
-
-  branch Branch @relation(fields: [branchCode], references: [branchCode])
-
+  id            String          @id @default(cuid())
+  vaultName     String          @db.VarChar(50)
+  branchCode    String
+  balance       Decimal         @db.Decimal(15, 2)
+  currency      String
+  createdBy     String?
+  updatedBy     String?
+  branch        Branch          @relation(fields: [branchCode], references: [branchCode])
+  createdByUser User?           @relation("VaultCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser User?           @relation("VaultUpdatedBy", fields: [updatedBy], references: [username])
   vaultMovement VaultMovement[]
 }
 
@@ -890,184 +905,202 @@ model VaultMovement {
   invoiceId         String?
   receiptId         String?
   description       String
-  entering          Decimal           @db.Decimal(15, 2) //giriş
-  emerging          Decimal           @db.Decimal(15, 2) //çıkış
+  entering          Decimal           @db.Decimal(15, 2)
+  emerging          Decimal           @db.Decimal(15, 2)
   vaultDirection    VaultDirection
   vaultType         VaultType
   vaultDocumentType VaultDocumentType
-  currentMovementId String?
+  createdBy         String?
+  updatedBy         String?
+  createdByUser     User?             @relation("VaultMovementCreatedBy", fields: [createdBy], references: [username])
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id])
+  receipt           Receipt?          @relation(fields: [receiptId], references: [id])
+  updatedByUser     User?             @relation("VaultMovementUpdatedBy", fields: [updatedBy], references: [username])
+  vault             Vault             @relation(fields: [vaultId], references: [id])
 
-  vault           Vault            @relation(fields: [vaultId], references: [id])
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
-  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  currentMovementId String?
   currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
+
 }
 
 model Bank {
-  id         String  @id @default(cuid())
-  bankName   String  @db.VarChar(50)
-  branchCode String
-  balance    Decimal @db.Decimal(15, 2)
-  currency   String
-
-  branch Branch @relation(fields: [branchCode], references: [branchCode])
-
-  bankMovement BankMovement[]
+  id            String         @id @default(cuid())
+  bankName      String         @db.VarChar(50)
+  branchCode    String
+  balance       Decimal        @db.Decimal(15, 2)
+  currency      String
+  createdBy     String?
+  updatedBy     String?
+  branch        Branch         @relation(fields: [branchCode], references: [branchCode])
+  createdByUser User?          @relation("BankCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser User?          @relation("BankUpdatedBy", fields: [updatedBy], references: [username])
+  bankMovement  BankMovement[]
 }
 
 model BankMovement {
-  id                String            @id @default(cuid())
-  bankId            String
-  invoiceId         String?
-  receiptId         String?
-  description       String
-  entering          Decimal           @db.Decimal(15, 2)
-  emerging          Decimal           @db.Decimal(15, 2)
-  bankDirection     VaultDirection
-  bankType          VaultType
-  bankDocumentType  VaultDocumentType
+  id               String            @id @default(cuid())
+  bankId           String
+  invoiceId        String?
+  receiptId        String?
+  description      String
+  entering         Decimal           @db.Decimal(15, 2)
+  emerging         Decimal           @db.Decimal(15, 2)
+  bankDirection    VaultDirection
+  bankType         VaultType
+  bankDocumentType VaultDocumentType
   currentMovementId String?
-
-  bank            Bank             @relation(fields: [bankId], references: [id])
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
-  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  createdBy        String?
+  updatedBy        String?
+  bank             Bank              @relation(fields: [bankId], references: [id])
+  createdByUser    User?             @relation("BankMovementCreatedBy", fields: [createdBy], references: [username])
+  invoice          Invoice?          @relation(fields: [invoiceId], references: [id])
+  receipt          Receipt?          @relation(fields: [receiptId], references: [id])
+  updatedByUser    User?             @relation("BankMovementUpdatedBy", fields: [updatedBy], references: [username])
   currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Pos {
-  id         String  @id @default(cuid())
-  posName    String  @db.VarChar(50)
-  branchCode String
-  balance    Decimal @db.Decimal(15, 2)
-  currency   String
-
-  branch Branch @relation(fields: [branchCode], references: [branchCode])
-
-  posMovement PosMovement[]
+  id            String        @id @default(cuid())
+  posName       String        @db.VarChar(50)
+  branchCode    String
+  balance       Decimal       @db.Decimal(15, 2)
+  currency      String
+  createdBy     String?
+  updatedBy     String?
+  branch        Branch        @relation(fields: [branchCode], references: [branchCode])
+  createdByUser User?         @relation("PosCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser User?         @relation("PosUpdatedBy", fields: [updatedBy], references: [username])
+  posMovement   PosMovement[]
 }
 
 model PosMovement {
-  id                String            @id @default(cuid())
-  posId             String
-  invoiceId         String?
-  receiptId         String?
-  description       String
-  entering          Decimal           @db.Decimal(15, 2)
-  emerging          Decimal           @db.Decimal(15, 2)
-  posDirection      VaultDirection
-  posType           VaultType
-  posDocumentType   VaultDocumentType
+  id              String            @id @default(cuid())
+  posId           String
+  invoiceId       String?
+  receiptId       String?
+  description     String
+  entering        Decimal           @db.Decimal(15, 2)
+  emerging        Decimal           @db.Decimal(15, 2)
+  posDirection    VaultDirection
+  posType         VaultType
+  posDocumentType VaultDocumentType
   currentMovementId String?
-
-  pos             Pos              @relation(fields: [posId], references: [id])
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
-  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  createdBy       String?
+  updatedBy       String?
+  createdByUser   User?             @relation("PosMovementCreatedBy", fields: [createdBy], references: [username])
+  invoice         Invoice?          @relation(fields: [invoiceId], references: [id])
+  pos             Pos               @relation(fields: [posId], references: [id])
+  receipt         Receipt?          @relation(fields: [receiptId], references: [id])
+  updatedByUser   User?             @relation("PosMovementUpdatedBy", fields: [updatedBy], references: [username])
   currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Order {
   id                String               @id @default(cuid())
-  platformOrderId   String // Platformdan gelen sipariş ID'si (Hepsiburada: "id", Trendyol: "orderNumber", WooCommerce: "id")
-  platform          String // Siparişin hangi platformdan geldiğini belirtir (hepsiburada, trendyol, woocommerce)
+  platformOrderId   String
+  platform          String
   customerId        String
   status            String
   currency          String
   orderDate         DateTime
   deliveryType      String?
   cargoCompany      String?
-  shippingAddressId String? // Kargo adresi
-  billingAddressId  String? // Fatura adresi
+  shippingAddressId String?
   timeSlot          DateTime?
   totalPrice        Float
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
-  shippingAddress   OrderInvoiceAddress? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddressId  String?
+  isInvoiceCreated  Boolean              @default(false)
+  storeId           String
   billingAddress    OrderInvoiceAddress? @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  items             OrderItem[] // Sipariş ürünleri ile ilişki
-  cargos            OrderCargo[] // Kargo bilgileri ile ilişki
-
-  Store Store[]
+  shippingAddress   OrderInvoiceAddress? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  store             Store                @relation(fields: [storeId], references: [id])
+  cargos            OrderCargo[]
+  items             OrderItem[]
 }
 
 model OrderInvoiceAddress {
-  id            String   @id @default(uuid()) // Benzersiz adres ID'si
-  address       String // Adres  
-  city          String // Şehir
-  district      String // İlçe
-  postalCode    String // Posta kodu
-  country       String // Ülke
-  fullName      String // Adres sahibi adı
-  email         String?
-  paymentMethod String?
-  transactionId String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  shippingOrders Order[] @relation("ShippingAddress") // Shipping Address ilişkisi
-  billingOrders  Order[] @relation("BillingAddress") // Billing Address ilişkisi
+  id             String   @id @default(uuid())
+  address        String
+  city           String
+  district       String
+  postalCode     String
+  country        String
+  fullName       String
+  email          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  paymentMethod  String?
+  transactionId  String?
+  billingOrders  Order[]  @relation("BillingAddress")
+  shippingOrders Order[]  @relation("ShippingAddress")
 }
 
 model OrderCargo {
-  id             String    @id @default(uuid()) // Benzersiz kargo ID'si
-  name           String // Kargo şirketi adı (ör. HepsiJet, Yurtiçi Kargo)
+  id             String    @id @default(uuid())
+  name           String
   shortName      String
-  trackingNumber String // Kargo takip numarası
-  orderId        String // Sipariş ID'si
-  deliveredAt    DateTime? // Teslimat tarihi
-  deliveryNote   String? // Teslimat notu
+  trackingNumber String
+  orderId        String
+  deliveredAt    DateTime?
+  deliveryNote   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-
-  order Order @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
+  order          Order     @relation(fields: [orderId], references: [id])
 }
 
 model OrderItem {
-  id          String   @id @default(cuid()) // Benzersiz ürün ID'si
-  orderId     String // Sipariş ID'si
-  stockCardId String // StockCard ile ilişki
-  quantity    Int // Ürün miktarı
-  unitPrice   Decimal  @db.Decimal(15, 4) // Ürün birim fiyatı
-  totalPrice  Decimal  @db.Decimal(15, 4) // Ürün toplam fiyatı
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  order     Order     @relation(fields: [orderId], references: [id]) // Sipariş ile ilişki
-  stockCard StockCard @relation(fields: [stockCardId], references: [id]) // StockCard ile ilişki
+  id          String     @id @default(cuid())
+  orderId     String
+  stockCardId String?
+  quantity    Int
+  unitPrice   Decimal    @db.Decimal(15, 4)
+  totalPrice  Decimal    @db.Decimal(15, 4)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  order       Order      @relation(fields: [orderId], references: [id])
+  stockCard   StockCard? @relation(fields: [stockCardId], references: [id])
 }
 
 model MarketPlace {
-  id          String   @id @default(cuid()) // Benzersiz market ID'si
-  name        String
-  apiBaseUrl  String
-  logoUrl     String
-  companyCode String? // Company ile ilişki için gerekli
-  company     Company? @relation(fields: [companyCode], references: [companyCode])
-
-  Store                 Store[]
+  id                    String                  @id @default(cuid())
+  name                  String
+  apiBaseUrl            String
+  logoUrl               String
+  companyCode           String?
+  createdBy             String?
+  updatedBy             String?
+  company               Company?                @relation(fields: [companyCode], references: [companyCode])
+  createdByUser         User?                   @relation("MarketPlaceCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser         User?                   @relation("MarketPlaceUpdatedBy", fields: [updatedBy], references: [username])
   MarketPlaceAttributes MarketPlaceAttributes[]
+  Store                 Store[]
 }
 
 model Store {
-  id             String @id @default(cuid()) // Benzersiz market ID'si
-  name           String
-  marketPlaceId  String
-  apiCredentials String
-
-  marketPlace MarketPlace @relation(fields: [marketPlaceId], references: [id])
-  stockcard   StockCard[]
-  order       Order[]
-
-  MarketPlaceProducts MarketPlaceProducts[]
-
+  id                      String                    @id @default(cuid())
+  name                    String
+  marketPlaceId           String
+  apiCredentials          String
+  autoInvoiceCreation     Boolean                   @default(false)
+  storeUrl                String?
+  createdBy               String?
+  updatedBy               String?
   MarketPlaceProductMatch MarketPlaceProductMatch[]
+  MarketPlaceProducts     MarketPlaceProducts[]
+  order                   Order[]
+  createdByUser           User?                     @relation("StoreCreatedBy", fields: [createdBy], references: [username])
+  marketPlace             MarketPlace               @relation(fields: [marketPlaceId], references: [id])
+  updatedByUser           User?                     @relation("StoreUpdatedBy", fields: [updatedBy], references: [username])
+  stockcard               StockCard[]               @relation("StockCardToStore")
 }
 
 model MarketPlaceCategories {
-  id                          String  @id @default(cuid())
+  id                          String                  @id @default(cuid())
   categoryName                String?
   marketPlaceCategoryId       String?
   marketPlaceCategoryParentId String?
-
   products MarketPlaceProducts[] @relation("ProductsOnCategories")
 
   // Alt ve üst kategori ilişkileri
@@ -1076,15 +1109,14 @@ model MarketPlaceCategories {
 }
 
 model MarketPlaceBrands {
-  id                 String  @id @default(cuid())
-  marketPlaceBrandId String?
-  brandName          String?
-
+  id                  String                @id @default(cuid())
+  marketPlaceBrandId  String?
+  brandName           String?
   MarketPlaceProducts MarketPlaceProducts[]
 }
 
 model MarketPlaceAttributes {
-  id                      String   @id @default(cuid())
+  id                      String                @id @default(cuid())
   marketPlaceId           String?
   MarketPlaceCategoriesId String?
   attributeName           String?
@@ -1093,24 +1125,19 @@ model MarketPlaceAttributes {
   valueMarketPlaceId      String?
   required                Boolean?
   allowCustom             Boolean?
-
-  marketPlace         MarketPlace?          @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
-  MarketPlaceProducts MarketPlaceProducts[]
+  marketPlace             MarketPlace?          @relation(fields: [marketPlaceId], references: [id], onDelete: Cascade)
+  MarketPlaceProducts     MarketPlaceProducts[] @relation("MarketPlaceAttributesToMarketPlaceProducts")
 }
 
 model MarketPlaceProductImages {
-  id                   String  @id @default(cuid())
+  id                   String               @id @default(cuid())
   imageUrl             String?
   marketPlaceProductId String?
-
-  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id], onDelete: Cascade)
+  marketPlaceProducts  MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id], onDelete: Cascade)
 }
 
 model MarketPlaceProducts {
   id                       String                     @id @default(cuid())
-  productType              String?
-  parentProductId          String?
-  productId                String?
   productName              String?
   productSku               String?
   description              String?
@@ -1122,27 +1149,34 @@ model MarketPlaceProducts {
   marketPlaceAttributesId  String?
   marketPlaceCategoriesId  String?
   marketPlaceBrandsId      String?
-  marketPlaceBrands        MarketPlaceBrands?         @relation(fields: [marketPlaceBrandsId], references: [id])
-  store                    Store?                     @relation(fields: [storeId], references: [id])
+  productId                String?
+  parentProductId          String?
+  productType              String?
+  createdBy                String?
+  updatedBy                String?
   MarketPlaceProductImages MarketPlaceProductImages[]
   MarketPlaceProductMatch  MarketPlaceProductMatch[]
-  marketPlaceAttributes    MarketPlaceAttributes[]
-  MarketPlaceCategories    MarketPlaceCategories[]    @relation("ProductsOnCategories")
-  // Self relation
+  createdByUser            User?                      @relation("MarketPlaceProductsCreatedBy", fields: [createdBy], references: [username])
+  marketPlaceBrands        MarketPlaceBrands?         @relation(fields: [marketPlaceBrandsId], references: [id])
   parentProduct            MarketPlaceProducts?       @relation("ParentChildRelation", fields: [parentProductId], references: [id])
   childrenProducts         MarketPlaceProducts[]      @relation("ParentChildRelation")
+  store                    Store?                     @relation(fields: [storeId], references: [id])
+  updatedByUser            User?                      @relation("MarketPlaceProductsUpdatedBy", fields: [updatedBy], references: [username])
+  marketPlaceAttributes    MarketPlaceAttributes[]    @relation("MarketPlaceAttributesToMarketPlaceProducts")
+  MarketPlaceCategories    MarketPlaceCategories[]    @relation("ProductsOnCategories")
 }
 
 model MarketPlaceProductMatch {
-  id                   String  @id @default(cuid())
+  id                   String               @id @default(cuid())
   storeId              String?
   marketPlaceProductId String?
-  platformProductId    String? // Mağazadaki ürünün idsi
-  platformVariationId  String? // Mağazadaki ürünün varyasyon idsi. Bu alan boş ise ana üründür. platformProductId alanı ise varyasyonun ebeveyn ürününün idsi
+  platformProductId    String?
+  platformVariationId  String?
   marketPlaceSKU       String?
-
-  marketPlaceProducts MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
-  store               Store?               @relation(fields: [storeId], references: [id])
+  createdBy            String?
+  updatedBy            String?
+  marketPlaceProducts  MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
+  store                Store?               @relation(fields: [storeId], references: [id])
 }
 
 model Notification {
@@ -1156,6 +1190,6 @@ model Notification {
   readBy    String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-
-  user User? @relation(fields: [readBy], references: [username])
+  user      User?     @relation(fields: [readBy], references: [username])
 }
+

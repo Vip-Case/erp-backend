@@ -15,9 +15,14 @@ const StockCardController = {
         const body = ctx.body as { stockCard: StockCard, warehouseIds: string[] | null };
         const stockCardData: StockCard = body.stockCard;
         const warehouseData: string[] = body.warehouseIds !== null ? body.warehouseIds : [];
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
 
         try {
-            const stockCard = await stockCardService.createStockCard(stockCardData, warehouseData);
+            const stockCard = await stockCardService.createStockCard(stockCardData, warehouseData, bearerToken);
             ctx.set.status = 200;
             return stockCard;
         } catch (error: any) {

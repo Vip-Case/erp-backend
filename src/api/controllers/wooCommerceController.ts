@@ -3,31 +3,41 @@ import { WooCommerceService } from "../../services/concrete/wooCommerceService";
 interface SyncProductsRequestBody {
   storeId?: string;
   storeUrl: string;
-  consumerKey: string;
-  consumerSecret: string;
 }
 
 export class WooCommerceController {
-  private wooCommerceService: WooCommerceService;
+  private wooCommerceService!: WooCommerceService;
 
-  constructor() {
-    // Service başlatma işlemi
-    this.wooCommerceService = new WooCommerceService();
+  constructor() { }
 
+  /**
+   * WooCommerce servisini başlatır.
+   */
+  private async initializeWooCommerceService(storeId: string): Promise<void> {
+    if (!this.wooCommerceService) {
+      try {
+        this.wooCommerceService = new WooCommerceService(storeId);
+        await this.wooCommerceService.initializeWooCommerce();
+        console.log("WooCommerce servisi başarıyla başlatıldı.");
+      } catch (error) {
+        console.error("WooCommerce servisi başlatılırken hata oluştu:", error);
+        throw new Error("WooCommerce servisi başlatılamadı.");
+      }
+    }
   }
 
   async syncProducts(body: SyncProductsRequestBody) {
-    const { storeId, storeUrl, consumerKey, consumerSecret } = body;
+    const { storeId } = body;
 
-    // Eksik parametre kontrolü
-    if (!storeId || !storeUrl || !consumerKey || !consumerSecret) {
-      return { success: false, message: "Eksik parametreler" };
+    if (!storeId) {
+      throw new Error("storeId eksik. Lütfen geçerli bir storeId sağlayın.");
     }
-
     try {
-      // Servis üzerinden ürün senkronizasyonu
-      await this.wooCommerceService.syncProducts(storeId);
-      return { success: true, message: "WooCommerce ürünleri başarıyla senkronize edildi." };
+      if (!this.wooCommerceService) {
+        await this.initializeWooCommerceService(storeId); // Dinamik başlatma
+      }
+      const result = await this.wooCommerceService.syncProducts({ storeId });
+      return result;
     } catch (error) {
       console.error("Error syncing products:", error);
       return {
@@ -38,26 +48,50 @@ export class WooCommerceController {
     }
   }
 
-  async addToStockCard(productIds: string[], branchCode?: string): Promise<void> {
+  async addToStockCard(
+    productIds: string[] = [],
+    branchCode?: string,
+    storeId?: string,
+    warehouseId?: string,
+    useWooCommercePrice: boolean = true,
+    useWooCommerceQuantity: boolean = true,
+    includeAll: boolean = false
+  ): Promise<void> {
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
       throw new Error("Geçersiz ürün ID'leri sağlandı.");
     }
-    
-    // WooCommerceService'deki metodu çağır
-    await this.wooCommerceService.addToStockCard(productIds, branchCode);
-  }
 
-  async addStockCardToStockCardWarehouse(): Promise<any> {
+    if (!storeId) {
+      throw new Error("storeId eksik. Lütfen geçerli bir storeId sağlayın.");
+    }
+
     try {
-      await this.wooCommerceService.addStockCardToStockCardWarehouse();
-      return { success: true, message: "StockCard'lar başarıyla StockCardWarehouse'a eklendi." };
+      console.log("addToStockCard çağrıldı:", {
+        productIds,
+        branchCode,
+        storeId,
+        warehouseId,
+        useWooCommercePrice,
+        useWooCommerceQuantity,
+        includeAll,
+      });
+      // WooCommerce servisini dinamik olarak başlat
+      const wooCommerceService = await WooCommerceService.getInstance(storeId);
+
+      // Servisi çağır ve parametreleri ilet
+      await wooCommerceService.addToStockCard(
+        productIds,
+        branchCode,
+        warehouseId,
+        useWooCommercePrice,
+        useWooCommerceQuantity,
+        includeAll
+      );
+
+      console.log("Ürünler başarıyla StockCard'a eklendi.");
     } catch (error) {
-      console.error("StockCardWarehouse eklerken hata oluştu:", error);
-      return {
-        success: false,
-        message: "StockCardWarehouse ekleme sırasında bir hata oluştu.",
-        error: error instanceof Error ? error.message : error,
-      };
+      console.error("StockCard eklenirken bir hata oluştu:", error);
+      throw new Error("StockCard ekleme işlemi sırasında bir hata oluştu.");
     }
   }
 

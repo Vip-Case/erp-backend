@@ -4,6 +4,7 @@ import { Prisma, BankMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import BankService from "./bankService";
+import { extractUsernameFromToken } from "./extractUsernameService";
 export class BankMovementService {
     private bankMovementRepository: BaseRepository<BankMovement>;
 
@@ -11,8 +12,9 @@ export class BankMovementService {
         this.bankMovementRepository = new BaseRepository<BankMovement>(prisma.bankMovement);
     }
 
-    async createBankMovement(bankMovement: BankMovement): Promise<BankMovement> {
+    async createBankMovement(bankMovement: BankMovement, bearerToken: string): Promise<BankMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdBankMovement = await prisma.bankMovement.create({
                 data: {
                     description: bankMovement.description,
@@ -21,6 +23,11 @@ export class BankMovementService {
                     bankDirection: bankMovement.bankDirection,
                     bankType: bankMovement.bankType,
                     bankDocumentType: bankMovement.bankDocumentType,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     bank: bankMovement.bankId ? {
                         connect: {

@@ -4,6 +4,8 @@ import { Prisma, Pos } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import { Decimal } from "@prisma/client/runtime/library";
+import { extractUsernameFromToken } from "./extractUsernameService";
+
 
 export class PosService {
     private posRepository: BaseRepository<Pos>;
@@ -12,13 +14,19 @@ export class PosService {
         this.posRepository = new BaseRepository<Pos>(prisma.pos);
     }
 
-    async createPos(pos: Pos): Promise<Pos> {
+    async createPos(pos: Pos, bearerToken: string): Promise<Pos> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdPos = await prisma.pos.create({
                 data: {
                     posName: pos.posName,
                     balance: pos.balance,
                     currency: pos.currency,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     branch: pos.branchCode ? {
                         connect: { branchCode: pos.branchCode },

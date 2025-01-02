@@ -4,6 +4,7 @@ import { Prisma, VaultMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import VaultService from "./vaultService";
+import { extractUsernameFromToken } from "./extractUsernameService";
 export class VaultMovementService {
     private vaultMovementRepository: BaseRepository<VaultMovement>;
 
@@ -11,8 +12,9 @@ export class VaultMovementService {
         this.vaultMovementRepository = new BaseRepository<VaultMovement>(prisma.vaultMovement);
     }
 
-    async createVaultMovement(vaultMovement: VaultMovement): Promise<VaultMovement> {
+    async createVaultMovement(vaultMovement: VaultMovement, bearerToken: string): Promise<VaultMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdVaultMovement = await prisma.vaultMovement.create({
                 data: {
                     description: vaultMovement.description,
@@ -21,6 +23,11 @@ export class VaultMovementService {
                     vaultDirection: vaultMovement.vaultDirection,
                     vaultType: vaultMovement.vaultType,
                     vaultDocumentType: vaultMovement.vaultDocumentType,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
 
                     vault: vaultMovement.vaultId ? {
                         connect: {

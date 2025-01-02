@@ -3,6 +3,7 @@ import prisma from "../../config/prisma";
 import { Prisma, Warehouse } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 
 export interface StocktakeWarehouse {
@@ -20,8 +21,9 @@ export class WarehouseService {
         this.warehouseRepository = new BaseRepository<Warehouse>(prisma.warehouse);
     }
 
-    async createWarehouse(warehouse: Warehouse): Promise<Warehouse> {
+    async createWarehouse(warehouse: Warehouse, bearerToken: string): Promise<Warehouse> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const createdWarehouse = await prisma.warehouse.create({
                 data: {
                     warehouseName: warehouse.warehouseName,
@@ -32,7 +34,11 @@ export class WarehouseService {
                     district: warehouse.district,
                     phone: warehouse.phone,
                     email: warehouse.email,
-
+                    createdByUser: {
+                        connect: {
+                            username: username
+                            }
+                    },
                     company: warehouse.companyCode ? {
                         connect: { companyCode: warehouse.companyCode },
                     } : {},

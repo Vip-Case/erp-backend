@@ -8,8 +8,14 @@ export const BrandController = {
 
     createBrand: async (ctx: Context) => {
         const brandData: Brand = ctx.body as Brand;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+        
         try {
-            const brand = await brandService.createBrand(brandData);
+            const brand = await brandService.createBrand(brandData, bearerToken);
             ctx.set.status = 200;
             return brand;
         } catch (error: any) {

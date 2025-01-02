@@ -1,5 +1,6 @@
 import prisma from "../../config/prisma";
 import { Permission } from "@prisma/client";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class PermissionService {
     async getAllPermissions(): Promise<Permission[]> {
@@ -13,6 +14,7 @@ export class PermissionService {
                     permissionName: permissionData.permissionName!,
                     description: permissionData.description!, // Zorunlu alan
                     route: permissionData.route!,
+                    
                 },
             });
         } catch (error: any) {

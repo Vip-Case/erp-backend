@@ -9,9 +9,16 @@ const branchService = new BranchService();
 export const BranchController = {
 
     createBranch: async (ctx: Context) => {
+        const branchData: Branch = ctx.body as Branch;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         const branchData: BranchData = ctx.body as BranchData;
         try {
-            const branch = await branchService.createBranch(branchData);
+            const branch = await branchService.createBranch(branchData, bearerToken);
             ctx.set.status = 200;
             return branch;
         } catch (error: any) {

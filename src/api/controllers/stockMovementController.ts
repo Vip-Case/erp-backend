@@ -10,8 +10,13 @@ export const StockMovementController = {
 
     createStockMovement: async (ctx: Context) => {
         const stockMovementData: StockMovement = ctx.body as StockMovement;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const stockMovement = await stockMovementService.createStockMovement(stockMovementData);
+            const stockMovement = await stockMovementService.createStockMovement(stockMovementData, bearerToken);
             ctx.set.status = 200;
             return stockMovement;
         } catch (error: any) {
