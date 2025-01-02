@@ -755,7 +755,7 @@ model User {
   phone       String   @db.VarChar(50)
   address     String   @db.VarChar(250)
   isActive    Boolean  @default(true)
-  companyCode String?  @default("VIP")
+  companyCode String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdBy   String?
