@@ -45,6 +45,12 @@ export class VaultMovementService {
                         connect: {
                             id: vaultMovement.receiptId
                         }
+                    } : undefined,
+
+                    currentMovement: vaultMovement.currentMovementId ? {
+                        connect: {
+                            id: vaultMovement.currentMovementId
+                        }
                     } : undefined
 
                 } as Prisma.VaultMovementCreateInput,
@@ -65,35 +71,58 @@ export class VaultMovementService {
     }
 
     async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
+        // Eski vaultMovement bilgilerini alıyoruz
+        const oldVaultMovement = await this.vaultMovementRepository.findById(id);
+        // Güncellenmemiş enterin ve emerging değerlerini alıyoruz
+        const entering: number = Number(oldVaultMovement?.entering || 0);
+        const emerging: number = Number(oldVaultMovement?.emerging || 0);
+        // Güncellenen enterin ve emerging değerlerini alıyoruz
+        const newEntering: number = Number(vaultMovement.entering || 0);
+        const newEmerging: number = Number(vaultMovement.emerging || 0);
+        // Eski değerlerden yeni değerleri çıkartarak farkı buluyoruz eğer negatif değer ise positive yaparak hesaplamayı yapıyoruz
+        const enteringDifference = newEntering - entering;
+        const emergingDifference = newEmerging - emerging;
+        const enteringValue = enteringDifference < 0 ? enteringDifference * -1 : enteringDifference;
+        const emergingValue = emergingDifference < 0 ? emergingDifference * -1 : emergingDifference;
+        // Önce yeni gelen veride vaultId var mı kontrol ediyoruz eğer yoksa eski vaultId yi alıyoruz eğer varsa yeni vaultId yi alıyoruz
+        const vaultId = vaultMovement.vaultId || oldVaultMovement.vaultId;
+        // Vault bakiyesini güncelliyoruz
+        VaultService.updateVaultBalance(vaultId, new Prisma.Decimal(enteringValue), new Prisma.Decimal(emergingValue));
+        // Güncelleme işlemini yapıyoruz
         try {
             return await prisma.vaultMovement.update({
                 where: { id },
                 data: {
-                    vaultId: vaultMovement.vaultId,
-                    invoiceId: vaultMovement.invoiceId,
-                    receiptId: vaultMovement.receiptId,
-                    description: vaultMovement.description,
-                    entering: vaultMovement.entering,
-                    emerging: vaultMovement.emerging,
-                    vaultDirection: vaultMovement.vaultDirection,
-                    vaultType: vaultMovement.vaultType,
-                    vaultDocumentType: vaultMovement.vaultDocumentType,
+                    invoiceId: vaultMovement?.invoiceId,
+                    receiptId: vaultMovement?.receiptId,
+                    description: vaultMovement?.description,
+                    entering: vaultMovement?.entering,
+                    emerging: vaultMovement?.emerging,
+                    vaultDirection: vaultMovement?.vaultDirection,
+                    vaultType: vaultMovement?.vaultType,
+                    vaultDocumentType: vaultMovement?.vaultDocumentType,
 
-                    Vault: vaultMovement.vaultId ? {
+                    vault: vaultMovement.vaultId ? {
                         connect: {
                             id: vaultMovement.vaultId
                         }
                     } : undefined,
 
-                    Invoice: vaultMovement.invoiceId ? {
+                    invoice: vaultMovement.invoiceId ? {
                         connect: {
                             id: vaultMovement.invoiceId
                         }
                     } : undefined,
 
-                    Receipt: vaultMovement.receiptId ? {
+                    receipt: vaultMovement.receiptId ? {
                         connect: {
                             id: vaultMovement.receiptId
+                        }
+                    } : undefined,
+
+                    currentMovement: vaultMovement.currentMovementId ? {
+                        connect: {
+                            id: vaultMovement.currentMovementId
                         }
                     } : undefined
 

@@ -1,4 +1,3 @@
-
 import InvoiceService, { QuickSaleResponse } from '../../services/concrete/invoiceService';
 import { Context } from 'elysia';
 import { Invoice, InvoiceDetail } from '@prisma/client';
@@ -109,6 +108,42 @@ const InvoiceController = {
         }
     },
 
+    // API to delete an sales invoice with relations and recreate
+    deleteSalesInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
+        try {
+            const invoice = await invoiceService.deleteSalesInvoiceWithRelationsAndRecreate(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            console.error("Satış faturası silme ve yeniden oluşturma hatası:", error);
+            ctx.set.status = error.status || 500;
+            return {
+                error: "Fatura silme ve yeniden oluşturma işlemi başarısız",
+                details: error.message,
+            };
+        }
+    },
+
+    // API to delete an purchase invoice with relations and recreate
+    deletePurchaseInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
+        try {
+            const invoice = await invoiceService.deletePurchaseInvoiceWithRelationsAndRecreate(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            console.error("Satış faturası silme ve yeniden oluşturma hatası:", error);
+            ctx.set.status = error.status || 500;
+            return {
+                error: "Fatura silme ve yeniden oluşturma işlemi başarısız",
+                details: error.message,
+            };
+        }
+    },
+
     // API to update an invoice with relations
     updateInvoiceWithRelations: async (ctx: Context) => {
         try {
@@ -147,13 +182,25 @@ const InvoiceController = {
         }
     },
 
-
-
     // API to delete an invoice with relations
-    deleteInvoiceWithRelations: async (ctx: Context) => {
+    deleteSalesInvoiceWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
         try {
-            const invoice = await invoiceService.deleteInvoiceWithRelations(id);
+            const invoice = await invoiceService.deleteSalesInvoiceWithRelations(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations", details: error.message };
+        }
+    },
+
+    deletePurchaseInvoiceWithRelations: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as InvoiceInfo
+        try {
+            const invoice = await invoiceService.deletePurchaseInvoiceWithRelations(id, data);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -220,6 +267,57 @@ const InvoiceController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Hızlı satış oluşturulurken hata oluştu.", details: error.message };
+        }
+    },
+
+    cancelPurchaseInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as any[]
+
+        try {
+            const invoice = await invoiceService.cancelPurchaseInvoiceWithRelations(data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Fatura İptal Edilirken Hata Oluştu.", details: error.message };
+        }
+    },
+
+    cancelSalesInvoiceWithRelations: async (ctx: Context) => {
+        const data = ctx.body as any[]
+
+        try {
+            const invoice = await invoiceService.cancelSalesInvoiceWithRelations(data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Fatura İptal Edilirken Hata Oluştu.", details: error.message };
+        }
+    },
+
+    deleteQuickSaleInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const data = ctx.body as QuickSaleResponse
+        try {
+            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelationsAndRecreate(id, data);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations", details: error.message };
+        }
+    },
+
+    deleteQuickSaleInvoiceWithRelations: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelations(id);
+            ctx.set.status = 200;
+            return invoice;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting invoice with relations", details: error.message };
         }
     },
 

@@ -1,5 +1,5 @@
-import { importExcelService } from '../../services/concrete/importExcelService';
 import { Context } from 'elysia';
+import { importStockCards } from '../../services/concrete/importStockCardService';
 
 export const importExcelController = async (context: Context) => {
     const body = await context.request.formData();
@@ -10,7 +10,7 @@ export const importExcelController = async (context: Context) => {
     }
 
     try {
-        const result = await importExcelService(excelFile);
+        const result = await importStockCards(excelFile);
         return { result };
     } catch (error) {
         console.error("Hata oluştu:", error);

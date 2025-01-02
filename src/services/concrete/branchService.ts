@@ -4,6 +4,20 @@ import { Branch, Prisma } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import { extractUsernameFromToken } from "./extractUsernameService";
+
+export interface BranchData {
+    branchName: string;
+    branchCode: string;
+    address: string;
+    countryCode: string;
+    city: string;
+    district: string;
+    phone: string;
+    email: string;
+    website: string;
+    companyCode: string;
+    warehouseId: string;
+}
 export class BranchService {
     private branchRepository: BaseRepository<Branch>;
 
@@ -12,7 +26,6 @@ export class BranchService {
     }
 
     async createBranch(branch: Branch, bearerToken: string): Promise<Branch> {
-
         try {
             const username = extractUsernameFromToken(bearerToken);
             const createdBranch = await prisma.branch.create({
@@ -37,6 +50,17 @@ export class BranchService {
                     } : {}
                 } as Prisma.BranchCreateInput
             });
+            const branchWarehouse = await prisma.branchWarehouse.create({
+                data: {
+                    branch: {
+                        connect: { id: createdBranch.id },
+                    },
+                    warehouse: {
+                        connect: { id: branch.warehouseId },
+                    }
+
+                } as Prisma.BranchWarehouseCreateInput
+            });
             return createdBranch;
         } catch (error) {
             logger.error("Error creating branch", error);
@@ -44,10 +68,10 @@ export class BranchService {
         }
     }
 
-    async updateBranch(id: string, branch: Partial<Branch>): Promise<Branch> {
+    async updateBranch(id: string, branch: Partial<BranchData>): Promise<any> {
         try {
-            return await prisma.branch.update({
-                where: {id}, 
+            const updatedBranch = await prisma.branch.update({
+                where: { id },
                 data: {
                     branchName: branch.branchName,
                     branchCode: branch.branchCode,
@@ -63,6 +87,17 @@ export class BranchService {
                         connect: { companyCode: branch.companyCode },
                     } : {}
                 } as Prisma.BranchUpdateInput
+            });
+            const branchWarehouse = await prisma.branchWarehouse.update({
+                where: { branchId_warehouseId: { branchId: id, warehouseId: branch.warehouseId! } },
+                data: {
+                    warehouse: {
+                        connect: { id: branch.warehouseId },
+                    },
+                    branch: {
+                        connect: { id: id },
+                    }
+                } as Prisma.BranchWarehouseUpdateInput
             });
         } catch (error) {
             logger.error(`Error updating branch with id ${id}`, error);
@@ -90,7 +125,16 @@ export class BranchService {
 
     async getAllBranches(): Promise<Branch[]> {
         try {
-            return await this.branchRepository.findAll();
+            return await prisma.branch.findMany({
+                include: {
+                    company: true,
+                    warehouse: {
+                        include: {
+                            warehouse: true
+                        }
+                    }
+                }
+            });
         } catch (error) {
             logger.error("Error fetching all branches", error);
             throw error;
