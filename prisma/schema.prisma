@@ -449,8 +449,7 @@ model Company {
   stockCard       StockCard[]
   User            User[]
   warehouse       Warehouse[]
-
-  Branch Branch[]
+  Branch          Branch[]
 }
 
 model Branch {
