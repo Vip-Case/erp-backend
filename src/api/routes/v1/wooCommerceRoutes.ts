@@ -126,13 +126,46 @@ export const wooCommerceRoutes = (app: Elysia) => {
     }
   });
 
-  app.post("/sync-stockcard-woocommerce", async ({ set }) => {
+  app.post("/sync-stockcard-woocommerce", async (ctx) => {
     try {
-      const response = await wooCommerceController.syncStockCardWithWooCommerce();
+      // JSON body'yi al
+      const body = await ctx.request.json().catch(() => null);
+  
+      if (!body) {
+        ctx.set.status = 400;
+        return { success: false, message: "Geçersiz body. Lütfen JSON formatında bir body gönderin." };
+      }
+  
+      // Gerekli parametreleri al ve kontrol et
+      const { storeId, specificStockCardIds, updatePrice, updateQuantity } = body as {
+        storeId: string;
+        specificStockCardIds: string[];
+        updatePrice?: boolean;
+        updateQuantity?: boolean;
+      };
+  
+      if (!storeId) {
+        ctx.set.status = 400;
+        return { success: false, message: "storeId eksik. Lütfen geçerli bir storeId sağlayın." };
+      }
+  
+      if (specificStockCardIds && !Array.isArray(specificStockCardIds)) {
+        ctx.set.status = 400;
+        return { success: false, message: "specificStockCardIds geçersiz bir formatta. Array olmalı." };
+    }
+  
+      // Metoda aktar ve sonucu döndür
+      const response = await wooCommerceController.syncStockCardWithWooCommerce(
+        storeId,
+        updatePrice ?? true,
+        updateQuantity ?? true,
+        specificStockCardIds
+      );
+  
       return response;
     } catch (error) {
       console.error("StockCard ve WooCommerce senkronizasyonu sırasında hata oluştu:", error);
-      set.status = 500;
+      ctx.set.status = 500;
       return {
         success: false,
         message: "StockCard ve WooCommerce senkronizasyonu sırasında bir hata oluştu.",
@@ -140,6 +173,7 @@ export const wooCommerceRoutes = (app: Elysia) => {
       };
     }
   });
+  
 
 };
 

@@ -101,7 +101,7 @@ export class WooCommerceService {
     let page = 1;
 
     while (true) {
-      const products = await this.wooCommerce.getProducts({ page, per_page: 100 });
+      const products = await this.wooCommerce.getProducts({ page, per_page: 50 });
       if (!products.length) break;
       allProducts.push(...products);
       page++;
@@ -485,7 +485,7 @@ export class WooCommerceService {
           },
         });
 
-        console.log("Seçilen ürünler:", selectedProducts);
+      console.log("Seçilen ürünler:", selectedProducts);
 
       if (!selectedProducts.length) {
         console.log("Seçilen ürünler bulunamadı.");
@@ -586,9 +586,9 @@ export class WooCommerceService {
           console.log(`StockCard oluşturuldu: ${product.productName} (SKU: ${product.productSku})`);
         } else {
           console.log("StockCard güncelleniyor:", {
-          productCode: product.productSku,
-          productName: product.productName,
-           });
+            productCode: product.productSku,
+            productName: product.productName,
+          });
           // StockCard güncelle
           stockCard = await prisma.stockCard.update({
             where: { productCode: product.productSku },
@@ -746,11 +746,11 @@ export class WooCommerceService {
     try {
       let page = 1;
       let products;
-  
+
       do {
         products = await this.wooCommerce.getProducts({ per_page: 100, page });
         console.log(`WooCommerce sayfa ${page} verileri:`, products);
-  
+
         for (const product of products) {
           if (product.sku) {
             data[product.sku] = {
@@ -758,7 +758,7 @@ export class WooCommerceService {
               quantity: product.stock_quantity || 0,
             };
             console.log(`Ürün eklendi: SKU: ${product.sku}, Price: ${product.price}, Quantity: ${product.stock_quantity}`);
-  
+
             if (product.type === "variable" && product.id) {
               const variations = await this.wooCommerce.getProductVariations(product.id);
               for (const variation of variations) {
@@ -773,29 +773,54 @@ export class WooCommerceService {
             }
           }
         }
-  
+
         page++;
       } while (products.length > 0);
-  
+
       console.log("WooCommerce verileri başarıyla çekildi:", data);
     } catch (error) {
       console.error("WooCommerce verileri alınırken hata oluştu:", error);
     }
     return data;
   }
-  
+
   // WooCommerce ürünlerini StockCard ile senkronize et
-  async syncStockCardWithWooCommerce(): Promise<void> {
+  async syncStockCardWithWooCommerce(
+    storeId: string,
+    updatePrice: boolean = true,
+    updateQuantity: boolean = true,
+    specificStockCardIds: string[] = []
+  ): Promise<void> {
     try {
+      console.log("Başlatılan Body:", { storeId, updatePrice, updateQuantity, specificStockCardIds });
+
       // WooCommerce bağlantısını başlat
-      await this.initializeWooCommerce();
+      if (!this.wooCommerce) {
+        await this.initializeWooCommerce();
+      }
 
       if (!this.wooCommerce) {
         throw new Error("WooCommerce servisi başlatılmadı. Lütfen initializeWooCommerce'i çağırın.");
       }
 
-      // Tüm StockCard'ları veritabanından çekiyoruz
+      const store = await prisma.store.findUnique({
+        where: { id: storeId },
+      });
+
+      if (!store) {
+        throw new Error(`Store bulunamadı. Sağlanan Store ID: ${storeId}`);
+      }
+      console.log(`Store bulundu: ${store.name} (ID: ${store.id})`);
+      
+      if (!specificStockCardIds || specificStockCardIds.length === 0) {
+        console.log("specificStockCardIds parametresi gönderilmedi. Tüm StockCard'lar güncellenecek.");
+      }
+
+      // StockCard'ları çek
       const stockCards = await prisma.stockCard.findMany({
+        where: specificStockCardIds.length > 0
+          ? { id: { in: specificStockCardIds } }
+          : undefined,
         include: {
           stockCardWarehouse: true,
           stockCardPriceLists: { include: { priceList: true } },
@@ -804,123 +829,142 @@ export class WooCommerceService {
         },
       });
 
-      // WooCommerce ürünlerini çekiyoruz
-      const wooCommerceProducts = [];
-      let page = 1;
-      let response;
+      if (!stockCards.length) {
+        console.log("Hiçbir StockCard bulunamadı.");
+        return;
+      }
 
-      do {
-        response = await this.wooCommerce.getProducts({ per_page: 100, page });
-        wooCommerceProducts.push(...response);
-        page++;
-      } while (response.length > 0);
+      console.log(`Veritabanından ${stockCards.length} StockCard çekildi.`);
 
+      // WooCommerce ürünlerini çek
+      const wooCommerceProducts = await this.fetchAllProducts();
       console.log(`WooCommerce'den toplam ${wooCommerceProducts.length} ürün çekildi.`);
 
-      // Varyasyonlar için önbellek oluşturuluyor
+      // Varyasyonları paralel olarak çekmek için limitli bir yapı kullanılıyor
       const variationsCache: Record<string, Product[]> = {};
-      for (const product of wooCommerceProducts) {
-        if (product.type === "variable") {
-          const variations = await this.wooCommerce.getProductVariations(product.id);
-          variationsCache[product.id] = variations;
-        }
-      }
+      await this.fetchWithConcurrency(
+        wooCommerceProducts.filter((product) => product.type === "variable"),
+        async (product) => {
+          try {
+            const variations = await this.wooCommerce.getProductVariations(product.id);
+            variationsCache[product.id] = variations;
+          } catch (error) {
+            console.error(`Varyasyonları alırken hata oluştu (Product ID: ${product.id}):`, error);
+          }
+        },
+        10 // Aynı anda maksimum 10 istek
+      );
 
       console.log("Tüm varyasyonlar hafızada saklandı.");
 
-      // Normalizasyon fonksiyonu
-      const normalize = (text: string) =>
-        text?.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+      let updatedCount = 0;
+      let skippedCount = 0;
 
-      // Senkronizasyon işlemi
+      // StockCard senkronizasyon işlemi
       for (const stockCard of stockCards) {
-        const stockCardNormalizedCode = normalize(stockCard.productCode);
-
-        // WooCommerce ürünlerini SKU'ya göre eşleştir
         let wooProduct = wooCommerceProducts.find(
-          (product) => normalize(product.sku) === stockCardNormalizedCode
+          (product) =>
+            product.sku === stockCard.productCode ||
+            product.name.toLowerCase() === stockCard.productName.toLowerCase()
         );
 
-        // Eğer ana ürünle eşleşme yoksa varyasyonlarda ara
         if (!wooProduct) {
-          for (const product of wooCommerceProducts) {
-            if (product.type === "variable" && variationsCache[product.id]) {
-              wooProduct = variationsCache[product.id].find(
-                (variation) => normalize(variation.sku) === stockCardNormalizedCode
+          // Eğer ana ürünle eşleşme yoksa varyasyonlarda ara
+          for (const product of wooCommerceProducts.filter((p) => p.type === "variable")) {
+            const variations = variationsCache[product.id];
+            if (variations) {
+              wooProduct = variations.find(
+                (variation) =>
+                  variation.sku === stockCard.productCode ||
+                  variation.name.toLowerCase() === stockCard.productName.toLowerCase()
               );
               if (wooProduct) break;
             }
           }
         }
 
-        // Eşleşme yoksa logla ve devam et
         if (!wooProduct) {
-          console.warn(
-            `Eşleşmeyen ürün: StockCard -> ${stockCard.productName} (${stockCard.productCode}), WooCommerce SKU'larla eşleşmiyor.`
-          );
+          console.warn(`Eşleşmeyen ürün: ${stockCard.productName} (${stockCard.productCode})`);
+          skippedCount++;
           continue;
         }
 
-        // PriceList kontrolü
         const wooCommercePriceList = stockCard.stockCardPriceLists.find(
           (item) => item.priceList.priceListName === "Woocommerce"
         );
 
         if (!wooCommercePriceList) {
           console.warn(`PriceList ilişkisi bulunmayan ürün: ${stockCard.productName}`);
+          skippedCount++;
           continue;
         }
 
-        // Fiyat ve miktar hesaplama
         const price = parseFloat(wooCommercePriceList.price.toString() || "0.00").toFixed(2);
         const totalQuantity = stockCard.stockCardWarehouse.reduce(
           (sum, warehouse) => sum + (warehouse.quantity?.toNumber() || 0),
           0
         );
 
-        // WooCommerce ürününü güncelle
+        const updateData: any = {};
+        if (updatePrice) {
+          updateData.regular_price = price;
+          updateData.sale_price = price;
+        }
+        if (updateQuantity) {
+          updateData.stock_quantity = totalQuantity;
+          updateData.manage_stock = true;
+        }
+
         try {
           if (wooProduct.type === "simple") {
-            await this.wooCommerce.updateProduct(wooProduct.id, {
-              stock_quantity: totalQuantity,
-              manage_stock: true,
-              regular_price: price,
-              sale_price: price,
-            });
-            console.log(
-              `Ürün güncellendi: ${wooProduct.name} (${wooProduct.sku}, Price: ${price})`
-            );
-          } else if (wooProduct.type === "variable") {
-            // Variable ürünlerin kendisi için stok bilgisi olmaz, sadece alt varyasyonları güncellenir.
-            console.log(`Variable ürün: ${wooProduct.name} (${wooProduct.sku}), sadece varyasyonlar güncellenir.`);
+            await this.wooCommerce.updateProduct(wooProduct.id, updateData);
           } else if (wooProduct.type === "variation") {
-            await this.wooCommerce.updateProductVariation(
-              wooProduct.parent_id,
-              wooProduct.id,
-              {
-                stock_quantity: totalQuantity,
-                manage_stock: true,
-                regular_price: price,
-                sale_price: price,
-              }
-            );
-            console.log(
-              `Varyasyon güncellendi: ${wooProduct.name} (${wooProduct.sku}, Price: ${price})`
-            );
+            const parentId = (wooProduct as any).parent_id;
+            await this.wooCommerce.updateProductVariation(parentId, wooProduct.id, updateData);
           }
+          updatedCount++;
         } catch (error) {
-          console.error(
-            `WooCommerce güncelleme hatası: ${wooProduct.sku} (${wooProduct.name})`,
-            error
-          );
+          console.error(`Ürün güncellenirken hata oluştu: ${wooProduct.sku}`, error);
+          skippedCount++;
         }
       }
 
-      console.log("StockCard ve WooCommerce senkronizasyonu tamamlandı.");
+      console.log(
+        `StockCard ve WooCommerce senkronizasyonu tamamlandı. Güncellenen ürünler: ${updatedCount}, Atlanan ürünler: ${skippedCount}`
+      );
     } catch (error) {
       console.error("StockCard ve WooCommerce senkronizasyon hatası:", error);
       throw new Error("Senkronizasyon sırasında bir hata oluştu.");
     }
   }
+
+
+  // Paralel işlem sınırını belirleyen yardımcı fonksiyon
+  private async fetchWithConcurrency<T>(
+    items: T[],
+    handler: (item: T) => Promise<void>,
+    concurrencyLimit: number = 10
+  ): Promise<void> {
+    const queue = [...items];
+    const activePromises: Promise<void>[] = [];
+
+    const runNext = async () => {
+      if (queue.length === 0) return;
+
+      const item = queue.shift();
+      if (item) {
+        const promise = handler(item).finally(() => {
+          activePromises.splice(activePromises.indexOf(promise), 1);
+        });
+        activePromises.push(promise);
+
+        await promise;
+        await runNext();
+      }
+    };
+
+    await Promise.all(Array.from({ length: concurrencyLimit }, runNext));
+  }
+
 
 }

@@ -95,9 +95,24 @@ export class WooCommerceController {
     }
   }
 
-  async syncStockCardWithWooCommerce(): Promise<any> {
+  async syncStockCardWithWooCommerce(storeId: string,
+    updatePrice: boolean = true,
+    updateQuantity: boolean = true,
+    specificStockCardIds: string[] = []): Promise<any> {
     try {
-      return await this.wooCommerceService.syncStockCardWithWooCommerce();
+      if (!storeId) {
+        throw new Error("storeId eksik. Lütfen geçerli bir storeId sağlayın.");
+      }
+
+      // WooCommerce servisini başlat
+      if (!this.wooCommerceService) {
+        await this.initializeWooCommerceService(storeId); // Dinamik başlatma
+      }
+
+      return await this.wooCommerceService.syncStockCardWithWooCommerce(storeId,
+        updatePrice,
+        updateQuantity,
+        specificStockCardIds);
     } catch (error) {
       console.error("StockCard ve WooCommerce senkronizasyonu sırasında hata oluştu:", error);
       throw error;

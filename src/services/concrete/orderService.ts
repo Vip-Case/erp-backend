@@ -284,8 +284,7 @@ const OrderService = {
             `Stok güncellendi: StockCardId ${item.stockCardId}, Yeni Stok: ${newQuantity}`
           );
         }
-        console.log("Transaction tamamlandı");
-      }, { isolationLevel: "Serializable" });
+      });
       
 
       // 6. Fatura oluşturma (eğer otomatik etkinse)
@@ -319,7 +318,7 @@ const OrderService = {
       }
   
       const updatedOrder = await prisma.order.update({
-        where: { id: existingOrder.id }, // Artık ID ile güncelleme yapılabilir
+        where: { id: existingOrder.id }, // ID ile güncelleme yapılabilir
         data: {
           status: updateData.status || existingOrder.status,
           currency: updateData.currency || existingOrder.currency,
