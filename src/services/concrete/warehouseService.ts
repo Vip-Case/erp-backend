@@ -9,6 +9,7 @@ import { extractUsernameFromToken } from "./extractUsernameService";
 export interface StocktakeWarehouse {
     id: string;
     warehouseId: string;
+    branchCode: string;
     products: Array<{
         stockCardId: string;
         quantity: number;
@@ -37,7 +38,7 @@ export class WarehouseService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
                     },
                     company: warehouse.companyCode ? {
                         connect: { companyCode: warehouse.companyCode },
@@ -217,7 +218,7 @@ export class WarehouseService {
                                 connect: { warehouseCode: _warehouseCode?.warehouseCode },
                             },
                             branch: {
-                                connect: { branchCode: _branch?.branch.branchCode },
+                                connect: { branchCode: data.branchCode },
                             },
                         },
                     });
