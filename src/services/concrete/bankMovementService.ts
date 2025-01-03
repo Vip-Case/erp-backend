@@ -45,6 +45,12 @@ export class BankMovementService {
                         connect: {
                             id: bankMovement.receiptId
                         }
+                    } : undefined,
+
+                    currentMovement: bankMovement?.currentMovementId ? {
+                        connect: {
+                            id: bankMovement.currentMovementId
+                        }
                     } : undefined
 
                 } as Prisma.BankMovementCreateInput,
@@ -61,39 +67,63 @@ export class BankMovementService {
 
     async updateBankMovement(id: string, bankMovement: Partial<BankMovement>): Promise<BankMovement> {
         try {
-            return await prisma.bankMovement.update({
+            // Eski bankMovement bilgilerini alıyoruz
+            const oldBankMovement = await this.bankMovementRepository.findById(id);
+            // Güncellenmemiş enterin ve emerging değerlerini alıyoruz
+            const entering: number = Number(oldBankMovement?.entering || 0);
+            const emerging: number = Number(oldBankMovement?.emerging || 0);
+            // Güncellenen enterin ve emerging değerlerini alıyoruz
+            const newEntering: number = Number(bankMovement.entering || 0);
+            const newEmerging: number = Number(bankMovement.emerging || 0);
+            // Eski değerlerden yeni değerleri çıkartarak farkı buluyoruz eğer negatif değer ise positive yaparak hesaplamayı yapıyoruz
+            const enteringDifference = newEntering - entering;
+            const emergingDifference = newEmerging - emerging;
+            const enteringValue = enteringDifference < 0 ? enteringDifference * -1 : enteringDifference;
+            const emergingValue = emergingDifference < 0 ? emergingDifference * -1 : emergingDifference;
+            // Önce yeni gelen veride bankId var mı kontrol ediyoruz eğer yoksa eski bankId yi alıyoruz eğer varsa yeni bankId yi alıyoruz
+            const bankId = bankMovement.bankId || oldBankMovement.bankId;
+            // Banka bakisini güncelliyoruz
+            BankService.updateBankBalance(bankId, new Prisma.Decimal(enteringValue), new Prisma.Decimal(emergingValue));
+            // Güncelleme işlemini yapıyoruz
+            const updatedBankMovement = await prisma.bankMovement.update({
                 where: { id },
                 data: {
-                    bankId: bankMovement.bankId,
-                    invoiceId: bankMovement.invoiceId,
-                    receiptId: bankMovement.receiptId,
-                    description: bankMovement.description,
-                    entering: bankMovement.entering,
-                    emerging: bankMovement.emerging,
-                    bankDirection: bankMovement.bankDirection,
-                    bankType: bankMovement.bankDirection,
-                    bankDocumentType: bankMovement.bankDirection,
+                    invoiceId: bankMovement?.invoiceId,
+                    receiptId: bankMovement?.receiptId,
+                    description: bankMovement?.description,
+                    entering: bankMovement?.entering,
+                    emerging: bankMovement?.emerging,
+                    bankDirection: bankMovement?.bankDirection,
+                    bankType: bankMovement?.bankType,
+                    bankDocumentType: bankMovement?.bankDocumentType,
 
-                    Bank: bankMovement.bankId ? {
+                    bank: bankMovement.bankId ? {
                         connect: {
                             id: bankMovement.bankId
                         }
                     } : undefined,
 
-                    Invoice: bankMovement.invoiceId ? {
+                    invoice: bankMovement.invoiceId ? {
                         connect: {
                             id: bankMovement.invoiceId
                         }
                     } : undefined,
 
-                    Receipt: bankMovement.receiptId ? {
+                    receipt: bankMovement.receiptId ? {
                         connect: {
                             id: bankMovement.receiptId
+                        }
+                    } : undefined,
+
+                    currentMovement: bankMovement.currentMovementId ? {
+                        connect: {
+                            id: bankMovement.currentMovementId
                         }
                     } : undefined
 
                 } as Prisma.BankMovementUpdateInput,
             });
+            return updatedBankMovement;
         } catch (error) {
             logger.error(`Error updating bankMovement with id ${id}`, error);
             throw error;
@@ -102,6 +132,7 @@ export class BankMovementService {
 
     async deleteBankMovement(id: string): Promise<boolean> {
         try {
+
             return await this.bankMovementRepository.delete(id);
         } catch (error) {
             logger.error(`Error deleting bankMovement with id ${id}`, error);

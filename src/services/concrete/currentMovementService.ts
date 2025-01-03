@@ -4,11 +4,20 @@ import { CurrentMovement, Prisma } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
 import { Decimal } from "@prisma/client/runtime/library";
+import VaultMovementService from "./vaultMovementService";
+import { PosMovementService } from "./posMovementService";
+import BankMovementService from "./bankMovementService";
 export class CurrentMovementService {
+    private vaultMovementService: VaultMovementService;
+    private bankMovementService: BankMovementService;
+    private posMovementService: PosMovementService;
     private currentMovementRepository: BaseRepository<CurrentMovement>;
 
     constructor() {
         this.currentMovementRepository = new BaseRepository<CurrentMovement>(prisma.currentMovement);
+        this.vaultMovementService = new VaultMovementService();
+        this.bankMovementService = new BankMovementService();
+        this.posMovementService = new PosMovementService();
     }
 
     async createCurrentMovement(currentMovement: any): Promise<any> {
@@ -29,7 +38,6 @@ export class CurrentMovementService {
                     description: currentMovement.description,
                     debtAmount: currentMovement.debtAmount,
                     creditAmount: currentMovement.creditAmount,
-                    balanceAmount: (currentMovement.debtAmount - currentMovement.creditAmount),
                     movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
@@ -74,16 +82,15 @@ export class CurrentMovementService {
 
     async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>): Promise<CurrentMovement> {
         try {
-            const debtAmount = currentMovement.debtAmount ?? new Decimal(0);
-            const creditAmount = currentMovement.creditAmount ?? new Decimal(0);
-            return await prisma.currentMovement.update({
+            const debtAmount = currentMovement.debtAmount ?? new Decimal(0);    // Eğer debtAmount yoksa 0 yap
+            const creditAmount = currentMovement.creditAmount ?? new Decimal(0); // Eğer creditAmount yoksa 0 yap
+            const updatedCurrentMovement = await prisma.currentMovement.update({
                 where: { id },
                 data: {
                     dueDate: currentMovement.dueDate,
                     description: currentMovement.description,
-                    debtAmount: currentMovement.debtAmount,
-                    creditAmount: currentMovement.creditAmount,
-                    balanceAmount: debtAmount.equals(new Decimal(0)) ? creditAmount.negated() : debtAmount, movementType: currentMovement.movementType,
+                    debtAmount: debtAmount,
+                    creditAmount: creditAmount,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
 
@@ -114,6 +121,59 @@ export class CurrentMovementService {
                     } : undefined,
                 } as Prisma.CurrentMovementUpdateInput,
             });
+
+            //  İlişkili olan vaultMovement bilgilerini alıyoruz
+            const vaultMovement = await prisma.vaultMovement.findFirst({
+                where: {
+                    currentMovementId: updatedCurrentMovement.id
+                }
+            });
+            const vaultMovementData = {
+                vaultId: vaultMovement?.vaultId,
+                entering: updatedCurrentMovement.debtAmount ?? new Decimal(0),
+                emerging: updatedCurrentMovement.creditAmount ?? new Decimal(0),
+                currentMovementId: updatedCurrentMovement.id
+            }
+            if (vaultMovement) {
+                // VaultMovement bilgilerini güncelliyoruz
+                await this.vaultMovementService.updateVaultMovement(vaultMovement.id, vaultMovementData);
+            }
+
+            // İlişkili olan bankMovement bilgilerini alıyoruz
+            const bankMovement = await prisma.bankMovement.findFirst({
+                where: {
+                    currentMovementId: updatedCurrentMovement.id
+                }
+            });
+            const bankMovementData = {
+                bankId: bankMovement?.bankId,
+                entering: updatedCurrentMovement.debtAmount ?? new Decimal(0),
+                emerging: updatedCurrentMovement.creditAmount ?? new Decimal(0),
+                currentMovementId: updatedCurrentMovement.id
+            }
+            if (bankMovement) {
+                // BankMovement bilgilerini güncelliyoruz
+                await this.bankMovementService.updateBankMovement(bankMovement.id, bankMovementData);
+            }
+
+            // İlişkili olan posMovement bilgilerini alıyoruz
+            const posMovement = await prisma.posMovement.findFirst({
+                where: {
+                    currentMovementId: updatedCurrentMovement.id
+                }
+            });
+            const posMovementData = {
+                posId: posMovement?.posId,
+                entering: updatedCurrentMovement.debtAmount ?? new Decimal(0),
+                emerging: updatedCurrentMovement.creditAmount ?? new Decimal(0),
+                currentMovementId: updatedCurrentMovement.id
+            }
+            if (posMovement) {
+                // PosMovement bilgilerini güncelliyoruz
+                await this.posMovementService.updatePosMovement(posMovement.id, posMovementData);
+            }
+
+            return updatedCurrentMovement;
         } catch (error) {
             logger.error(`Error updating current movement with id ${id}`, error);
             throw error;

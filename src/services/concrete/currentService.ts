@@ -1,7 +1,7 @@
 import prisma from "../../config/prisma";
 import {
+    $Enums,
     Current,
-    CurrentAddress,
     CurrentBranch,
     CurrentCategoryItem,
     CurrentFinancial,
@@ -30,10 +30,48 @@ interface SearchCriteria {
     currentName?: string;
 }
 
+interface CurrentData {
+    id?: string
+    currentCode: string
+    currentName: string
+    currentType?: $Enums.CurrentType
+    institution?: $Enums.InstitutionType
+    identityNo?: string | null
+    taxNumber?: string | null
+    taxOffice?: string | null
+    title?: string | null
+    name?: string | null
+    surname?: string | null
+    webSite?: string | null
+    birthOfDate?: Date | string | null
+    kepAddress?: string | null
+    mersisNo?: string | null
+    sicilNo?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    createdBy?: string | null
+    updatedBy?: string | null
+    priceListId: string
+}
+
+interface CurrentAddress {
+    id?: string
+    addressName: string
+    addressType: $Enums.AddressType
+    address: string
+    countryCode: string
+    province: string
+    district: string
+    postalCode: string
+    phone: string
+    phone2: string
+    email: string
+    email2: string
+}
+
 export class currentService {
     async createCurrent(data: {
-        current: Prisma.CurrentCreateInput;
-        priceListName: string;
+        current: CurrentData;
         currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
         currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
@@ -55,9 +93,9 @@ export class currentService {
 
             const newCurrent = await prisma.current.create({
                 data: {
-                    ...data.current,
+                    ...{ ...data.current, priceListId: undefined },
                     priceList: {
-                        connect: { id: priceList.id } // Bulunan id ile bağlantı sağlanıyor
+                        connect: { id: data.current.priceListId }
                     },
                     currentAddress: data.currentAddress,
                     currentBranch: data.currentBranch,
@@ -93,52 +131,95 @@ export class currentService {
         }
     }
 
-    async updateCurrent(id: string, data: {
-        current: Prisma.CurrentUpdateInput;
-        priceListName: string;
-        currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
-        currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
-        currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
-        currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
-        currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
-        currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
-
-    }): Promise<Current> {
+    async updateCurrent(id: string, data: any): Promise<any> {
         try {
-            let priceListConnect = {};
+            // Restructure the incoming data
+            const { priceListId, ...updateData } = data;
 
-            if (data.priceListName) {
-                const priceList = await prisma.stockCardPriceList.findUnique({
-                    where: { priceListName: data.priceListName }
+            // Create transaction to handle all updates atomically
+            return await prisma.$transaction(async (tx) => {
+                // 1. Update main current record
+                const updatedCurrent = await tx.current.update({
+                    where: { id },
+                    data: {
+                        currentCode: data.currentCode,
+                        currentName: data.currentName,
+                        currentType: data.currentType,
+                        institution: data.institution,
+                        identityNo: data.identityNo,
+                        taxNumber: data.taxNumber,
+                        taxOffice: data.taxOffice,
+                        kepAddress: data.kepAddress,
+                        mersisNo: data.mersisNo,
+                        sicilNo: data.sicilNo,
+                        title: data.title,
+                        webSite: data.webSite,
+                        birthOfDate: data.birthOfDate ? new Date(data.birthOfDate) : null,
+                        priceList: {
+                            connect: { id: priceListId }
+                        }
+                    }
                 });
 
-                if (!priceList) {
-                    throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
+                // 2. Handle addresses if provided
+                if (data.addresses && Array.isArray(data.addresses)) {
+                    await tx.currentAddress.deleteMany({
+                        where: { currentCode: updatedCurrent.currentCode }
+                    });
+
+                    await Promise.all(
+                        data.addresses.map((address) =>
+                            tx.currentAddress.create({
+                                data: {
+                                    addressName: address.addressName,
+                                    addressType: address.addressType,
+                                    address: address.address,
+                                    city: address.province,
+                                    district: address.district,
+                                    countryCode: address.countryCode,
+                                    postalCode: address.postalCode,
+                                    phone: address.phone,
+                                    phone2: address.phone2,
+                                    email: address.email,
+                                    email2: address.email2,
+                                    current: { connect: { currentCode: updatedCurrent.currentCode } }
+                                }
+                            })
+                        )
+                    );
                 }
 
-                priceListConnect = { connect: { id: priceList.id } };
-            }
-            const updatedCurrent = await prisma.current.update({
+                // 3. Handle categories if provided
+                if (data.categories && Array.isArray(data.categories)) {
+                    await tx.currentCategoryItem.deleteMany({
+                        where: { currentCode: updatedCurrent.currentCode }
+                    });
 
-                where: { id },
-                data: {
-                    ...data.current,
-                    priceList: priceListConnect,
-                    currentAddress: data.currentAddress,
-                    currentBranch: data.currentBranch,
-                    currentCategoryItem: data.currentCategoryItem,
-                    currentFinancial: data.currentFinancial,
-                    currentRisk: data.currentRisk,
-                    currentOfficials: data.currentOfficials
+                    await Promise.all(
+                        data.categories.map((categoryId) =>
+                            tx.currentCategoryItem.create({
+                                data: {
+                                    category: { connect: { id: categoryId } },
+                                    current: { connect: { currentCode: updatedCurrent.currentCode } }
+                                }
+                            })
+                        )
+                    );
+                }
 
-                },
-                include: currentRelations
+                // Return updated current with relations
+                return await tx.current.findUnique({
+                    where: { id },
+                    include: currentRelations
+                });
             });
 
-            return updatedCurrent;
-        } catch (error) {
+        } catch (error: any) {
             logger.error("Error updating current:", error);
-            throw new Error("Could not update current");
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                throw new Error(`Database error: ${error.message}`);
+            }
+            throw new Error(`Could not update current: ${error.message}`);
         }
     }
 
@@ -198,11 +279,29 @@ export class currentService {
     }
 
     async createCurrentWithRelations(data: {
-        current: Current;
-        priceList: StockCardPriceList[];
-        currentAdress?: CurrentAddress[];
+        currentCode: string
+        currentName: string
+        currentType?: $Enums.CurrentType
+        institution?: $Enums.InstitutionType
+        identityNo?: string | null
+        taxNumber?: string | null
+        taxOffice?: string | null
+        title?: string | null
+        name?: string | null
+        surname?: string | null
+        webSite?: string | null
+        birthOfDate?: Date | string | null
+        kepAddress?: string | null
+        mersisNo?: string | null
+        sicilNo?: string | null
+        createdAt?: Date | string
+        updatedAt?: Date | string
+        createdBy?: string | null
+        updatedBy?: string | null
+        priceListId: string
+        categories?: string[];
+        addresses?: CurrentAddress[];
         currentBranch?: CurrentBranch[];
-        currentCategoryItem?: CurrentCategoryItem[];
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
@@ -210,37 +309,50 @@ export class currentService {
     }) {
         try {
             const result = await prisma.$transaction(async (prisma) => {
+                console.log(data);
 
                 const current = await prisma.current.create({
                     data: {
-                        ...data.current,
-
-                        priceList: data.current.priceListId ? {
-                            connect: { id: data.current.priceListId }
-                        } : {}
-
-                    } as Prisma.CurrentCreateInput
+                        currentCode: data.currentCode,
+                        currentName: data.currentName,
+                        currentType: data.currentType,
+                        institution: data.institution,
+                        identityNo: data.identityNo,
+                        taxNumber: data.taxNumber,
+                        taxOffice: data.taxOffice,
+                        title: data.title,
+                        name: data.name,
+                        surname: data.surname,
+                        webSite: data.webSite,
+                        birthOfDate: data.birthOfDate,
+                        kepAddress: data.kepAddress,
+                        mersisNo: data.mersisNo,
+                        sicilNo: data.sicilNo,
+                        priceList: {
+                            connect: {
+                                id: data.priceListId
+                            }
+                        }
+                    }
                 });
-
                 const currentCode = current.currentCode;
-
-                if (data.currentAdress) {
+                if (data.addresses) {
                     await Promise.all(
-                        data.currentAdress.map((currentAdress) =>
+                        data.addresses.map((currentAdress) =>
                             prisma.currentAddress.create({
                                 data: {
                                     addressName: currentAdress.addressName,
                                     addressType: currentAdress.addressType,
                                     address: currentAdress.address,
                                     countryCode: currentAdress.countryCode,
-                                    city: currentAdress.city,
+                                    city: currentAdress.province,
                                     district: currentAdress.district,
                                     postalCode: currentAdress.postalCode,
                                     phone: currentAdress.phone,
                                     phone2: currentAdress.phone2,
                                     email: currentAdress.email,
                                     email2: currentAdress.email2,
-                                    current: { connect: { currentCode: currentAdress.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -253,7 +365,7 @@ export class currentService {
                             prisma.currentBranch.create({
                                 data: {
                                     branch: { connect: { branchCode: currentBranch.branchCode } },
-                                    current: { connect: { currentCode: currentBranch.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -270,7 +382,7 @@ export class currentService {
                                     bankBranchCode: currentFinancial.bankBranchCode,
                                     iban: currentFinancial.iban,
                                     accountNo: currentFinancial.accountNo,
-                                    current: { connect: { currentCode: currentFinancial.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -294,7 +406,7 @@ export class currentService {
                                     limitKontrol: currentRisk.limitKontrol,
                                     acikHesap: currentRisk.acikHesap,
                                     posKullanim: currentRisk.posKullanim,
-                                    current: { connect: { currentCode: currentRisk.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -312,20 +424,20 @@ export class currentService {
                                     phone: currentOfficials.phone,
                                     email: currentOfficials.email,
                                     note: currentOfficials.note,
-                                    current: { connect: { currentCode: currentOfficials.currentCode } }
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
                     );
                 }
 
-                if (data.currentCategoryItem) {
+                if (data.categories) {
                     await Promise.all(
-                        data.currentCategoryItem.map((currentCategoryItem) =>
+                        data.categories.map((currentCategoryItem) =>
                             prisma.currentCategoryItem.create({
                                 data: {
-                                    category: { connect: { id: currentCategoryItem.categoryId } },
-                                    current: { connect: { currentCode: currentCategoryItem.currentCode } }
+                                    category: { connect: { id: currentCategoryItem } },
+                                    current: { connect: { currentCode: currentCode } }
                                 }
                             })
                         )
@@ -333,9 +445,10 @@ export class currentService {
                 }
 
             });
+            return result;
         } catch (error) {
             logger.error("Error creating StockCard with relations:", error);
-            throw new Error("Could not create StockCard with relations");
+            throw new Error(`Could not create StockCard with relations: ${error}`);
         }
     }
 
@@ -471,6 +584,54 @@ export class currentService {
         } catch (error) {
             logger.error("Error deleting Current with relations:", error);
             throw new Error("Could not delete Current with relations");
+        }
+    }
+
+    async deleteManyCurrentsWithRelations(data: any) {
+        try {
+            // Input data contains {ids: [...]} structure, so extract the ids array
+            const idsArray = Array.isArray(data.ids) ? data.ids : [data.ids];
+
+            if (idsArray.length === 0) {
+                throw new Error("No ids provided");
+            }
+
+            // Extract just the id values
+            const idList = idsArray.map(item => item.id);
+
+            return await prisma.$transaction(async (prisma) => {
+                await prisma.currentAddress.deleteMany({
+                    where: { current: { id: { in: idList } } }
+                });
+
+                await prisma.currentBranch.deleteMany({
+                    where: { current: { id: { in: idList } } }
+                });
+
+                await prisma.currentCategoryItem.deleteMany({
+                    where: { current: { id: { in: idList } } }
+                });
+
+                await prisma.currentFinancial.deleteMany({
+                    where: { current: { id: { in: idList } } }
+                });
+
+                await prisma.currentOfficials.deleteMany({
+                    where: { current: { id: { in: idList } } }
+                });
+
+                await prisma.currentRisk.deleteMany({
+                    where: { current: { id: { in: idList } } }
+                });
+
+                await prisma.current.deleteMany({
+                    where: { id: { in: idList } }
+                });
+
+            });
+        } catch (error) {
+            logger.error("Error deleting Current with relations:", error);
+            throw new Error(`Could not delete Current with relations${error}`);
         }
     }
 

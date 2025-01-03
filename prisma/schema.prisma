@@ -295,6 +295,7 @@ model Brand {
   updatedByUser         User?                   @relation("BrandUpdatedBy", fields: [updatedBy], references: [username])
   stockCard             StockCard[]
   stockCardManufacturer StockCardManufacturer[]
+  user                  User?                   @relation(fields: [createdBy], references: [username])
 }
 
 model StockCardPriceList {
@@ -705,7 +706,6 @@ model CurrentMovement {
   description        String?                      @db.VarChar(250)
   debtAmount         Decimal?                     @db.Decimal(15, 4)
   creditAmount       Decimal?                     @db.Decimal(15, 4)
-  balanceAmount      Decimal?                     @db.Decimal(15, 4)
   priceListId        String?
   movementType       CurrentMovementType
   documentType       CurrentMovementDocumentType?
@@ -724,6 +724,12 @@ model CurrentMovement {
   invoice            Invoice?                     @relation(fields: [documentNo], references: [invoiceNo])
   stockCardPriceList StockCardPriceList?          @relation(fields: [priceListId], references: [id])
   updatedByUser      User?                        @relation("CurrentMovementUpdatedBy", fields: [updatedBy], references: [username])
+
+
+  VaultMovement VaultMovement[]
+  BankMovement  BankMovement[]
+  PosMovement   PosMovement[]
+
 }
 
 model CurrentCategory {
@@ -757,6 +763,10 @@ model User {
   companyCode                    String
   createdAt                      DateTime                @default(now())
   updatedAt                      DateTime                @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  company Company? @relation(fields: [companyCode], references: [companyCode])
 
   role       Role[]
   permission Permission[]
@@ -805,6 +815,8 @@ model User {
   createdByWarehouse             Warehouse[]             @relation("WarehouseCreatedBy")
   updatedByWarehouse             Warehouse[]             @relation("WarehouseUpdatedBy")
 
+  Notification Notification[]
+  Brand        Brand[]
 }
 
 model Invoice {
@@ -905,6 +917,10 @@ model VaultMovement {
   receipt           Receipt?          @relation(fields: [receiptId], references: [id])
   updatedByUser     User?             @relation("VaultMovementUpdatedBy", fields: [updatedBy], references: [username])
   vault             Vault             @relation(fields: [vaultId], references: [id])
+
+  currentMovementId String?
+  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
+
 }
 
 model Bank {
@@ -932,6 +948,7 @@ model BankMovement {
   bankDirection    VaultDirection
   bankType         VaultType
   bankDocumentType VaultDocumentType
+  currentMovementId String?
   createdBy        String?
   updatedBy        String?
   bank             Bank              @relation(fields: [bankId], references: [id])
@@ -939,6 +956,7 @@ model BankMovement {
   invoice          Invoice?          @relation(fields: [invoiceId], references: [id])
   receipt          Receipt?          @relation(fields: [receiptId], references: [id])
   updatedByUser    User?             @relation("BankMovementUpdatedBy", fields: [updatedBy], references: [username])
+  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Pos {
@@ -966,6 +984,7 @@ model PosMovement {
   posDirection    VaultDirection
   posType         VaultType
   posDocumentType VaultDocumentType
+  currentMovementId String?
   createdBy       String?
   updatedBy       String?
   createdByUser   User?             @relation("PosMovementCreatedBy", fields: [createdBy], references: [username])
@@ -973,6 +992,7 @@ model PosMovement {
   pos             Pos               @relation(fields: [posId], references: [id])
   receipt         Receipt?          @relation(fields: [receiptId], references: [id])
   updatedByUser   User?             @relation("PosMovementUpdatedBy", fields: [updatedBy], references: [username])
+  currentMovement CurrentMovement? @relation(fields: [currentMovementId], references: [id])
 }
 
 model Order {
@@ -1081,9 +1101,11 @@ model MarketPlaceCategories {
   categoryName                String?
   marketPlaceCategoryId       String?
   marketPlaceCategoryParentId String?
-  parentCategory              MarketPlaceCategories?  @relation("CategoryParent", fields: [marketPlaceCategoryParentId], references: [id])
-  subCategories               MarketPlaceCategories[] @relation("CategoryParent")
-  products                    MarketPlaceProducts[]   @relation("ProductsOnCategories")
+  products MarketPlaceProducts[] @relation("ProductsOnCategories")
+
+  // Alt ve üst kategori ilişkileri
+  subCategories  MarketPlaceCategories[] @relation("CategoryParent")
+  parentCategory MarketPlaceCategories?  @relation("CategoryParent", fields: [marketPlaceCategoryParentId], references: [id])
 }
 
 model MarketPlaceBrands {

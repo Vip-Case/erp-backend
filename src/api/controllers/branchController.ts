@@ -1,5 +1,5 @@
 
-import BranchService from '../../services/concrete/branchService';
+import BranchService, { BranchData } from '../../services/concrete/branchService';
 import { Context } from 'elysia';
 import { Branch } from '@prisma/client';
 
@@ -16,6 +16,7 @@ export const BranchController = {
             return ctx.error(401, "Authorization header is missing.");
         }
 
+        const branchData: BranchData = ctx.body as BranchData;
         try {
             const branch = await branchService.createBranch(branchData, bearerToken);
             ctx.set.status = 200;

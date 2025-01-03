@@ -1,6 +1,6 @@
 import CurrentService from '../../services/concrete/currentService';
 import { Context } from 'elysia';
-import { Prisma } from '@prisma/client';
+import { $Enums, CurrentAddress, CurrentBranch, CurrentCategoryItem, CurrentFinancial, CurrentOfficials, CurrentRisk, Prisma } from '@prisma/client';
 
 // Service Initialization
 const currentService = new CurrentService();
@@ -9,12 +9,35 @@ interface SearchCriteria {
     search: string;
 }
 
+interface CurrentCreateInput {
+    id?: string
+    currentCode: string
+    currentName: string
+    currentType?: $Enums.CurrentType
+    institution?: $Enums.InstitutionType
+    identityNo?: string | null
+    taxNumber?: string | null
+    taxOffice?: string | null
+    title?: string | null
+    name?: string | null
+    surname?: string | null
+    webSite?: string | null
+    birthOfDate?: Date | string | null
+    kepAddress?: string | null
+    mersisNo?: string | null
+    sicilNo?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    createdBy?: string | null
+    updatedBy?: string | null
+    priceListId: string
+}
+
 export const CurrentController = {
 
     createCurrent: async (ctx: Context) => {
         const data = ctx.body as {
-            current: Prisma.CurrentCreateInput;
-            priceListId: string;
+            current: CurrentCreateInput;
             currentAddress?: Prisma.CurrentAddressCreateNestedManyWithoutCurrentInput;
             currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
             currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
@@ -32,10 +55,9 @@ export const CurrentController = {
         try {
             const createData = {
                 current: {
-                    ...data.current
+                    ...data.current,
+                    priceListId: data.current.priceListId
                 },
-                priceListId: data.priceListId,
-                priceListName: data.priceListId,
                 currentAddress: data.currentAddress,
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
@@ -54,40 +76,17 @@ export const CurrentController = {
 
     updateCurrent: async (ctx: Context) => {
         const { id } = ctx.params;
-        const data = ctx.body as {
-            current: Prisma.CurrentUpdateInput;
-            priceListId: string;
-            currentAddress?: Prisma.CurrentAddressUpdateManyWithoutCurrentNestedInput;
-            currentBranch?: Prisma.CurrentBranchUpdateManyWithoutCurrentNestedInput;
-            currentCategoryItem?: Prisma.CurrentCategoryItemUpdateManyWithoutCurrentNestedInput;
-            currentFinancial?: Prisma.CurrentFinancialUpdateManyWithoutCurrentNestedInput;
-            currentRisk?: Prisma.CurrentRiskUpdateManyWithoutCurrentNestedInput;
-            currentOfficials?: Prisma.CurrentOfficialsUpdateManyWithoutCurrentNestedInput;
-        };
-
         try {
-            const updateData = {
-                current: {
-                    ...data.current
-                },
-                priceListId: data.priceListId,
-                priceListName: data.priceListId,
-                currentAddress: data.currentAddress,
-                currentBranch: data.currentBranch,
-                currentCategoryItem: data.currentCategoryItem,
-                currentFinancial: data.currentFinancial,
-                currentRisk: data.currentRisk,
-                currentOfficials: data.currentOfficials,
-            };
-
-            const updatedCurrent = await currentService.updateCurrent(id, updateData);
+            const updatedCurrent = await currentService.updateCurrent(id, ctx.body);
             ctx.set.status = 200;
             return updatedCurrent;
         } catch (error: any) {
             ctx.set.status = 500;
-            return { error: "Error updating current", details: error.message };
+            return {
+                error: "Error updating current",
+                details: error.message || "An unknown error occurred"
+            };
         }
-
     },
 
     deleteCurrent: async (ctx: Context) => {
@@ -150,6 +149,31 @@ export const CurrentController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    createWithRelations: async (ctx: Context) => {
+        const data = ctx.body as any;
+        console.log(data);
+        try {
+            const newCurrent = await currentService.createCurrentWithRelations(data);
+            ctx.set.status = 200;
+            return newCurrent;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error creating current", details: error.message };
+        }
+    },
+
+    deleteManyCurrentsWithRelations: async (ctx: Context) => {
+        const data = ctx.body;
+        try {
+            const deleted = await currentService.deleteManyCurrentsWithRelations(data);
+            ctx.set.status = 200;
+            return { success: deleted, message: "true" };
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error deleting current", details: error.message };
         }
     }
 }
