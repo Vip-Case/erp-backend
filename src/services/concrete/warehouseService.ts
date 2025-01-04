@@ -173,7 +173,12 @@ export class WarehouseService {
                     where: { id: data.warehouseId },
                     data: {
                         stockCardWarehouse: {
-                            deleteMany: {},
+                            deleteMany: {
+                                AND: [
+                                    { warehouseId: data.warehouseId },
+                                    { stockCardId: { in: data.products.map(p => p.stockCardId) } }
+                                ]
+                            },
                         },
                     },
                 });
@@ -261,7 +266,12 @@ export class WarehouseService {
                     where: { id: data.warehouseId },
                     data: {
                         stockCardWarehouse: {
-                            deleteMany: {},
+                            deleteMany: {
+                                AND: [
+                                    { warehouseId: data.warehouseId },
+                                    { stockCardId: { in: data.products.map(p => p.stockCardId) } }
+                                ]
+                            },
                         },
                     },
                 });
