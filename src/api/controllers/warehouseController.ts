@@ -1,4 +1,3 @@
-
 import WarehouseService from '../../services/concrete/warehouseService';
 import { Context } from 'elysia';
 import { Warehouse } from '@prisma/client';
@@ -6,6 +5,7 @@ import { Warehouse } from '@prisma/client';
 export interface StocktakeWarehouse {
     id: string;
     warehouseId: string;
+    branchCode: string;
     products: Array<{
         stockCardId: string;
         quantity: number;
@@ -20,7 +20,7 @@ export const WarehouseController = {
     createWarehouse: async (ctx: Context) => {
         const warehouseData: Warehouse = ctx.body as Warehouse;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -101,12 +101,23 @@ export const WarehouseController = {
     createStocktakeWarehouse: async (ctx: Context) => {
         const stockTakeData: StocktakeWarehouse = ctx.body as StocktakeWarehouse;
         try {
-            const warehouse = await warehouseService.createStocktakeWarehouse(stockTakeData);
-            ctx.set.status = 200;
-            return warehouse;
+            const result = await warehouseService.createStocktakeWarehouse(stockTakeData);
+            if (!result) {
+                return ctx.error(400, 'Stok sayım işlemi oluşturulamadı');
+            }
+            ctx.set.status = 201;
+            return {
+                success: true,
+                data: result,
+                message: 'Stok sayım işlemi başarıyla oluşturuldu'
+            };
         } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error creating stocktake warehouse", details: error.message };
+            ctx.set.status = error.status || 500;
+            return {
+                success: false,
+                error: "Stok sayım işlemi oluşturulurken hata oluştu",
+                details: error.message
+            };
         }
     },
 

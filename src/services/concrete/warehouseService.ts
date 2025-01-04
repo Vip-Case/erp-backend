@@ -1,4 +1,3 @@
-
 import prisma from "../../config/prisma";
 import { Prisma, Warehouse } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
@@ -158,13 +157,16 @@ export class WarehouseService {
     async createStocktakeWarehouse(data: StocktakeWarehouse): Promise<any> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
-                await prisma.stockTake.create({
+                const stockTake = await prisma.stockTake.create({
                     data: {
                         stockCardIds: data.products.map((product) => product.stockCardId),
                         warehouse: {
                             connect: { id: data.warehouseId },
                         },
                     },
+                    include: {
+                        warehouse: true
+                    }
                 });
 
                 await prisma.warehouse.update({
@@ -176,8 +178,9 @@ export class WarehouseService {
                     },
                 });
 
+                const stockCardWarehouses = [];
                 for (const product of data.products) {
-                    await prisma.stockCardWarehouse.create({
+                    const stockCardWarehouse = await prisma.stockCardWarehouse.create({
                         data: {
                             quantity: product.quantity,
                             stockCard: {
@@ -187,7 +190,12 @@ export class WarehouseService {
                                 connect: { id: data.warehouseId },
                             },
                         },
+                        include: {
+                            stockCard: true,
+                            warehouse: true
+                        }
                     });
+                    stockCardWarehouses.push(stockCardWarehouse);
 
                     const _productCode = await prisma.stockCard.findUnique({
                         where: { id: product.stockCardId },
@@ -223,6 +231,11 @@ export class WarehouseService {
                         },
                     });
                 }
+
+                return {
+                    stockTake,
+                    stockCardWarehouses
+                };
             });
             return result;
         } catch (error) {
