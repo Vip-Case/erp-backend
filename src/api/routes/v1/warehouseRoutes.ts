@@ -1,4 +1,3 @@
-
 import { Elysia } from 'elysia';
 import WarehouseController from '../../controllers/warehouseController';
 
@@ -15,6 +14,7 @@ export const WarehouseRoutes = (app: Elysia) => {
       .get("/stocktake", WarehouseController.getAllStocktakeWarehouses, { tags: ["Warehouses"] })
       .get("/stocktake/:id", WarehouseController.getStocktakeWarehouseById, { tags: ["Warehouses"] })
       .delete("/stocktake/:id", WarehouseController.deleteStocktakeWarehouse, { tags: ["Warehouses"] })
+      .post("/order-prepare", WarehouseController.createOrderPrepareWarehouse, { tags: ["Warehouses"] })
   );
   return app;
 };

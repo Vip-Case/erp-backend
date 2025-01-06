@@ -12,6 +12,17 @@ export interface StocktakeWarehouse {
     }>
 }
 
+export interface OrderPrepareWarehouse {
+    id: string;
+    warehouseId: string;
+    branchCode: string;
+    currentId: string;
+    products: Array<{
+        stockCardId: string;
+        quantity: number;
+    }>
+}
+
 // Service Initialization
 const warehouseService = new WarehouseService();
 
@@ -100,8 +111,14 @@ export const WarehouseController = {
 
     createStocktakeWarehouse: async (ctx: Context) => {
         const stockTakeData: StocktakeWarehouse = ctx.body as StocktakeWarehouse;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const result = await warehouseService.createStocktakeWarehouse(stockTakeData);
+            const result = await warehouseService.createStocktakeWarehouse(stockTakeData, bearerToken);
             if (!result) {
                 return ctx.error(400, 'Stok sayım işlemi oluşturulamadı');
             }
@@ -169,6 +186,35 @@ export const WarehouseController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching stocktake warehouses", details: error.message };
+        }
+    },
+
+    createOrderPrepareWarehouse: async (ctx: Context) => {
+        const orderPrepareData: OrderPrepareWarehouse = ctx.body as OrderPrepareWarehouse;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
+        try {
+            const result = await warehouseService.createOrderPrepareWarehouse(orderPrepareData, bearerToken);
+            if (!result) {
+                return ctx.error(400, 'Sipariş hazırlama işlemi oluşturulamadı');
+            }
+            ctx.set.status = 201;
+            return {
+                success: true,
+                data: result,
+                message: 'Sipariş hazırlama işlemi başarıyla oluşturuldu'
+            };
+        } catch (error: any) {
+            ctx.set.status = error.status || 500;
+            return {
+                success: false,
+                error: "Sipariş hazırlama işlemi oluşturulurken hata oluştu",
+                details: error.message
+            };
         }
     }
 }

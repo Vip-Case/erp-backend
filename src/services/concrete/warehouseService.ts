@@ -14,6 +14,18 @@ export interface StocktakeWarehouse {
         quantity: number;
     }>
 }
+
+export interface OrderPrepareWarehouse {
+    id: string;
+    warehouseId: string;
+    branchCode: string;
+    currentId: string;
+    products: Array<{
+        stockCardId: string;
+        quantity: number;
+    }>
+}
+
 export class WarehouseService {
     private warehouseRepository: BaseRepository<Warehouse>;
 
@@ -154,8 +166,9 @@ export class WarehouseService {
         }
     }
 
-    async createStocktakeWarehouse(data: StocktakeWarehouse): Promise<any> {
+    async createStocktakeWarehouse(data: StocktakeWarehouse, bearerToken: string): Promise<any> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const result = await prisma.$transaction(async (prisma) => {
                 const stockTake = await prisma.stockTake.create({
                     data: {
@@ -163,6 +176,9 @@ export class WarehouseService {
                         warehouse: {
                             connect: { id: data.warehouseId },
                         },
+                        createdByUser: {
+                            connect: { username: username }
+                        }
                     },
                     include: {
                         warehouse: true
@@ -346,6 +362,104 @@ export class WarehouseService {
             });
         } catch (error) {
             logger.error("Error fetching stocktaking warehouses", error);
+            throw error;
+        }
+    }
+
+    async createOrderPrepareWarehouse(data: OrderPrepareWarehouse, bearerToken: string): Promise<any> {
+        try {
+            const username = extractUsernameFromToken(bearerToken);
+            const result = await prisma.$transaction(async (prisma) => {
+                const orderPrepare = await prisma.orderPrepareWarehouse.create({
+                    data: {
+                        warehouse: {
+                            connect: { id: data.warehouseId },
+                        },
+                        createdByUser: {
+                            connect: { username: username }
+                        },
+                        current: {
+                            connect: { id: data.currentId },
+                        },
+                    },
+                    include: {
+                        warehouse: true
+                    }
+                });
+
+                for (const product of data.products) {
+                    // Önce mevcut stok kartı-depo ilişkisini bul
+                    const existingStockCardWarehouse = await prisma.stockCardWarehouse.findFirst({
+                        where: {
+                            stockCardId: product.stockCardId,
+                            warehouseId: data.warehouseId
+                        }
+                    });
+
+                    if (!existingStockCardWarehouse) {
+                        throw new Error(`Stok kartı bulunamadı: ${product.stockCardId}`);
+                    }
+
+                    // Yeni miktar = Mevcut miktar - Çıkılacak miktar
+                    const newQuantity = existingStockCardWarehouse.quantity.toNumber() - product.quantity;
+
+                    if (newQuantity < 0) {
+                        throw new Error(`Yetersiz stok. Stok kartı: ${product.stockCardId}, Mevcut: ${existingStockCardWarehouse.quantity}, İstenen: ${product.quantity}`);
+                    }
+
+                    const stockCardWarehouse = await prisma.stockCardWarehouse.update({
+                        where: {
+                            id: existingStockCardWarehouse.id
+                        },
+                        data: {
+                            quantity: newQuantity
+                        },
+                        include: {
+                            stockCard: true,
+                            warehouse: true
+                        }
+                    });
+
+                    const _productCode = await prisma.stockCard.findUnique({
+                        where: { id: product.stockCardId },
+                        select: { productCode: true },
+                    });
+                    const _warehouseCode = await prisma.warehouse.findUnique({
+                        where: { id: data.warehouseId },
+                        select: { warehouseCode: true },
+                    });
+                    const _branch = await prisma.branchWarehouse.findUnique({
+                        where: { id: data.warehouseId },
+                        select: { branch: { select: { branchCode: true } } },
+                    });
+
+                    await prisma.stockMovement.create({
+                        data: {
+                            documentType: "Other",
+                            invoiceType: "Other",
+                            movementType: "Devir",
+                            gcCode: "Cikis",
+                            type: "Siparis Hazirlama",
+                            description: "Siparis Hazirlama Cikisi",
+                            quantity: product.quantity,
+                            stockCard: {
+                                connect: { productCode: _productCode?.productCode },
+                            },
+                            warehouse: {
+                                connect: { warehouseCode: _warehouseCode?.warehouseCode },
+                            },
+                            branch: {
+                                connect: { branchCode: data.branchCode },
+                            },
+                        },
+                    });
+                }
+
+                return orderPrepare;
+            });
+            return result;
+        } catch (error) {
+            logger.error("Error preparing order warehouse", error);
             throw error;
         }
     }
