@@ -14,6 +14,9 @@ interface CustomContext {
             userId: string;
             permissions: string[];
         };
+        headers: {
+            authorization?: string;
+        };
     };
     body: RoleRequest;
     params: { id?: string };
@@ -39,15 +42,23 @@ export const RoleController = {
 
     createRole: async (ctx: CustomContext) => {
         const { roleName, description, permissionIds } = ctx.body;
+        const bearerToken = ctx.request.headers.authorization;
+
         try {
             if (!ctx.request.user?.isAdmin) {
                 ctx.set.status = 403;
                 return { error: "Yalnızca adminler yeni rol oluşturabilir." };
             }
 
+            if (!bearerToken) {
+                ctx.set.status = 401;
+                return { error: "Authorization token is required" };
+            }
+
             const role = await roleService.createRole(
                 { roleName, description } as Role,
-                permissionIds || []
+                permissionIds || [],
+                bearerToken
             );
             ctx.set.status = 201;
             return role;
@@ -76,16 +87,23 @@ export const RoleController = {
     updateRole: async (ctx: CustomContext) => {
         const { id } = ctx.params;
         const { roleName, description, permissionIds } = ctx.body;
+        const bearerToken = ctx.request.headers.authorization;
         try {
             if (!ctx.request.user?.isAdmin) {
                 ctx.set.status = 403;
                 return { error: "Yalnızca adminler rol güncelleyebilir." };
             }
 
+            if (!bearerToken) {
+                ctx.set.status = 401;
+                return { error: "Authorization token is required" };
+            }
+
             const role = await roleService.updateRole(
                 id || "",
                 { roleName, description },
-                permissionIds || []
+                bearerToken,
+                permissionIds
             );
             ctx.set.status = 200;
             return role;

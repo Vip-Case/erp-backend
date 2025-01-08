@@ -29,8 +29,14 @@ export const PosController = {
     updatePos: async (ctx: Context) => {
         const { id } = ctx.params;
         const posData: Partial<Pos> = ctx.body as Partial<Pos>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const pos = await posService.updatePos(id, posData);
+            const pos = await posService.updatePos(id, posData, bearerToken);
             ctx.set.status = 200;
             return pos;
         } catch (error: any) {

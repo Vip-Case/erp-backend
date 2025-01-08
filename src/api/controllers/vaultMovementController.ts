@@ -29,8 +29,13 @@ export const VaultMovementController = {
     updateVaultMovement: async (ctx: Context) => {
         const { id } = ctx.params;
         const vaultMovementData: Partial<VaultMovement> = ctx.body as Partial<VaultMovement>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const vaultMovement = await vaultMovementService.updateVaultMovement(id, vaultMovementData);
+            const vaultMovement = await vaultMovementService.updateVaultMovement(id, vaultMovementData, bearerToken);
             ctx.set.status = 200;
             return vaultMovement;
         } catch (error: any) {

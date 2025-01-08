@@ -30,7 +30,12 @@ export class StockMovementService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
@@ -84,8 +89,9 @@ export class StockMovementService {
     }
 
 
-    async updateStockMovement(id: string, stockMovementData: Partial<StockMovement>): Promise<StockMovement> {
+    async updateStockMovement(id: string, stockMovementData: Partial<StockMovement>, bearerToken: string): Promise<StockMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.stockMovement.update({
                 where: { id },
                 data: {
@@ -99,6 +105,11 @@ export class StockMovementService {
                     unitPrice: stockMovementData.unitPrice,
                     totalPrice: stockMovementData.totalPrice,
                     unitOfMeasure: stockMovementData.unitOfMeasure,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
                             warehouseCode: stockMovementData.warehouseCode

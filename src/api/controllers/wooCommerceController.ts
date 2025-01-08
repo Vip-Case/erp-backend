@@ -1,3 +1,4 @@
+import invoiceService, { InvoiceService } from "../../services/concrete/invoiceService";
 import { WooCommerceService } from "../../services/concrete/wooCommerceService";
 
 interface SyncProductsRequestBody {
@@ -118,4 +119,33 @@ export class WooCommerceController {
       throw error;
     }
   }
+
+  public async createOrderFromInvoice(invoiceId: string, storeId: string): Promise<any> {
+    try {
+      if (!this.wooCommerceService) {
+        await this.initializeWooCommerceService(storeId);
+      }
+
+      // ERP'den fatura bilgilerini al
+      const invoiceService = new InvoiceService();
+      const invoiceDetails = await invoiceService.getInvoiceInfoById(invoiceId);
+      if (!invoiceDetails) {
+        throw new Error(`Fatura bulunamadı: ${invoiceId}`);
+      }
+
+      // WooCommerce sipariş oluştur
+      await this.wooCommerceService.createOrder(invoiceDetails);
+
+      console.log(`WooCommerce siparişi başarıyla oluşturuldu. Invoice ID: ${invoiceId}`);
+      return { success: true, message: `Sipariş başarıyla oluşturuldu. Invoice ID: ${invoiceId}` };
+    } catch (error) {
+      console.error("WooCommerce siparişi oluşturulurken hata oluştu:", error);
+      return {
+        success: false,
+        message: "WooCommerce siparişi oluşturulamadı.",
+        error: error instanceof Error ? error.message : error,
+      };
+    }
+  }
+
 }

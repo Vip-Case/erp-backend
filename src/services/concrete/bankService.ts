@@ -24,7 +24,12 @@ export class BankService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     branch: bank.branchCode ? {
@@ -40,14 +45,20 @@ export class BankService {
         }
     }
 
-    async updateBank(id: string, bank: Partial<Bank>): Promise<Bank> {
+    async updateBank(id: string, bank: Partial<Bank>, bearerToken: string): Promise<Bank> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.bank.update({
                 where: { id },
                 data: {
                     bankName: bank.bankName,
                     balance: bank.balance,
                     currency: bank.currency,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     branch: bank.branchCode ? {
                         connect: { branchCode: bank.branchCode },

@@ -26,7 +26,12 @@ export class BankMovementService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     bank: bankMovement.bankId ? {
@@ -65,8 +70,9 @@ export class BankMovementService {
         }
     }
 
-    async updateBankMovement(id: string, bankMovement: Partial<BankMovement>): Promise<BankMovement> {
+    async updateBankMovement(id: string, bankMovement: Partial<BankMovement>, bearerToken: string): Promise<BankMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             // Eski bankMovement bilgilerini alıyoruz
             const oldBankMovement = await this.bankMovementRepository.findById(id);
             // Güncellenmemiş enterin ve emerging değerlerini alıyoruz
@@ -81,6 +87,9 @@ export class BankMovementService {
             const enteringValue = enteringDifference < 0 ? enteringDifference * -1 : enteringDifference;
             const emergingValue = emergingDifference < 0 ? emergingDifference * -1 : emergingDifference;
             // Önce yeni gelen veride bankId var mı kontrol ediyoruz eğer yoksa eski bankId yi alıyoruz eğer varsa yeni bankId yi alıyoruz
+            if (!oldBankMovement) {
+                throw new Error(`BankMovement with id ${id} not found`);
+            }
             const bankId = bankMovement.bankId || oldBankMovement.bankId;
             // Banka bakisini güncelliyoruz
             BankService.updateBankBalance(bankId, new Prisma.Decimal(enteringValue), new Prisma.Decimal(emergingValue));
@@ -96,6 +105,11 @@ export class BankMovementService {
                     bankDirection: bankMovement?.bankDirection,
                     bankType: bankMovement?.bankType,
                     bankDocumentType: bankMovement?.bankDocumentType,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     bank: bankMovement.bankId ? {
                         connect: {

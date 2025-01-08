@@ -20,7 +20,7 @@ CREATE TYPE "CurrentMovementType" AS ENUM ('Borc', 'Alacak');
 CREATE TYPE "CurrentMovementDocumentType" AS ENUM ('Devir', 'Fatura', 'IadeFatura', 'Kasa', 'MusteriSeneti', 'BorcSeneti', 'MusteriCeki', 'BorcCeki', 'KarsiliksizCek', 'Muhtelif');
 
 -- CreateEnum
-CREATE TYPE "CurrentPaymentType" AS ENUM ('Kasa', 'POS', 'Banka', 'Cek', 'Senet', 'Diger');
+CREATE TYPE "CurrentPaymentType" AS ENUM ('CokluOdeme', 'Kasa', 'POS', 'Banka', 'Cek', 'Senet', 'Diger');
 
 -- CreateEnum
 CREATE TYPE "ReceiptType" AS ENUM ('Devir', 'Sayim', 'Nakil', 'Giris', 'Cikis', 'Fire');
@@ -68,8 +68,6 @@ CREATE TABLE "Permission" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "groupId" TEXT,
     "route" TEXT,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
 );
@@ -92,7 +90,7 @@ CREATE TABLE "StockCard" (
     "productName" VARCHAR(150) NOT NULL,
     "unit" "StockUnits" NOT NULL DEFAULT 'Adet',
     "shortDescription" VARCHAR(150),
-    "description" VARCHAR(250),
+    "description" TEXT,
     "companyCode" VARCHAR(50),
     "branchCode" VARCHAR(50),
     "brandId" VARCHAR(100),
@@ -126,8 +124,6 @@ CREATE TABLE "StockCardEFatura" (
     "stockCardId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "StockCardEFatura_pkey" PRIMARY KEY ("id")
 );
@@ -143,8 +139,6 @@ CREATE TABLE "StockCardManufacturer" (
     "currentId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "StockCardManufacturer_pkey" PRIMARY KEY ("id")
 );
@@ -311,8 +305,6 @@ CREATE TABLE "Company" (
     "website" VARCHAR(100),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "Company_pkey" PRIMARY KEY ("id")
 );
@@ -542,7 +534,6 @@ CREATE TABLE "CurrentMovement" (
     "description" VARCHAR(250),
     "debtAmount" DECIMAL(15,4),
     "creditAmount" DECIMAL(15,4),
-    "balanceAmount" DECIMAL(15,4),
     "priceListId" TEXT,
     "movementType" "CurrentMovementType" NOT NULL,
     "documentType" "CurrentMovementDocumentType",
@@ -588,9 +579,11 @@ CREATE TABLE "User" (
     "phone" VARCHAR(50) NOT NULL,
     "address" VARCHAR(250) NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "companyCode" TEXT NOT NULL,
+    "companyCode" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdBy" TEXT,
+    "updatedBy" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -676,6 +669,7 @@ CREATE TABLE "VaultMovement" (
     "vaultDocumentType" "VaultDocumentType" NOT NULL,
     "createdBy" TEXT,
     "updatedBy" TEXT,
+    "currentMovementId" TEXT,
 
     CONSTRAINT "VaultMovement_pkey" PRIMARY KEY ("id")
 );
@@ -705,6 +699,7 @@ CREATE TABLE "BankMovement" (
     "bankDirection" "VaultDirection" NOT NULL,
     "bankType" "VaultType" NOT NULL,
     "bankDocumentType" "VaultDocumentType" NOT NULL,
+    "currentMovementId" TEXT,
     "createdBy" TEXT,
     "updatedBy" TEXT,
 
@@ -736,6 +731,7 @@ CREATE TABLE "PosMovement" (
     "posDirection" "VaultDirection" NOT NULL,
     "posType" "VaultType" NOT NULL,
     "posDocumentType" "VaultDocumentType" NOT NULL,
+    "currentMovementId" TEXT,
     "createdBy" TEXT,
     "updatedBy" TEXT,
 
@@ -761,8 +757,6 @@ CREATE TABLE "Order" (
     "billingAddressId" TEXT,
     "isInvoiceCreated" BOOLEAN NOT NULL DEFAULT false,
     "storeId" TEXT NOT NULL,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
@@ -938,11 +932,35 @@ CREATE TABLE "Notification" (
 );
 
 -- CreateTable
+CREATE TABLE "_RoleToUser" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_RoleToUser_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
 CREATE TABLE "_PermissionToRole" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
 
     CONSTRAINT "_PermissionToRole_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_PermissionToUser" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_PermissionToUser_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
+CREATE TABLE "_StockCardToStockCardEFatura" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_StockCardToStockCardEFatura_AB_pkey" PRIMARY KEY ("A","B")
 );
 
 -- CreateTable
@@ -1073,7 +1091,16 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "Invoice_invoiceNo_key" ON "Invoice"("invoiceNo");
 
 -- CreateIndex
+CREATE INDEX "_RoleToUser_B_index" ON "_RoleToUser"("B");
+
+-- CreateIndex
 CREATE INDEX "_PermissionToRole_B_index" ON "_PermissionToRole"("B");
+
+-- CreateIndex
+CREATE INDEX "_PermissionToUser_B_index" ON "_PermissionToUser"("B");
+
+-- CreateIndex
+CREATE INDEX "_StockCardToStockCardEFatura_B_index" ON "_StockCardToStockCardEFatura"("B");
 
 -- CreateIndex
 CREATE INDEX "_StockCardToStore_B_index" ON "_StockCardToStore"("B");
@@ -1097,13 +1124,7 @@ ALTER TABLE "Role" ADD CONSTRAINT "Role_createdBy_fkey" FOREIGN KEY ("createdBy"
 ALTER TABLE "Role" ADD CONSTRAINT "Role_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Permission" ADD CONSTRAINT "Permission_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Permission" ADD CONSTRAINT "Permission_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "PermissionGroup"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Permission" ADD CONSTRAINT "Permission_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StockCard" ADD CONSTRAINT "StockCard_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1121,28 +1142,13 @@ ALTER TABLE "StockCard" ADD CONSTRAINT "StockCard_createdBy_fkey" FOREIGN KEY ("
 ALTER TABLE "StockCard" ADD CONSTRAINT "StockCard_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "StockCardEFatura" ADD CONSTRAINT "StockCardEFatura_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StockCardEFatura" ADD CONSTRAINT "StockCardEFatura_stockCardId_fkey" FOREIGN KEY ("stockCardId") REFERENCES "StockCard"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StockCardEFatura" ADD CONSTRAINT "StockCardEFatura_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "StockCardManufacturer" ADD CONSTRAINT "StockCardManufacturer_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "Brand"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StockCardManufacturer" ADD CONSTRAINT "StockCardManufacturer_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StockCardManufacturer" ADD CONSTRAINT "StockCardManufacturer_currentId_fkey" FOREIGN KEY ("currentId") REFERENCES "Current"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StockCardManufacturer" ADD CONSTRAINT "StockCardManufacturer_stockCardId_fkey" FOREIGN KEY ("stockCardId") REFERENCES "StockCard"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "StockCardManufacturer" ADD CONSTRAINT "StockCardManufacturer_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Brand" ADD CONSTRAINT "Brand_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1209,12 +1215,6 @@ ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_updatedBy_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_warehouseCode_fkey" FOREIGN KEY ("warehouseCode") REFERENCES "Warehouse"("warehouseCode") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Company" ADD CONSTRAINT "Company_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Company" ADD CONSTRAINT "Company_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Branch" ADD CONSTRAINT "Branch_companyCode_fkey" FOREIGN KEY ("companyCode") REFERENCES "Company"("companyCode") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1334,7 +1334,7 @@ ALTER TABLE "CurrentCategoryItem" ADD CONSTRAINT "CurrentCategoryItem_categoryId
 ALTER TABLE "CurrentCategoryItem" ADD CONSTRAINT "CurrentCategoryItem_currentCode_fkey" FOREIGN KEY ("currentCode") REFERENCES "Current"("currentCode") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_companyCode_fkey" FOREIGN KEY ("companyCode") REFERENCES "Company"("companyCode") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "User" ADD CONSTRAINT "User_companyCode_fkey" FOREIGN KEY ("companyCode") REFERENCES "Company"("companyCode") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1397,6 +1397,9 @@ ALTER TABLE "VaultMovement" ADD CONSTRAINT "VaultMovement_updatedBy_fkey" FOREIG
 ALTER TABLE "VaultMovement" ADD CONSTRAINT "VaultMovement_vaultId_fkey" FOREIGN KEY ("vaultId") REFERENCES "Vault"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "VaultMovement" ADD CONSTRAINT "VaultMovement_currentMovementId_fkey" FOREIGN KEY ("currentMovementId") REFERENCES "CurrentMovement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Bank" ADD CONSTRAINT "Bank_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1419,6 +1422,9 @@ ALTER TABLE "BankMovement" ADD CONSTRAINT "BankMovement_receiptId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "BankMovement" ADD CONSTRAINT "BankMovement_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BankMovement" ADD CONSTRAINT "BankMovement_currentMovementId_fkey" FOREIGN KEY ("currentMovementId") REFERENCES "CurrentMovement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Pos" ADD CONSTRAINT "Pos_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1445,19 +1451,16 @@ ALTER TABLE "PosMovement" ADD CONSTRAINT "PosMovement_receiptId_fkey" FOREIGN KE
 ALTER TABLE "PosMovement" ADD CONSTRAINT "PosMovement_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_billingAddressId_fkey" FOREIGN KEY ("billingAddressId") REFERENCES "OrderInvoiceAddress"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "PosMovement" ADD CONSTRAINT "PosMovement_currentMovementId_fkey" FOREIGN KEY ("currentMovementId") REFERENCES "CurrentMovement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Order" ADD CONSTRAINT "Order_billingAddressId_fkey" FOREIGN KEY ("billingAddressId") REFERENCES "OrderInvoiceAddress"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_shippingAddressId_fkey" FOREIGN KEY ("shippingAddressId") REFERENCES "OrderInvoiceAddress"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Order" ADD CONSTRAINT "Order_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderCargo" ADD CONSTRAINT "OrderCargo_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1520,10 +1523,28 @@ ALTER TABLE "MarketPlaceProductMatch" ADD CONSTRAINT "MarketPlaceProductMatch_st
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_readBy_fkey" FOREIGN KEY ("readBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "_PermissionToRole" ADD CONSTRAINT "_PermissionToRole_A_fkey" FOREIGN KEY ("A") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_PermissionToRole" ADD CONSTRAINT "_PermissionToRole_B_fkey" FOREIGN KEY ("B") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_PermissionToUser" ADD CONSTRAINT "_PermissionToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_PermissionToUser" ADD CONSTRAINT "_PermissionToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_StockCardToStockCardEFatura" ADD CONSTRAINT "_StockCardToStockCardEFatura_A_fkey" FOREIGN KEY ("A") REFERENCES "StockCard"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_StockCardToStockCardEFatura" ADD CONSTRAINT "_StockCardToStockCardEFatura_B_fkey" FOREIGN KEY ("B") REFERENCES "StockCardEFatura"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_StockCardToStore" ADD CONSTRAINT "_StockCardToStore_A_fkey" FOREIGN KEY ("A") REFERENCES "StockCard"("id") ON DELETE CASCADE ON UPDATE CASCADE;

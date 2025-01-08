@@ -26,7 +26,12 @@ export class VaultMovementService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     vault: vaultMovement.vaultId ? {
@@ -70,7 +75,9 @@ export class VaultMovementService {
         }
     }
 
-    async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>): Promise<VaultMovement> {
+    async updateVaultMovement(id: string, vaultMovement: Partial<VaultMovement>, bearerToken: string): Promise<VaultMovement> {
+        
+        const username = extractUsernameFromToken(bearerToken);
         // Eski vaultMovement bilgilerini alıyoruz
         const oldVaultMovement = await this.vaultMovementRepository.findById(id);
         // Güncellenmemiş enterin ve emerging değerlerini alıyoruz
@@ -85,6 +92,9 @@ export class VaultMovementService {
         const enteringValue = enteringDifference < 0 ? enteringDifference * -1 : enteringDifference;
         const emergingValue = emergingDifference < 0 ? emergingDifference * -1 : emergingDifference;
         // Önce yeni gelen veride vaultId var mı kontrol ediyoruz eğer yoksa eski vaultId yi alıyoruz eğer varsa yeni vaultId yi alıyoruz
+        if (!oldVaultMovement) {
+            throw new Error("Old vault movement not found");
+        }
         const vaultId = vaultMovement.vaultId || oldVaultMovement.vaultId;
         // Vault bakiyesini güncelliyoruz
         VaultService.updateVaultBalance(vaultId, new Prisma.Decimal(enteringValue), new Prisma.Decimal(emergingValue));
@@ -101,6 +111,11 @@ export class VaultMovementService {
                     vaultDirection: vaultMovement?.vaultDirection,
                     vaultType: vaultMovement?.vaultType,
                     vaultDocumentType: vaultMovement?.vaultDocumentType,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     vault: vaultMovement.vaultId ? {
                         connect: {

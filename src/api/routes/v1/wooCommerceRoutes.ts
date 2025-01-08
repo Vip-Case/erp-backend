@@ -174,8 +174,36 @@ export const wooCommerceRoutes = (app: Elysia) => {
     }
   });
   
+  app.post("/create-order-from-invoice", async ({ body, set }) => {
+    const { invoiceId, storeId } = body as {
+      invoiceId?: string;
+      storeId?: string;
+    };
+
+    // Parametre kontrolü
+    if (!invoiceId || !storeId) {
+      set.status = 400;
+      return { success: false, message: "Eksik parametreler. invoiceId ve storeId gerekli." };
+    }
+
+    try {
+      const result = await wooCommerceController.createOrderFromInvoice(invoiceId, storeId);
+      return result;
+    } catch (error) {
+      console.error("WooCommerce siparişi oluşturulurken hata oluştu:", error);
+      set.status = 500;
+      return {
+        success: false,
+        message: "WooCommerce siparişi oluşturulamadı.",
+        error: error instanceof Error ? error.message : error,
+      };
+    }
+  });
 
 };
+
+
+
 
 // Type guard fonksiyonu
 function isSyncProductsRequestBody(body: any): body is SyncProductsRequestBody {

@@ -36,12 +36,17 @@ export class StockCardService {
                 const resultWithoutWarehouse = await prisma.stockCard.create({
                     data: {
                         ...stockCard,
-
                         createdByUser: {
                             connect: {
                                 username: username
-                                }
+                            }
                         },
+                        updatedByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
+
                         company: stockCard.companyCode ? {
                             connect: { companyCode: stockCard.companyCode },
                         } : undefined,
@@ -61,12 +66,17 @@ export class StockCardService {
                 const resultWithWarehouse = await prisma.stockCard.create({
                     data: {
                         ...stockCard,
-
                         createdByUser: {
                             connect: {
                                 username: username
-                                }
+                            }
                         },
+                        updatedByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
+
                         company: stockCard.companyCode ? {
                             connect: { companyCode: stockCard.companyCode },
                         } : undefined,
@@ -97,12 +107,18 @@ export class StockCardService {
         }
     }
 
-    async updateStockCard(id: string, stockCard: Partial<StockCard>, warehouseIds?: string[]): Promise<StockCard> {
+    async updateStockCard(id: string, stockCard: Partial<StockCard>, bearerToken: string, warehouseIds?: string[]): Promise<StockCard> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.stockCard.update({
                 where: { id },
                 data: {
                     ...stockCard,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     company: stockCard.companyCode ? {
                         connect: { companyCode: stockCard.companyCode },
@@ -200,10 +216,11 @@ export class StockCardService {
         eFatura?: StockCardEFatura[];
         manufacturers?: StockCardManufacturer[];
         marketNames?: StockCardMarketNames[];
-
-    }) => {
+    }, bearerToken: string) => {
         const result = await prisma.$transaction(async (prisma) => {
+            const username = extractUsernameFromToken(bearerToken);
             console.log(data);
+
             const stockCard = await prisma.stockCard.create({
                 data: {
                     productCode: data.stockCard?.productCode,
@@ -225,6 +242,16 @@ export class StockCardService {
                     allowNegativeStock: data.stockCard?.allowNegativeStock,
                     maliyet: data.stockCard?.maliyet,
                     maliyetDoviz: data.stockCard?.maliyetDoviz,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     company: data.stockCard.companyCode ? {
                         connect: { companyCode: data.stockCard.companyCode },
@@ -426,8 +453,9 @@ export class StockCardService {
         eFatura?: StockCardEFatura[];
         manufacturers?: StockCardManufacturer[];
         marketNames?: StockCardMarketNames[];
-    }) => {
+    }, bearerToken: string) => {
         const result = await prisma.$transaction(async (prisma) => {
+            const username = extractUsernameFromToken(bearerToken);
             // 1. StockCard'ı güncelle
             const updatedStockCard = await prisma.stockCard.update({
                 where: { id: _id },
@@ -450,11 +478,15 @@ export class StockCardService {
                     allowNegativeStock: data.stockCard.allowNegativeStock,
                     maliyet: data.stockCard?.maliyet,
                     maliyetDoviz: data.stockCard?.maliyetDoviz,
-
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
                     brand: data.stockCard.brandId ? {
                         connect: { id: data.stockCard.brandId },
                     } : undefined,
-                },
+                } as Prisma.StockCardUpdateInput,
             });
 
             // 2. İlişkili verileri sil ve yeniden ekle

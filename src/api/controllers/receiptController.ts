@@ -15,6 +15,7 @@ export const ReceiptController = {
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
+        
         try {
             const receipt = await receiptService.createReceipt(receiptData, bearerToken);
             ctx.set.status = 200;
@@ -28,8 +29,14 @@ export const ReceiptController = {
     updateReceipt: async (ctx: Context) => {
         const { id } = ctx.params;
         const receiptData: Partial<Receipt> = ctx.body as Partial<Receipt>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const attribute = await receiptService.updateReceipt(id, receiptData);
+            const attribute = await receiptService.updateReceipt(id, receiptData, bearerToken);
             ctx.set.status = 200;
             return attribute;
         } catch (error: any) {

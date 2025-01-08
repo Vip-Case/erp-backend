@@ -1,5 +1,6 @@
 import { PrismaClient, MarketPlaceCategories, StockCard, StockUnits, ProductType, Warehouse, StockCardWarehouse } from "@prisma/client";
 import { WooCommerceAdapter } from "../../adapters/wooCommerceAdapter";
+import { InvoiceDetailResponse } from "./invoiceService";
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,11 @@ interface WooCategory {
   name: string;
   parent?: number | string | null;
   children?: WooCategory[];
+}
+interface WooCommerceMeta {
+  id: number;
+  key: string;
+  value: string;
 }
 
 interface Product {
@@ -519,206 +525,211 @@ export class WooCommerceService {
 
       // StockCard oluşturma veya güncelleme döngüsü
       for (const product of selectedProducts) {
-        console.log("İşlenen ürün:", product.productName);
-        if (!product.productSku || !product.productName) {
-          const errorMessage = `Hatalı ürün: ${product.productName}. productSku eksik.`;
-          console.error(errorMessage);
-          continue;
-
-        }
-
-        // Branch doğrulama
-        if (branchCode) {
-          const branchExists = await prisma.branch.findUnique({
-            where: { branchCode },
-          });
-
-          if (!branchExists) {
-            console.error(`Branch bulunamadı: ${branchCode}`);
+        try {
+          console.log("İşlenen ürün:", product.productName);
+          if (!product.productSku || !product.productName) {
+            const errorMessage = `Hatalı ürün: ${product.productName}. productSku eksik.`;
+            console.error(errorMessage);
             continue;
+
           }
-        }
 
-        // Store ile ilişkili MarketPlace bilgisi üzerinden company bilgisi kontrol edilir
-        const store = product.store;
-        let companyCode: string | null = null;
-
-        if (store?.marketPlace?.company) {
-          companyCode = store.marketPlace.company.companyCode; // MarketPlace ile ilişkili companyCode alınır
-        } else {
-          console.error(`MarketPlace ilişkili company bulunamadı: ${store?.marketPlace?.id}`);
-          continue;
-        }
-
-        // StockCard kontrol et
-        const existingStockCard = await prisma.stockCard.findUnique({
-          where: { productCode: product.productSku },
-        });
-
-        let stockCard;
-        if (!existingStockCard) {
-          console.log("StockCard oluşturuluyor:", {
-            productCode: product.productSku,
-            productName: product.productName
-          });
-
-          // StockCard oluştur
-          stockCard = await prisma.stockCard.create({
-            data: {
-              productCode: product.productSku,
-              productName: product.productName,
-              unit: StockUnits.Adet,
-              shortDescription: product.shortDescription || "",
-              description: product.description || "",
-              brandId: product.marketPlaceBrands?.id || null,
-              productType: mapProductType(product.productType),
-              companyCode: companyCode, // Company Code ekleniyor
-              branchCode: branchCode,
-              Store: store
-                ? {
-                  connect: {
-                    id: store.id,
-                  },
-                }
-                : undefined,
-            },
-          });
-          console.log(`StockCard oluşturuldu: ${product.productName} (SKU: ${product.productSku})`);
-        } else {
-          console.log("StockCard güncelleniyor:", {
-            productCode: product.productSku,
-            productName: product.productName,
-          });
-          // StockCard güncelle
-          stockCard = await prisma.stockCard.update({
-            where: { productCode: product.productSku },
-            data: {
-              productName: product.productName,
-              unit: StockUnits.Adet,
-              shortDescription: product.shortDescription || "",
-              description: product.description || "",
-              brandId: product.marketPlaceBrands?.id || null,
-              productType: mapProductType(product.productType),
-              companyCode: companyCode, // Company Code ekleniyor
-              branchCode: branchCode,
-              Store: store
-                ? {
-                  connect: {
-                    id: store.id,
-                  },
-                }
-                : undefined,
-            },
-          });
-          console.log(`StockCard güncellendi: ${product.productName} (SKU: ${product.productSku})`);
-        }
-
-        // PriceListItem kontrol ve oluşturma
-        const wooData = wooCommerceData[product.productSku] || {};
-        const price = useWooCommercePrice ? wooData.price || 0 : 0; // WooCommerce'den veya varsayılan değer
-        const quantity = useWooCommerceQuantity ? wooData.quantity || 0 : 0;
-
-        // PriceListItem kontrol ve oluşturma
-        const priceListItem = await prisma.stockCardPriceListItems.findFirst({
-          where: {
-            stockCardId: stockCard.id,
-            priceListId: wooCommercePriceList.id,
-          },
-        });
-
-        if (!priceListItem) {
-          await prisma.stockCardPriceListItems.create({
-            data: {
-              stockCardId: stockCard.id,
-              priceListId: wooCommercePriceList.id,
-              price: price, // Varsayılan fiyat
-              vatRate: 18, // Varsayılan KDV
-            },
-          });
-          console.log(`PriceListItem oluşturuldu: ${product.productName} (PriceList: WooCommerce)`);
-        } else {
-          // Fiyatı güncelle
-          await prisma.stockCardPriceListItems.update({
-            where: { id: priceListItem.id },
-            data: { price },
-          });
-          console.log(`PriceListItem güncellendi: ${product.productName} - Price: ${price}`);
-        }
-
-        // StockCardWarehouse kontrol ve oluşturma
-        const warehouseRecord = await prisma.stockCardWarehouse.findFirst({
-          where: {
-            stockCardId: stockCard.id,
-            warehouseId: warehouseId || "",
-          },
-        });
-
-        if (!warehouseRecord) {
-          await prisma.stockCardWarehouse.create({
-            data: {
-              stockCardId: stockCard.id,
-              warehouseId: warehouseId || "",
-              quantity: quantity,
-            },
-          });
-          console.log(`StockCardWarehouse oluşturuldu: ${product.productName} (Warehouse ID: ${warehouseId})`);
-        } else {
-          // Miktarı güncelle
-          await prisma.stockCardWarehouse.update({
-            where: { id: warehouseRecord.id },
-            data: { quantity },
-          });
-          console.log(`StockCardWarehouse güncellendi: ${product.productName} - Quantity: ${quantity}`);
-        }
-
-
-        // MarketPlaceAttributes ile StockCardAttribute ve StockCardAttributeItems oluştur
-        if (product.marketPlaceAttributes && product.marketPlaceAttributes.length > 0) {
-          for (const attr of product.marketPlaceAttributes) {
-            if (!attr.attributeName || !attr.valueName) {
-              console.error(`Hatalı attribute: ${attr.attributeName}. valueName eksik.`);
-              continue;
-            }
-
-            // StockCardAttribute kontrol et
-            let stockCardAttribute = await prisma.stockCardAttribute.findFirst({
-              where: {
-                attributeName: attr.attributeName,
-                value: attr.valueName,
-              },
+          // Branch doğrulama
+          if (branchCode) {
+            const branchExists = await prisma.branch.findUnique({
+              where: { branchCode },
             });
 
-            if (!stockCardAttribute) {
-              // StockCardAttribute oluştur
-              stockCardAttribute = await prisma.stockCardAttribute.create({
-                data: {
+            if (!branchExists) {
+              console.error(`Branch bulunamadı: ${branchCode}`);
+              continue;
+            }
+          }
+
+          // Store ile ilişkili MarketPlace bilgisi üzerinden company bilgisi kontrol edilir
+          const store = product.store;
+          let companyCode: string | null = null;
+
+          if (store?.marketPlace?.company) {
+            companyCode = store.marketPlace.company.companyCode; // MarketPlace ile ilişkili companyCode alınır
+          } else {
+            console.error(`MarketPlace ilişkili company bulunamadı: ${store?.marketPlace?.id}`);
+            continue;
+          }
+
+          // StockCard kontrol et
+          const existingStockCard = await prisma.stockCard.findUnique({
+            where: { productCode: product.productSku },
+          });
+
+          let stockCard;
+          if (!existingStockCard) {
+            console.log("StockCard oluşturuluyor:", {
+              productCode: product.productSku,
+              productName: product.productName
+            });
+
+            // StockCard oluştur
+            stockCard = await prisma.stockCard.create({
+              data: {
+                productCode: product.productSku,
+                productName: product.productName,
+                unit: StockUnits.Adet,
+                shortDescription: product.shortDescription || "",
+                description: product.description || "",
+                brandId: product.marketPlaceBrands?.id || null,
+                productType: mapProductType(product.productType),
+                companyCode: companyCode, // Company Code ekleniyor
+                branchCode: branchCode,
+                Store: store
+                  ? {
+                    connect: {
+                      id: store.id,
+                    },
+                  }
+                  : undefined,
+              },
+            });
+            console.log(`StockCard oluşturuldu: ${product.productName} (SKU: ${product.productSku})`);
+          } else {
+            console.log("StockCard güncelleniyor:", {
+              productCode: product.productSku,
+              productName: product.productName,
+            });
+            // StockCard güncelle
+            stockCard = await prisma.stockCard.update({
+              where: { productCode: product.productSku },
+              data: {
+                productName: product.productName,
+                unit: StockUnits.Adet,
+                shortDescription: product.shortDescription || "",
+                description: product.description || "",
+                brandId: product.marketPlaceBrands?.id || null,
+                productType: mapProductType(product.productType),
+                companyCode: companyCode, // Company Code ekleniyor
+                branchCode: branchCode,
+                Store: store
+                  ? {
+                    connect: {
+                      id: store.id,
+                    },
+                  }
+                  : undefined,
+              },
+            });
+            console.log(`StockCard güncellendi: ${product.productName} (SKU: ${product.productSku})`);
+          }
+
+          // PriceListItem kontrol ve oluşturma
+          const wooData = wooCommerceData[product.productSku] || {};
+          const price = useWooCommercePrice ? wooData.price || 0 : 0; // WooCommerce'den veya varsayılan değer
+          const quantity = useWooCommerceQuantity ? wooData.quantity || 0 : 0;
+
+          // PriceListItem kontrol ve oluşturma
+          const priceListItem = await prisma.stockCardPriceListItems.findFirst({
+            where: {
+              stockCardId: stockCard.id,
+              priceListId: wooCommercePriceList.id,
+            },
+          });
+
+          if (!priceListItem) {
+            await prisma.stockCardPriceListItems.create({
+              data: {
+                stockCardId: stockCard.id,
+                priceListId: wooCommercePriceList.id,
+                price: price, // Varsayılan fiyat
+                vatRate: 18, // Varsayılan KDV
+              },
+            });
+            console.log(`PriceListItem oluşturuldu: ${product.productName} (PriceList: WooCommerce)`);
+          } else {
+            // Fiyatı güncelle
+            await prisma.stockCardPriceListItems.update({
+              where: { id: priceListItem.id },
+              data: { price },
+            });
+            console.log(`PriceListItem güncellendi: ${product.productName} - Price: ${price}`);
+          }
+
+          // StockCardWarehouse kontrol ve oluşturma
+          const warehouseRecord = await prisma.stockCardWarehouse.findFirst({
+            where: {
+              stockCardId: stockCard.id,
+              warehouseId: warehouseId || "",
+            },
+          });
+
+          if (!warehouseRecord) {
+            await prisma.stockCardWarehouse.create({
+              data: {
+                stockCardId: stockCard.id,
+                warehouseId: warehouseId || "",
+                quantity: quantity,
+              },
+            });
+            console.log(`StockCardWarehouse oluşturuldu: ${product.productName} (Warehouse ID: ${warehouseId})`);
+          } else {
+            // Miktarı güncelle
+            await prisma.stockCardWarehouse.update({
+              where: { id: warehouseRecord.id },
+              data: { quantity },
+            });
+            console.log(`StockCardWarehouse güncellendi: ${product.productName} - Quantity: ${quantity}`);
+          }
+
+
+          // MarketPlaceAttributes ile StockCardAttribute ve StockCardAttributeItems oluştur
+          if (product.marketPlaceAttributes && product.marketPlaceAttributes.length > 0) {
+            for (const attr of product.marketPlaceAttributes) {
+              if (!attr.attributeName || !attr.valueName) {
+                console.error(`Hatalı attribute: ${attr.attributeName}. valueName eksik.`);
+                continue;
+              }
+
+              // StockCardAttribute kontrol et
+              let stockCardAttribute = await prisma.stockCardAttribute.findFirst({
+                where: {
                   attributeName: attr.attributeName,
                   value: attr.valueName,
                 },
               });
-            }
 
-            // StockCardAttributeItem kontrol et
-            const existingAttributeItem = await prisma.stockCardAttributeItems.findFirst({
-              where: {
-                attributeId: stockCardAttribute.id,
-                stockCardId: stockCard.id,
-              },
-            });
+              if (!stockCardAttribute) {
+                // StockCardAttribute oluştur
+                stockCardAttribute = await prisma.stockCardAttribute.create({
+                  data: {
+                    attributeName: attr.attributeName,
+                    value: attr.valueName,
+                  },
+                });
+              }
 
-            if (!existingAttributeItem) {
-              // StockCardAttributeItem oluştur
-              await prisma.stockCardAttributeItems.create({
-                data: {
+              // StockCardAttributeItem kontrol et
+              const existingAttributeItem = await prisma.stockCardAttributeItems.findFirst({
+                where: {
                   attributeId: stockCardAttribute.id,
                   stockCardId: stockCard.id,
                 },
               });
+
+              if (!existingAttributeItem) {
+                // StockCardAttributeItem oluştur
+                await prisma.stockCardAttributeItems.create({
+                  data: {
+                    attributeId: stockCardAttribute.id,
+                    stockCardId: stockCard.id,
+                  },
+                });
+              }
             }
           }
+
+        } catch (error) {
+          console.error(`Ürün işlenirken hata oluştu: ${product.productName}. Hata:`, error);
+          continue; // Sıradaki ürüne geç
         }
       }
-
     } catch (error) {
       console.error("StockCard ekleme sırasında bir hata oluştu:", error);
       throw new Error("StockCard ekleme işlemi başarısız oldu.");
@@ -811,7 +822,7 @@ export class WooCommerceService {
         throw new Error(`Store bulunamadı. Sağlanan Store ID: ${storeId}`);
       }
       console.log(`Store bulundu: ${store.name} (ID: ${store.id})`);
-      
+
       if (!specificStockCardIds || specificStockCardIds.length === 0) {
         console.log("specificStockCardIds parametresi gönderilmedi. Tüm StockCard'lar güncellenecek.");
       }
@@ -966,5 +977,273 @@ export class WooCommerceService {
     await Promise.all(Array.from({ length: concurrencyLimit }, runNext));
   }
 
+  public async createOrder(invoiceDetails: InvoiceDetailResponse): Promise<void> {
+    try {
+      // WooCommerce'de aynı ERP faturasına ait sipariş olup olmadığını kontrol et
+      const existingOrders = await this.wooCommerce.getOrders({
+        meta_key: "ERP_Invoice_ID",
+        meta_value: invoiceDetails.id,
+      });
+
+      if (existingOrders && existingOrders.length > 0) {
+        //console.log("Existing Orders:", JSON.stringify(existingOrders, null, 2));
+
+        const orderMatch = existingOrders.find(order =>
+          order.meta_data.some((meta: WooCommerceMeta) => meta.key === "ERP_Invoice_ID" && meta.value === invoiceDetails.id)
+        );
+
+        if (orderMatch) {
+          console.log(`WooCommerce'de bu faturaya ait bir sipariş zaten mevcut: ${orderMatch.id}`);
+          return; // Sipariş oluşturmayı atla
+        }
+      }
+
+      // WooCommerce ürünlerini eşleştir
+      const wooProducts = await this.fetchAllProducts();
+
+      console.log("ERP'den gelen ürünler:", invoiceDetails.items.map(i => i.stockCode));
+      console.log("WooCommerce'den çekilen SKU'lar:", wooProducts.map(p => p.sku));
+
+      // WooCommerce ürünlerini eşleştir
+      const lineItems = await Promise.all(
+        invoiceDetails.items.map(async (item) => {
+          const normalizedStockCode = item.stockCode?.trim().toLowerCase();
+          console.log("Normalize edilmiş ERP SKU:", normalizedStockCode);
+
+          // varyasyonları kontrol et
+          for (const product of wooProducts) {
+            const variations = await this.wooCommerce.getProductVariations(product.id);
+            // Varyasyonları getir
+            const variation = variations.find((v) => {
+              const variationSkuNormalized = v.sku?.trim().toLowerCase();
+              return variationSkuNormalized === normalizedStockCode;
+            });
+
+            if (variation) {
+              // Varyasyon eşleşti
+              console.log(`Varyasyon eşleşti: ${variation.sku}`);
+              return {
+                product_id: product.id,
+                variation_id: variation.id,
+                quantity: item.quantity,
+                price: item.unitPrice.toFixed(2),
+                total: item.totalAmount.toFixed(2),
+                subtotal: (item.totalAmount - item.vatAmount).toFixed(2),
+              };
+            }
+          }
+
+          // Ana ürün eşleştirmesi
+          const wooProduct = wooProducts.find((p) => {
+            const wooSkuNormalized = p.sku?.trim().toLowerCase(); // WooCommerce SKU'yu normalize et
+            return (
+              wooSkuNormalized === normalizedStockCode || // Tam eşleşme
+              normalizedStockCode?.startsWith(wooSkuNormalized) || // ERP SKU, WooCommerce SKU ile başlıyorsa
+              wooSkuNormalized?.startsWith(normalizedStockCode) // WooCommerce SKU, ERP SKU ile başlıyorsa
+            );
+          });
+
+          if (wooProduct) {
+            // Ana ürün eşleşti
+            return {
+              product_id: wooProduct.id,
+              quantity: item.quantity,
+              price: item.unitPrice.toFixed(2),
+              total: item.totalAmount.toFixed(2),
+              subtotal: (item.totalAmount - item.vatAmount).toFixed(2),
+            };
+          }
+
+          // Ürün veya varyasyon bulunamazsa hata fırlat
+          console.error(
+            `Eşleşmeyen ürün: ${item.stockName} (${item.stockCode}) - WooCommerce SKU'lar:`,
+            wooProducts.map((p) => p.sku)
+          );
+          throw new Error(`WooCommerce'de eşleşmeyen ürün: ${item.stockName} (${item.stockCode})`);
+        })
+      );
+
+      const current = await prisma.current.findUnique({
+        where: { currentCode: invoiceDetails.current.currentCode },
+        include: { currentAddress: true },
+      });
+
+      if (!current) {
+        throw new Error(`Current bulunamadı: ${invoiceDetails.current.currentCode}`);
+      }
+
+      // Fatura adresini seç
+      const billingAddressData = current.currentAddress?.[0] || null; // İlk adresi fatura adresi olarak al
+      const shippingAddressData = current.currentAddress?.[1] || billingAddressData; // İkinci adres yoksa fatura adresini kullan
+
+      const paymentMethods = invoiceDetails.payments.map((payment) => ({
+        method_title: this.mapPaymentMethod(payment.method),
+        total: payment.amount.toFixed(2),
+      }));
+
+      const orderData = {
+        payment_method: paymentMethods.length > 0 ? paymentMethods[0].method_title : "N/A",
+        payment_method_title: paymentMethods.length > 0 ? paymentMethods[0].method_title : "N/A",
+        set_paid: invoiceDetails.payments.length > 0,
+        status: "processing",
+        billing: {
+          first_name: invoiceDetails.current?.currentName || "Unknown",
+          last_name: "-",
+          address_1: billingAddressData?.address || "No Address",
+          city: billingAddressData?.city || "No City",
+          postcode: billingAddressData?.postalCode || "00000",
+          country: billingAddressData?.countryCode || "TR",
+          email: billingAddressData?.email || "no-email@example.com",
+          phone: invoiceDetails.current?.phone || "0000000000",
+        },
+        shipping: {
+          first_name: invoiceDetails.current?.currentName || "Unknown",
+          last_name: "-",
+          address_1: shippingAddressData?.address || "No Address",
+          city: shippingAddressData?.city || "No City",
+          postcode: shippingAddressData?.postalCode || "00000",
+          country: shippingAddressData?.countryCode || "TR",
+          email: shippingAddressData?.email || "no-email@example.com",
+          phone: invoiceDetails.current?.phone || "0000000000",
+        },
+        line_items: lineItems.map((item) => ({
+          product_id: item.product_id,
+          variation_id: item.variation_id || undefined, // Varyasyon ID'si varsa ekle
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total,
+          subtotal: item.subtotal,
+        })),
+        meta_data: [
+          { key: "ERP_Invoice_ID", value: invoiceDetails.id },
+          { key: "ERP_Invoice_No", value: invoiceDetails.invoiceNo },
+        ],
+        customer_note: "ERP üzerinden oluşturulan sipariş",
+      };
+
+      // WooCommerce'de sipariş oluştur
+      const createdOrder = await this.wooCommerce.createOrder(orderData);
+
+      console.log("WooCommerce siparişi başarıyla oluşturuldu:", createdOrder);
+
+      // WooCommerce Order ID'yi ERP'ye kaydet
+      await prisma.invoice.update({
+        where: { id: invoiceDetails.id },
+        data: {
+          description: `WooCommerce Order ID: ${createdOrder.id}`, // Sipariş ID açıklama alanında saklanıyor
+        },
+      });
+
+      const wooBillingAddress = createdOrder.billing;
+      const wooShippingAddress = createdOrder.shipping;
+
+      // Adres verilerini OrderInvoiceAddress'e ekle
+      const billingAddress = await prisma.orderInvoiceAddress.create({
+        data: {
+          address: wooBillingAddress?.address || "No Address",
+          city: wooBillingAddress?.city || "No City",
+          district: wooBillingAddress?.district || "No District",
+          postalCode: wooBillingAddress?.postcode || "00000",
+          country: wooBillingAddress?.country || "TR",
+          fullName: `${wooBillingAddress?.first_name || ""} ${wooBillingAddress?.last_name || ""}`.trim(),
+          email: wooBillingAddress?.email || "no-email@example.com",
+        },
+      });
+
+      const shippingAddress = await prisma.orderInvoiceAddress.create({
+        data: {
+          address: wooShippingAddress?.address_1 || "No Address",
+          city: wooShippingAddress?.city || "No City",
+          district: wooShippingAddress?.state || "No District",
+          postalCode: wooShippingAddress?.postcode || "00000",
+          country: wooShippingAddress?.country || "Unknown",
+          fullName: `${wooShippingAddress?.first_name || ""} ${wooShippingAddress?.last_name || ""}`.trim(),
+          email: wooShippingAddress?.email || "no-email@example.com",
+        },
+      });
+
+      // Order tablosuna sipariş ekle
+      const createdOrderInDB = await prisma.order.create({
+        data: {
+          platformOrderId: createdOrder.id.toString(),
+          platform: "WooCommerce",
+          customerId: "ERP-Generated", // Eğer müşteri ID'si varsa buraya eklenmeli
+          status: createdOrder.status,
+          currency: createdOrder.currency,
+          orderDate: new Date(createdOrder.date_created_gmt),
+          deliveryType: "Standard", // Teslimat tipi belirlenebilir
+          totalPrice: parseFloat(createdOrder.total),
+          storeId: this.storeId,
+          billingAddressId: billingAddress.id,
+          shippingAddressId: shippingAddress.id,
+          isInvoiceCreated: false,
+        },
+      });
+
+      // OrderItem için doğrulama ve oluşturma
+      await Promise.all(
+        invoiceDetails.items.map(async (item) => {
+          try {
+            // InvoiceDetail'deki productCode üzerinden StockCard'ı eşle
+            const stockCard = await prisma.stockCard.findFirst({
+              where: {
+                productCode: item.stockCode, // ProductCode üzerinden eşleşme
+              },
+              select: {
+                id: true, // Sadece id'yi al
+              },
+            });
+
+            if (!stockCard) {
+              console.error(
+                `StockCard bulunamadı: ProductCode - ${item.stockCode}`
+              );
+              throw new Error(
+                `StockCard bulunamadı: ProductCode - ${item.stockCode}`
+              );
+            }
+
+            // OrderItem oluştur
+            await prisma.orderItem.create({
+              data: {
+                orderId: createdOrderInDB.id, // Mevcut Order ID
+                stockCardId: stockCard.id, // Bulunan StockCard ID
+                quantity: item.quantity,
+                unitPrice: parseFloat(item.unitPrice.toString()),
+                totalPrice: parseFloat(item.totalAmount.toString()),
+              },
+            });
+          } catch (error) {
+            console.error(
+              `OrderItem oluşturulurken hata: ProductCode - ${item.stockCode}`,
+              error
+            );
+            throw new Error(
+              `OrderItem oluşturulamadı: ProductCode - ${item.stockCode}`
+            );
+          }
+        })
+      );
+
+    } catch (error) {
+      console.error("WooCommerce siparişi oluşturulurken hata oluştu:", error);
+      throw new Error("WooCommerce siparişi oluşturulamadı.");
+    }
+  }
+
+  private mapPaymentMethod(method: string): string {
+    switch (method) {
+      case "cash":
+        return "Cash on Delivery";
+      case "bank":
+        return "Bank Transfer";
+      case "card":
+        return "Credit Card";
+      case "openAccount":
+        return "Open Account";
+      default:
+        return "Unknown";
+    }
+  }
 
 }

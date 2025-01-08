@@ -28,8 +28,13 @@ export const PosMovementController = {
     updatePosMovement: async (ctx: Context) => {
         const { id } = ctx.params;
         const posMovementData: Partial<PosMovement> = ctx.body as Partial<PosMovement>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const posMovement = await posMovementService.updatePosMovement(id, posMovementData);
+            const posMovement = await posMovementService.updatePosMovement(id, posMovementData, bearerToken);
             ctx.set.status = 200;
             return posMovement;
         } catch (error: any) {

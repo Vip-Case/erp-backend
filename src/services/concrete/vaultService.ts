@@ -24,7 +24,12 @@ export class VaultService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     branch: vault.branchCode ? {
@@ -40,14 +45,20 @@ export class VaultService {
         }
     }
 
-    async updateVault(id: string, vault: Partial<Vault>): Promise<Vault> {
+    async updateVault(id: string, vault: Partial<Vault>, bearerToken: string): Promise<Vault> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.vault.update({
                 where: { id },
                 data: {
                     vaultName: vault.vaultName,
                     balance: vault.balance,
                     currency: vault.currency,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     branch: vault.branchCode ? {
                         connect: { branchCode: vault.branchCode },

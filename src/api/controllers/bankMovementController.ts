@@ -29,8 +29,13 @@ export const BankMovementController = {
     updateBankMovement: async (ctx: Context) => {
         const { id } = ctx.params;
         const bankMovementData: Partial<BankMovement> = ctx.body as Partial<BankMovement>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const bankMovement = await bankMovementService.updateBankMovement(id, bankMovementData);
+            const bankMovement = await bankMovementService.updateBankMovement(id, bankMovementData, bearerToken);
             ctx.set.status = 200;
             return bankMovement;
         } catch (error: any) {
