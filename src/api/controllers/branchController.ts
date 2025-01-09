@@ -17,6 +17,7 @@ export const BranchController = {
         }
 
         //const branchData: BranchData = ctx.body as BranchData;
+
         try {
             const branch = await branchService.createBranch(branchData, bearerToken);
             ctx.set.status = 200;
