@@ -269,7 +269,7 @@ model StockCard {
   stockCardWarehouse      StockCardWarehouse[]
   stockMovement           StockMovement[]
   Store                   Store[]                   @relation("StockCardToStore")
-  ProductMatch ProductMatch[]
+  ProductMatch            ProductMatch[]
   StockTakeDetail         StockTakeDetail[]
 }
 
@@ -616,19 +616,19 @@ model Receipt {
 }
 
 model ReceiptDetail {
-  id            String    @id @default(cuid())
-  receiptId     String
-  stockCardId   String
-  quantity      Decimal   @db.Decimal(15, 4)
-  unitPrice     Decimal   @db.Decimal(15, 4)
-  totalPrice    Decimal   @db.Decimal(15, 4)
-  vatRate       Decimal   @db.Decimal(15, 4)
-  discount      Decimal   @db.Decimal(15, 4)
-  netPrice      Decimal   @db.Decimal(15, 4)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  receipt       Receipt   @relation(fields: [receiptId], references: [id])
-  stockCard     StockCard @relation(fields: [stockCardId], references: [id])
+  id          String    @id @default(cuid())
+  receiptId   String
+  stockCardId String
+  quantity    Decimal   @db.Decimal(15, 4)
+  unitPrice   Decimal   @db.Decimal(15, 4)
+  totalPrice  Decimal   @db.Decimal(15, 4)
+  vatRate     Decimal   @db.Decimal(15, 4)
+  discount    Decimal   @db.Decimal(15, 4)
+  netPrice    Decimal   @db.Decimal(15, 4)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  receipt     Receipt   @relation(fields: [receiptId], references: [id])
+  stockCard   StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model Current {
@@ -774,11 +774,11 @@ model CurrentMovement {
   stockCardPriceList StockCardPriceList?          @relation(fields: [priceListId], references: [id])
   updatedByUser      User?                        @relation("CurrentMovementUpdatedBy", fields: [updatedBy], references: [username])
 
-  VaultMovement VaultMovement[]
-  BankMovement  BankMovement[]
-  PosMovement   PosMovement[]
+  VaultMovement         VaultMovement[]
+  BankMovement          BankMovement[]
+  PosMovement           PosMovement[]
   OrderPrepareWarehouse OrderPrepareWarehouse[]
-  Receipt Receipt[]
+  Receipt               Receipt[]
 }
 
 model CurrentCategory {
@@ -833,12 +833,8 @@ model User {
   updatedByCurrentMovement       CurrentMovement[]       @relation("CurrentMovementUpdatedBy")
   createdByInvoice               Invoice[]               @relation("InvoiceCreatedBy")
   updatedByInvoice               Invoice[]               @relation("InvoiceUpdatedBy")
-  createdByInvoiceDetail         InvoiceDetail[]         @relation("InvoiceDetailCreatedBy")
-  updatedByInvoiceDetail         InvoiceDetail[]         @relation("InvoiceDetailUpdatedBy")
   createdByMarketPlace           MarketPlace[]           @relation("MarketPlaceCreatedBy")
   updatedByMarketPlace           MarketPlace[]           @relation("MarketPlaceUpdatedBy")
-  createdByMarketPlaceProducts   MarketPlaceProducts[]   @relation("MarketPlaceProductsCreatedBy")
-  updatedByMarketPlaceProducts   MarketPlaceProducts[]   @relation("MarketPlaceProductsUpdatedBy")
   Notification                   Notification[]
   createdByPos                   Pos[]                   @relation("PosCreatedBy")
   updatedByPos                   Pos[]                   @relation("PosUpdatedBy")
@@ -846,8 +842,6 @@ model User {
   updatedByPosMovement           PosMovement[]           @relation("PosMovementUpdatedBy")
   createdByReceipt               Receipt[]               @relation("ReceiptCreatedBy")
   updatedByReceipt               Receipt[]               @relation("ReceiptUpdatedBy")
-  createdByReceiptDetail         ReceiptDetail[]         @relation("ReceiptDetailCreatedBy")
-  updatedByReceiptDetail         ReceiptDetail[]         @relation("ReceiptDetailUpdatedBy")
   createdByRoles                 Role[]                  @relation("RoleCreatedBy")
   updatedByRoles                 Role[]                  @relation("RoleUpdatedBy")
   createdByStockCard             StockCard[]             @relation("StockCardCreatedBy")
@@ -915,19 +909,19 @@ model Invoice {
 }
 
 model InvoiceDetail {
-  id            String    @id @default(cuid())
-  invoiceId     String
-  productCode   String
-  quantity      Decimal   @db.Decimal(15, 4)
-  unitPrice     Decimal   @db.Decimal(15, 4)
-  totalPrice    Decimal   @db.Decimal(15, 4)
-  vatRate       Decimal   @db.Decimal(15, 4)
-  discount      Decimal   @db.Decimal(15, 4)
-  netPrice      Decimal   @db.Decimal(15, 4)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
-  stockCard     StockCard @relation(fields: [productCode], references: [productCode])
+  id          String    @id @default(cuid())
+  invoiceId   String
+  productCode String
+  quantity    Decimal   @db.Decimal(15, 4)
+  unitPrice   Decimal   @db.Decimal(15, 4)
+  totalPrice  Decimal   @db.Decimal(15, 4)
+  vatRate     Decimal   @db.Decimal(15, 4)
+  discount    Decimal   @db.Decimal(15, 4)
+  netPrice    Decimal   @db.Decimal(15, 4)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
+  stockCard   StockCard @relation(fields: [productCode], references: [productCode])
 }
 
 model Vault {
@@ -1232,29 +1226,29 @@ model Notification {
 }
 
 model ProductMatch {
-  id                   String               @id @default(cuid())
-  productCode          String?
-  barcode              String?              @unique
+  id          String  @id @default(cuid())
+  productCode String?
+  barcode     String? @unique
 
-  product              StockCard?           @relation(fields: [productCode], references: [productCode])
+  product StockCard? @relation(fields: [productCode], references: [productCode])
 }
 
 model SentRequests {
-  id                   String               @id @default(cuid())
-  url                  String
-  storeId              String?
-  body                 String
-  batchRequestId       String?
+  id             String  @id @default(cuid())
+  url            String
+  storeId        String?
+  body           String
+  batchRequestId String?
 
   requestResponses RequestResponses[]
 }
 
 model RequestResponses {
-  id                   String               @id @default(cuid())
-  sentRequestId        String?
-  batchRequestResult  String
+  id                 String  @id @default(cuid())
+  sentRequestId      String?
+  batchRequestResult String
 
-  sentRequest          SentRequests?        @relation(fields: [sentRequestId], references: [id])
+  sentRequest SentRequests? @relation(fields: [sentRequestId], references: [id])
 }
 
 model OrderPrepareWarehouse {
