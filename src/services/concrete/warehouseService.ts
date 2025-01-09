@@ -117,6 +117,12 @@ export class WarehouseService {
                             username: username
                         }
                     },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+
+                    },
                     company: warehouse.companyCode ? {
                         connect: { companyCode: warehouse.companyCode },
                     } : {},
@@ -129,8 +135,9 @@ export class WarehouseService {
         }
     }
 
-    async updateWarehouse(id: string, warehouse: Partial<Warehouse>): Promise<Warehouse> {
+    async updateWarehouse(id: string, warehouse: Partial<Warehouse>, bearerToken: string): Promise<Warehouse> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.warehouse.update({
                 where: { id },
                 data: {
@@ -142,6 +149,11 @@ export class WarehouseService {
                     district: warehouse.district,
                     phone: warehouse.phone,
                     email: warehouse.email,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     company: warehouse.companyCode ? {
                         connect: { companyCode: warehouse.companyCode },

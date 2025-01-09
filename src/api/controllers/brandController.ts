@@ -27,8 +27,14 @@ export const BrandController = {
     updateBrand: async (ctx: Context) => {
         const { id } = ctx.params;
         const brandData: Partial<Brand> = ctx.body as Partial<Brand>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const brand = await brandService.updateBrand(id, brandData);
+            const brand = await brandService.updateBrand(id, brandData, bearerToken);
             ctx.set.status = 200;
             return brand;
         } catch (error: any) {

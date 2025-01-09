@@ -28,13 +28,18 @@ export class MarketPlaceService {
                         connect: {
                             username: username
                         }
-                    }, 
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
                     company: data.companyCode
                     ? {
                           connect: { companyCode: data.companyCode },
                       }
                     : undefined,
-                }
+                } as Prisma.MarketPlaceCreateInput
             });
         } catch (error) {
             logger.error("Error creating MarketPlace", error);
@@ -53,8 +58,8 @@ export class MarketPlaceService {
                         connect: {
                             username: username
                         }
-                    }
-                }
+                    },
+                } as Prisma.MarketPlaceUpdateInput
             });
         } catch (error) {
             logger.error(`Error updating MarketPlace with id ${id}`, error);

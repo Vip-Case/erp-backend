@@ -28,6 +28,13 @@ export interface InvoiceDetailResponse {
         id: string;
         currentCode: string;
         currentName: string;
+        address?: string; // Adres alanı
+        city?: string; // Şehir
+        district?: string; // İlçe
+        postcode?: string; // Posta Kodu
+        country?: string; // Ülke
+        email?: string; // E-posta
+        phone?: string; 
         priceList?: {
             id: string;
             priceListName: string;
@@ -63,6 +70,26 @@ export interface InvoiceDetailResponse {
         description?: string;
     }>;
 
+    billingAddress?: {
+        address: string;
+        city: string;
+        district: string;
+        postalCode: string;
+        country: string;
+        fullName: string;
+        email: string;
+    };
+
+    shippingAddress?: {
+        address: string;
+        city: string;
+        district: string;
+        postalCode: string;
+        country: string;
+        fullName: string;
+        email: string;
+    };
+    
     // Toplam Değerler
     subtotal: number;
     totalVat: number;
@@ -223,6 +250,11 @@ export class InvoiceService {
                             username: username
                         }
                     },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
                     priceList: invoice.priceListId ? {
                         connect: {
                             id: invoice.priceListId
@@ -262,8 +294,9 @@ export class InvoiceService {
         }
     }
 
-    async updateInvoice(id: string, invoice: Partial<Invoice>): Promise<Invoice> {
+    async updateInvoice(id: string, invoice: Partial<Invoice>, bearerToken: string): Promise<Invoice> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.invoice.update({
                 where: { id },
                 data: {
@@ -285,6 +318,11 @@ export class InvoiceService {
                     totalDebt: invoice.totalDebt,
                     totalBalance: invoice.totalBalance,
                     canceledAt: invoice.canceledAt,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     priceList: invoice.priceListId ? {
                         connect: {

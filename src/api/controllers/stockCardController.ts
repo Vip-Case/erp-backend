@@ -34,9 +34,15 @@ const StockCardController = {
     // StockCard'ı güncelleyen API
     updateStockCard: async (ctx: Context) => {
         const { id } = ctx.params;
-        const stockCardData: Partial<StockCard> = ctx.body as Partial<StockCard>;;
+        const stockCardData: Partial<StockCard> = ctx.body as Partial<StockCard>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const stockCard = await stockCardService.updateStockCard(id, stockCardData);
+            const stockCard = await stockCardService.updateStockCard(id, stockCardData, bearerToken);
             ctx.set.status = 200;
             return stockCard;
         } catch (error: any) {

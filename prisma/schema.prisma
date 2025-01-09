@@ -269,6 +269,7 @@ model StockCard {
   stockCardWarehouse      StockCardWarehouse[]
   stockMovement           StockMovement[]
   Store                   Store[]                   @relation("StockCardToStore")
+  ProductMatch ProductMatch[]
   StockTakeDetail         StockTakeDetail[]
 }
 
@@ -626,12 +627,8 @@ model ReceiptDetail {
   netPrice      Decimal   @db.Decimal(15, 4)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  createdBy     String?
-  updatedBy     String?
-  createdByUser User?     @relation("ReceiptDetailCreatedBy", fields: [createdBy], references: [username])
   receipt       Receipt   @relation(fields: [receiptId], references: [id])
   stockCard     StockCard @relation(fields: [stockCardId], references: [id])
-  updatedByUser User?     @relation("ReceiptDetailUpdatedBy", fields: [updatedBy], references: [username])
 }
 
 model Current {
@@ -780,9 +777,7 @@ model CurrentMovement {
   VaultMovement VaultMovement[]
   BankMovement  BankMovement[]
   PosMovement   PosMovement[]
-
   OrderPrepareWarehouse OrderPrepareWarehouse[]
-
   Receipt Receipt[]
 }
 
@@ -931,12 +926,8 @@ model InvoiceDetail {
   netPrice      Decimal   @db.Decimal(15, 4)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  createdBy     String?
-  updatedBy     String?
-  createdByUser User?     @relation("InvoiceDetailCreatedBy", fields: [createdBy], references: [username])
   invoice       Invoice   @relation(fields: [invoiceId], references: [id])
   stockCard     StockCard @relation(fields: [productCode], references: [productCode])
-  updatedByUser User?     @relation("InvoiceDetailUpdatedBy", fields: [updatedBy], references: [username])
 }
 
 model Vault {
@@ -1197,7 +1188,7 @@ model MarketPlaceProducts {
   shortDescription         String?
   listPrice                Decimal?                   @db.Decimal(15, 4)
   salePrice                Decimal?                   @db.Decimal(15, 4)
-  barcode                  String?
+  barcode                  String?                    @unique
   storeId                  String?
   marketPlaceAttributesId  String?
   marketPlaceCategoriesId  String?
@@ -1205,16 +1196,12 @@ model MarketPlaceProducts {
   productId                String?
   parentProductId          String?
   productType              String?
-  createdBy                String?
-  updatedBy                String?
   MarketPlaceProductImages MarketPlaceProductImages[]
   MarketPlaceProductMatch  MarketPlaceProductMatch[]
-  createdByUser            User?                      @relation("MarketPlaceProductsCreatedBy", fields: [createdBy], references: [username])
   marketPlaceBrands        MarketPlaceBrands?         @relation(fields: [marketPlaceBrandsId], references: [id])
   parentProduct            MarketPlaceProducts?       @relation("ParentChildRelation", fields: [parentProductId], references: [id])
   childrenProducts         MarketPlaceProducts[]      @relation("ParentChildRelation")
   store                    Store?                     @relation(fields: [storeId], references: [id])
-  updatedByUser            User?                      @relation("MarketPlaceProductsUpdatedBy", fields: [updatedBy], references: [username])
   marketPlaceAttributes    MarketPlaceAttributes[]    @relation("MarketPlaceAttributesToMarketPlaceProducts")
   MarketPlaceCategories    MarketPlaceCategories[]    @relation("ProductsOnCategories")
 }
@@ -1226,8 +1213,6 @@ model MarketPlaceProductMatch {
   platformProductId    String?
   platformVariationId  String?
   marketPlaceSKU       String?
-  createdBy            String?
-  updatedBy            String?
   marketPlaceProducts  MarketPlaceProducts? @relation(fields: [marketPlaceProductId], references: [id])
   store                Store?               @relation(fields: [storeId], references: [id])
 }
@@ -1244,6 +1229,32 @@ model Notification {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   user      User?     @relation(fields: [readBy], references: [username])
+}
+
+model ProductMatch {
+  id                   String               @id @default(cuid())
+  productCode          String?
+  barcode              String?              @unique
+
+  product              StockCard?           @relation(fields: [productCode], references: [productCode])
+}
+
+model SentRequests {
+  id                   String               @id @default(cuid())
+  url                  String
+  storeId              String?
+  body                 String
+  batchRequestId       String?
+
+  requestResponses RequestResponses[]
+}
+
+model RequestResponses {
+  id                   String               @id @default(cuid())
+  sentRequestId        String?
+  batchRequestResult  String
+
+  sentRequest          SentRequests?        @relation(fields: [sentRequestId], references: [id])
 }
 
 model OrderPrepareWarehouse {

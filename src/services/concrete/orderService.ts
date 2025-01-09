@@ -195,7 +195,7 @@ const OrderService = {
             taxOffice: orderData.taxOffice || "Unknown Tax Office",
             name: billingAddress.fullName?.split(" ")[0] || "Unknown",
             surname: billingAddress.fullName?.split(" ")[1] || "Unknown",
-            priceListId: "cm56mf2dv00079omghohkjeee", // Aktif fiyat listesini buraya yerleştirin
+            priceListId: "cm5htwlmm00099oe0qx1lcp71", // Aktif fiyat listesini buraya yerleştirin
             currentType: CurrentType.AliciSatici,
             institution: orderData.isCorporate ? InstitutionType.Sirket : InstitutionType.Sahis,
           },
@@ -284,8 +284,7 @@ const OrderService = {
             `Stok güncellendi: StockCardId ${item.stockCardId}, Yeni Stok: ${newQuantity}`
           );
         }
-        console.log("Transaction tamamlandı");
-      }, { isolationLevel: "Serializable" });
+      });
       
 
       // 6. Fatura oluşturma (eğer otomatik etkinse)
@@ -319,7 +318,7 @@ const OrderService = {
       }
   
       const updatedOrder = await prisma.order.update({
-        where: { id: existingOrder.id }, // Artık ID ile güncelleme yapılabilir
+        where: { id: existingOrder.id }, // ID ile güncelleme yapılabilir
         data: {
           status: updateData.status || existingOrder.status,
           currency: updateData.currency || existingOrder.currency,

@@ -40,8 +40,14 @@ export const WarehouseController = {
     updateWarehouse: async (ctx: Context) => {
         const { id } = ctx.params;
         const warehouseData: Partial<Warehouse> = ctx.body as Partial<Warehouse>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const warehouse = await warehouseService.updateWarehouse(id, warehouseData);
+            const warehouse = await warehouseService.updateWarehouse(id, warehouseData, bearerToken);
             ctx.set.status = 200;
             return warehouse;
         } catch (error: any) {

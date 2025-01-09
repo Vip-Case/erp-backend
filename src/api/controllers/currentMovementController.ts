@@ -10,8 +10,13 @@ export const CurrentMovementController = {
 
     createCurrentMovement: async (ctx: Context) => {
         const currentMovementData: CurrentMovement = ctx.body as CurrentMovement;
+        const bearerToken = ctx.request.headers.get("Authorization");
+            
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const currentMovement = await currentMovementService.createCurrentMovement(currentMovementData);
+            const currentMovement = await currentMovementService.createCurrentMovement(currentMovementData, bearerToken);
             ctx.set.status = 200;
             return currentMovement;
         } catch (error: any) {
@@ -23,8 +28,13 @@ export const CurrentMovementController = {
     updateCurrentMovement: async (ctx: Context) => {
         const { id } = ctx.params;
         const currentMovementData: Partial<CurrentMovement> = ctx.body as Partial<CurrentMovement>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+            
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const currentMovement = await currentMovementService.updateCurrentMovement(id, currentMovementData);
+            const currentMovement = await currentMovementService.updateCurrentMovement(id, currentMovementData, bearerToken);
             ctx.set.status = 200;
             return currentMovement;
         } catch (error: any) {

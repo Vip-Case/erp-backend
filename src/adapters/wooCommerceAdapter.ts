@@ -85,5 +85,34 @@ export class WooCommerceAdapter implements PlatformInterface {
     return response.data;
   }
   
+  async getOrders(filters: { meta_key: string; meta_value: string }): Promise<any[]> {
+    try {
+      const response = await axios.get(`${this.baseUrl}/wp-json/wc/v3/orders`, {
+        params: {
+          ...this.getAuthParams(),
+          [`meta_key`]: filters.meta_key,
+          [`meta_value`]: filters.meta_value,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("WooCommerce siparişleri alınırken hata oluştu:", error);
+      throw new Error("WooCommerce siparişleri alınamadı.");
+    }
+  }
+  
+  async createOrder(orderData: any): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/wp-json/wc/v3/orders`,
+        orderData,
+        { params: this.getAuthParams() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("WooCommerce siparişi oluşturulurken hata oluştu:", error);
+      throw new Error("WooCommerce siparişi oluşturulamadı.");
+    }
+  }
   
 }

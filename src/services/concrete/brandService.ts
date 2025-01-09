@@ -17,6 +17,7 @@ export class BrandService {
             return await this.brandRepository.create({
                 ...brand,
                 createdBy: username,
+                updatedBy: username
             });
         } catch (error) {
             logger.error("Error creating brand", error);
@@ -24,9 +25,13 @@ export class BrandService {
         }
     }
 
-    async updateBrand(id: string, brand: Partial<Brand>): Promise<Brand> {
+    async updateBrand(id: string, brand: Partial<Brand>, bearerToken: string): Promise<Brand> {
         try {
-            return await this.brandRepository.update(id, brand);
+            const username = extractUsernameFromToken(bearerToken);
+            return await this.brandRepository.update(id, {
+                ...brand,
+                updatedBy: username
+            });
         } catch (error) {
             logger.error(`Error updating brand with id ${id}`, error);
             throw error;
@@ -44,7 +49,12 @@ export class BrandService {
 
     async getBrandById(id: string): Promise<Brand | null> {
         try {
-            return await this.brandRepository.findById(id);
+            return await this.brandRepository.findByIdWithOptions(id, {
+                include: {
+                    createdByUser: true,
+                    updatedByUser: true
+                }
+            });
         } catch (error) {
             logger.error(`Error fetching brand with id ${id}`, error);
             throw error;
@@ -53,7 +63,12 @@ export class BrandService {
 
     async getAllBrands(): Promise<Brand[]> {
         try {
-            return await this.brandRepository.findAll();
+            return await this.brandRepository.findAll({
+                include: {
+                    createdByUser: true,
+                    updatedByUser: true
+                }
+            });
         } catch (error) {
             logger.error("Error fetching all brands", error);
             throw error;

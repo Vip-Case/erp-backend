@@ -3,6 +3,7 @@ import prisma from "../../config/prisma";
 import { User } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class UserService {
     private userRepository: BaseRepository<User>;
@@ -11,18 +12,32 @@ export class UserService {
         this.userRepository = new BaseRepository<User>(prisma.user);
     }
 
-    async createUser(user: User): Promise<User> {
+    async createUser(user: User, bearerToken: string): Promise<User> {
         try {
-            return await this.userRepository.create(user);
+            const username = extractUsernameFromToken(bearerToken);
+            return await prisma.user.create({
+                data: {
+                    ...user,
+                    createdBy: username,
+                    updatedBy: username
+                }
+            });
         } catch (error) {
             logger.error("Error creating user", error);
             throw error;
         }
     }
 
-    async updateUser(id: string, user: Partial<User>): Promise<User> {
+    async updateUser(id: string, user: Partial<User>, bearerToken: string): Promise<User> {
         try {
-            return await this.userRepository.update(id, user);
+            const username = extractUsernameFromToken(bearerToken);
+            return await prisma.user.update({
+                where: { id },
+                data: {
+                    ...user,
+                    updatedBy: username
+                }
+            });
         } catch (error) {
             logger.error(`Error updating user with id ${id}`, error);
             throw error;

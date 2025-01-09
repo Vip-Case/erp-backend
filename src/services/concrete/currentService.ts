@@ -106,7 +106,12 @@ export class currentService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                 },
@@ -131,10 +136,11 @@ export class currentService {
         }
     }
 
-    async updateCurrent(id: string, data: any): Promise<any> {
+    async updateCurrent(id: string, data: any, bearerToken: string): Promise<any> {
         try {
             // Restructure the incoming data
             const { priceListId, ...updateData } = data;
+            const username = extractUsernameFromToken(bearerToken);
 
             // Create transaction to handle all updates atomically
             return await prisma.$transaction(async (tx) => {
@@ -154,6 +160,11 @@ export class currentService {
                         sicilNo: data.sicilNo,
                         title: data.title,
                         webSite: data.webSite,
+                        updatedByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
                         birthOfDate: data.birthOfDate ? new Date(data.birthOfDate) : null,
                         priceList: {
                             connect: { id: priceListId }
@@ -306,9 +317,10 @@ export class currentService {
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
 
-    }) {
+    }, bearerToken: string) {
         try {
             const result = await prisma.$transaction(async (prisma) => {
+                const username = extractUsernameFromToken(bearerToken);
                 console.log(data);
 
                 const current = await prisma.current.create({
@@ -328,6 +340,16 @@ export class currentService {
                         kepAddress: data.kepAddress,
                         mersisNo: data.mersisNo,
                         sicilNo: data.sicilNo,
+                        createdByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
+                        updatedByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
                         priceList: {
                             connect: {
                                 id: data.priceListId
@@ -461,13 +483,24 @@ export class currentService {
         currentRisk?: CurrentRisk[];
         currentFinancial?: CurrentFinancial[];
         currentOfficials?: CurrentOfficials[];
-    }) {
+    }, bearerToken: string) {
         try {
             const result = await prisma.$transaction(async (prisma) => {
+                const username = extractUsernameFromToken(bearerToken);
                 const current = await prisma.current.update({
                     where: { id },
                     data: {
                         ...data.current,
+                        createdByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
+                        updatedByUser: {
+                            connect: {
+                                username: username
+                            }
+                        },
 
                         priceList: data.current.priceListId ? {
                             connect: { id: data.current.priceListId }
