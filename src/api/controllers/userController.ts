@@ -26,7 +26,12 @@ export const UserController = {
     createUser: async (ctx: Context) => {
         const userData: User = ctx.body as User;
         try {
-            const user = await userService.createUser(userData);
+            const bearerToken = ctx.request.headers.get("Authorization");
+                
+            if (!bearerToken) {
+                return ctx.error(401, "Authorization header is missing.");
+            }
+            const user = await userService.createUser(userData, bearerToken);
             ctx.set.status = 200;
             return user;
         } catch (error: any) {
@@ -38,8 +43,13 @@ export const UserController = {
     updateUser: async (ctx: Context) => {
         const { id } = ctx.params;
         const userData: Partial<User> = ctx.body as Partial<User>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+            
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const user = await userService.updateUser(id, userData);
+            const user = await userService.updateUser(id, userData, bearerToken);
             ctx.set.status = 200;
             return user;
         } catch (error: any) {

@@ -42,7 +42,12 @@ export class BranchService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     company: branch.companyCode ? {
@@ -68,8 +73,9 @@ export class BranchService {
         }
     }
 
-    async updateBranch(id: string, branch: Partial<BranchData>): Promise<any> {
+    async updateBranch(id: string, branch: Partial<BranchData>, bearerToken: string): Promise<any> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const updatedBranch = await prisma.branch.update({
                 where: { id },
                 data: {
@@ -82,6 +88,11 @@ export class BranchService {
                     phone: branch.phone,
                     email: branch.email,
                     website: branch.website,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     company: branch.companyCode ? {
                         connect: { companyCode: branch.companyCode },

@@ -26,10 +26,15 @@ export class StoreService {
                     storeUrl: data.storeUrl ?? null, // Null ya da string değeri
                     createdByUser: {
                         connect: {
-                            username: username, // Kullanıcı adıyla bağlantı kurulur
-                        },
+                            username: username
+                        }
                     },
-                },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
+                } as Prisma.StoreCreateInput,
             });
         } catch (error) {
             logger.error("Error creating Store", error);
@@ -48,8 +53,8 @@ export class StoreService {
                         connect: {
                             username: username
                         }
-                    }
-                }
+                    },
+                } as Prisma.StoreUpdateInput,
             });
         } catch (error) {
             logger.error(`Error updating Store with id ${id}`, error);

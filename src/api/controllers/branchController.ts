@@ -16,6 +16,8 @@ export const BranchController = {
             return ctx.error(401, "Authorization header is missing.");
         }
 
+        //const branchData: BranchData = ctx.body as BranchData;
+
         try {
             const branch = await branchService.createBranch(branchData, bearerToken);
             ctx.set.status = 200;
@@ -29,8 +31,14 @@ export const BranchController = {
     updateBranch: async (ctx: Context) => {
         const { id } = ctx.params;
         const branchData: Partial<Branch> = ctx.body as Partial<Branch>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const branch = await branchService.updateBranch(id, branchData);
+            const branch = await branchService.updateBranch(id, branchData, bearerToken);
             ctx.set.status = 200;
             return branch;
         } catch (error: any) {

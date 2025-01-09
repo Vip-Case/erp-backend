@@ -25,7 +25,12 @@ export class PosService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     branch: pos.branchCode ? {
@@ -41,14 +46,20 @@ export class PosService {
         }
     }
 
-    async updatePos(id: string, pos: Partial<Pos>): Promise<Pos> {
+    async updatePos(id: string, pos: Partial<Pos>, bearerToken: string): Promise<Pos> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.pos.update({
                 where: { id },
                 data: {
                     posName: pos.posName,
                     balance: pos.balance,
                     currency: pos.currency,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     branch: pos.branchCode ? {
                         connect: { branchCode: pos.branchCode },

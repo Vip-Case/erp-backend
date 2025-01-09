@@ -18,6 +18,8 @@ export const StockCardRoutes = (app: Elysia) => {
       .get("/search", StockCardController.searchStockCards, { tags: ["Stock Cards"] })
       .get("/byWarehouse/:id", StockCardController.getStockCardsByWarehouseId, { tags: ["Stock Cards"] })
       .get("/byWarehouse/search/:id", StockCardController.searchStockCardsByWarehouseId, { tags: ["Stock Cards"] })
+      .put("/updateBarcodes", StockCardController.updateStockCardBarcodes, { tags: ["Stock Cards"] })
+      .post("/searchBarcodes", StockCardController.getStockCardBarcodesBySearch, { tags: ["Stock Cards"] })
   );
   return app;
 };

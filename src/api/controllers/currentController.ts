@@ -77,7 +77,12 @@ export const CurrentController = {
     updateCurrent: async (ctx: Context) => {
         const { id } = ctx.params;
         try {
-            const updatedCurrent = await currentService.updateCurrent(id, ctx.body);
+            const bearerToken = ctx.request.headers.get("Authorization");
+            if (!bearerToken) {
+                return ctx.error(401, "Authorization header is missing.");
+            }
+            const updatedCurrent = await currentService.updateCurrent(id, ctx.body, bearerToken);
+                
             ctx.set.status = 200;
             return updatedCurrent;
         } catch (error: any) {

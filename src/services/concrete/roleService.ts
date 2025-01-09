@@ -2,6 +2,7 @@ import prisma from "../../config/prisma";
 import { Role, Permission } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
+import { extractUsernameFromToken } from "./extractUsernameService";
 
 export class RoleService {
     private roleRepository: BaseRepository<Role>;
@@ -11,16 +12,23 @@ export class RoleService {
     }
 
     // Rol oluşturma (izinlerle birlikte)
-    async createRole(role: Role, permissionIds: string[]): Promise<Role> {
+    async createRole(role: Role, permissionIds: string[], bearerToken: string): Promise<Role> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.role.create({
                 data: {
                     ...role,
+                    createdBy: username,
+                    updatedBy: username,
                     permission: {
                         connect: permissionIds.map((id) => ({ id })),
                     },
                 },
-                include: { permission: true },
+                include: { 
+                    permission: true,
+                    createdByUser: true,
+                    updatedByUser: true 
+                },
             });
         } catch (error) {
             logger.error("Error creating role", error);
@@ -29,19 +37,25 @@ export class RoleService {
     }
 
     // Rol güncelleme
-    async updateRole(id: string, roleData: Partial<Role>, permissionIds?: string[]): Promise<Role> {
+    async updateRole(id: string, roleData: Partial<Role>, bearerToken: string, permissionIds?: string[]): Promise<Role> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.role.update({
                 where: { id },
                 data: {
                     ...roleData,
+                    updatedBy: username,
                     ...(permissionIds && {
                         permission: {
                             set: permissionIds.map((id) => ({ id })), // Eski izinleri temizler, yenileri ekler
                         },
                     }),
                 },
-                include: { permission: true },
+                include: { 
+                    permission: true,
+                    createdByUser: true,
+                    updatedByUser: true 
+                },
             });
         } catch (error) {
             logger.error(`Error updating role with id ${id}`, error);
@@ -64,7 +78,11 @@ export class RoleService {
         try {
             return await prisma.role.findUnique({
                 where: { id },
-                include: { permission: true },
+                include: { 
+                    permission: true,
+                    createdByUser: true,
+                    updatedByUser: true 
+                },
             });
         } catch (error) {
             logger.error(`Error fetching role with id ${id}`, error);
@@ -74,7 +92,13 @@ export class RoleService {
 
     async getAllRoles(): Promise<Role[]> {
         try {
-            return await prisma.role.findMany({ include: { permission: true } });
+            return await prisma.role.findMany({ 
+                include: { 
+                    permission: true,
+                    createdByUser: true,
+                    updatedByUser: true 
+                } 
+            });
         } catch (error) {
             logger.error("Error fetching all roles", error);
             throw error;

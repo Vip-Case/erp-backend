@@ -60,12 +60,7 @@ export class OrderInvoiceService {
 
             const warehouseId = warehouse?.warehouse?.id;
             const warehouseCode = warehouse?.warehouse?.warehouseCode;
-            if (warehouse) {
-                console.log(
-                    `Invoice işlemi sırasında erişilen StockCardWarehouse: StockCardId: ${firstItemStockCard?.id}, Mevcut Miktar: ${warehouse.quantity}`
-                );
-            }
-            
+
             if (!warehouseId || !warehouseCode) {
                 throw new Error("Warehouse ID or Code not found for the provided stock card.");
             }
@@ -169,7 +164,6 @@ export class OrderInvoiceService {
                 where: { id: orderId },
                 data: { isInvoiceCreated: true },
             });
-            console.log(`Processing Order ID: ${orderId}`);
 
             return await this.invoiceService.createInvoiceWithRelations(invoiceData);
         } catch (error) {

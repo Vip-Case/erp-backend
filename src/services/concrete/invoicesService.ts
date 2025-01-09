@@ -232,7 +232,7 @@ export class InvoicesService {
                     const quantity = detail.quantity;
 
                     // Stok miktarını güncelleme
-
+                    /*
                     if (stockCardWarehouse) {
                         await prisma.stockCardWarehouse.update({
                             where: { id: stockCardWarehouse.id },
@@ -249,7 +249,7 @@ export class InvoicesService {
                             },
                         });
                     }
-
+*/
                     // Ensure warehouseCode exists before creating stockMovement
                     const warehouseExists = await prisma.warehouse.findUnique({
                         where: { warehouseCode: _warehouseCode.warehouseCode },

@@ -1,4 +1,3 @@
-
 import StockMovementService from '../../services/concrete/stockMovementService';
 import { Context } from 'elysia';
 import { StockMovement } from '@prisma/client';
@@ -11,7 +10,7 @@ export const StockMovementController = {
     createStockMovement: async (ctx: Context) => {
         const stockMovementData: StockMovement = ctx.body as StockMovement;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -113,6 +112,18 @@ export const StockMovementController = {
         const { stockCardCode } = ctx.params;
         try {
             const stockMovements = await stockMovementService.getAllStockMovementsByStockCardCode(stockCardCode);
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
+    },
+
+    getAllStockMovementsByStockCardId: async (ctx: Context) => {
+        const { stockCardId } = ctx.params;
+        try {
+            const stockMovements = await stockMovementService.getAllStockMovementsByStockCardId(stockCardId);
             ctx.set.status = 200;
             return stockMovements;
         } catch (error: any) {

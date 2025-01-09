@@ -29,8 +29,13 @@ const InvoiceController = {
     updateInvoice: async (ctx: Context) => {
         const { id } = ctx.params;
         const invoiceData: Partial<InvoiceDetail> = ctx.body as Partial<Invoice>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const invoice = await invoiceService.updateInvoice(id, invoiceData);
+            const invoice = await invoiceService.updateInvoice(id, invoiceData, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {

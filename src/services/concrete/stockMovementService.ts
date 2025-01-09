@@ -1,4 +1,3 @@
-
 import prisma from "../../config/prisma";
 import { Prisma, StockMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
@@ -30,7 +29,14 @@ export class StockMovementService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+
                     },
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
@@ -84,8 +90,9 @@ export class StockMovementService {
     }
 
 
-    async updateStockMovement(id: string, stockMovementData: Partial<StockMovement>): Promise<StockMovement> {
+    async updateStockMovement(id: string, stockMovementData: Partial<StockMovement>, bearerToken: string): Promise<StockMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.stockMovement.update({
                 where: { id },
                 data: {
@@ -99,6 +106,11 @@ export class StockMovementService {
                     unitPrice: stockMovementData.unitPrice,
                     totalPrice: stockMovementData.totalPrice,
                     unitOfMeasure: stockMovementData.unitOfMeasure,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
                             warehouseCode: stockMovementData.warehouseCode
@@ -217,6 +229,26 @@ export class StockMovementService {
             });
         } catch (error) {
             logger.error(`Error fetching all stock movements for stock card with id ${stockCardCode}`, error);
+            throw error;
+        }
+    }
+
+    async getAllStockMovementsByStockCardId(stockCardId: string): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    stockCard: {
+                        id: stockCardId
+                    }
+                },
+                include: {
+                    stockCard: true,
+                    warehouse: true,
+                    branch: true
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching all stock movements for stock card with id ${stockCardId}`, error);
             throw error;
         }
     }

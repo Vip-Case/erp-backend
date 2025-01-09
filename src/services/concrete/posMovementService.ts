@@ -27,7 +27,12 @@ export class PosMovementService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
 
                     pos: posMovement.posId ? {
@@ -66,8 +71,9 @@ export class PosMovementService {
         }
     }
 
-    async updatePosMovement(id: string, posMovement: Partial<PosMovement>): Promise<PosMovement> {
+    async updatePosMovement(id: string, posMovement: Partial<PosMovement>, bearerToken: string): Promise<PosMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             // Eski posMovement bilgilerini alıyoruz
             const oldPosMovement = await this.posMovementRepository.findById(id);
             // Güncellenmemiş enterin ve emerging değerlerini alıyoruz
@@ -82,6 +88,9 @@ export class PosMovementService {
             const enteringValue = enteringDifference < 0 ? enteringDifference * -1 : enteringDifference;
             const emergingValue = emergingDifference < 0 ? emergingDifference * -1 : emergingDifference;
             // Önce yeni gelen veride posId var mı kontrol ediyoruz eğer yoksa eski posId yi alıyoruz eğer varsa yeni posId yi alıyoruz
+            if (!oldPosMovement) {
+                throw new Error(`PosMovement with id ${id} not found`);
+            }
             const posId = posMovement.posId || oldPosMovement.posId;
             // Pos bakiyesini güncelliyoruz
             PosService.updatePosBalance(posId, new Prisma.Decimal(enteringValue), new Prisma.Decimal(emergingValue));
@@ -97,6 +106,11 @@ export class PosMovementService {
                     posDirection: posMovement?.posDirection,
                     posType: posMovement?.posType,
                     posDocumentType: posMovement?.posDocumentType,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     pos: posMovement.posId ? {
                         connect: {

@@ -29,7 +29,12 @@ export class ReceiptService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
                     },
                     branch: receipt.branchCode ? {
                         connect: { branchCode: receipt.branchCode },
@@ -52,8 +57,9 @@ export class ReceiptService {
         }
     }
 
-    async updateReceipt(id: string, receipt: Partial<Receipt>): Promise<Receipt> {
+    async updateReceipt(id: string, receipt: Partial<Receipt>, bearerToken: string): Promise<Receipt> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             return await prisma.receipt.update({
                 where: { id },
                 data: {
@@ -61,7 +67,11 @@ export class ReceiptService {
                     receiptDate: receipt.receiptDate,
                     documentNo: receipt.documentNo,
                     description: receipt.description,
-
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
                     branch: receipt.branchCode ? {
                         connect: { branchCode: receipt.branchCode },
                     } : {},

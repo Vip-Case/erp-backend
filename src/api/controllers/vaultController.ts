@@ -28,8 +28,13 @@ export const VaultController = {
     updateVault: async (ctx: Context) => {
         const { id } = ctx.params;
         const vaultData: Partial<Vault> = ctx.body as Partial<Vault>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
-            const vault = await vaultService.updateVault(id, vaultData);
+            const vault = await vaultService.updateVault(id, vaultData, bearerToken);
             ctx.set.status = 200;
             return vault;
         } catch (error: any) {

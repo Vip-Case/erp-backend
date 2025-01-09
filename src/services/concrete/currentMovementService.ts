@@ -7,6 +7,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import VaultMovementService from "./vaultMovementService";
 import { PosMovementService } from "./posMovementService";
 import BankMovementService from "./bankMovementService";
+import { extractUsernameFromToken } from "./extractUsernameService";
 export class CurrentMovementService {
     private vaultMovementService: VaultMovementService;
     private bankMovementService: BankMovementService;
@@ -20,8 +21,9 @@ export class CurrentMovementService {
         this.posMovementService = new PosMovementService();
     }
 
-    async createCurrentMovement(currentMovement: any): Promise<any> {
+    async createCurrentMovement(currentMovement: any, bearerToken: string): Promise<any> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const companyCode = await prisma.company.findFirst();
             console.log("companyCode", companyCode);
             const getLastBalanceAmountByCurrentId = await prisma.currentMovement.findFirst({
@@ -41,6 +43,16 @@ export class CurrentMovementService {
                     movementType: currentMovement.movementType,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
+                    createdByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     current: currentMovement.currentCode ? {
                         connect: {
@@ -80,8 +92,9 @@ export class CurrentMovementService {
         }
     }
 
-    async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>): Promise<CurrentMovement> {
+    async updateCurrentMovement(id: string, currentMovement: Partial<CurrentMovement>, bearerToken: string): Promise<CurrentMovement> {
         try {
+            const username = extractUsernameFromToken(bearerToken);
             const debtAmount = currentMovement.debtAmount ?? new Decimal(0);    // Eğer debtAmount yoksa 0 yap
             const creditAmount = currentMovement.creditAmount ?? new Decimal(0); // Eğer creditAmount yoksa 0 yap
             const updatedCurrentMovement = await prisma.currentMovement.update({
@@ -93,6 +106,11 @@ export class CurrentMovementService {
                     creditAmount: creditAmount,
                     documentType: currentMovement.documentType,
                     paymentType: currentMovement.paymentType,
+                    updatedByUser: {
+                        connect: {
+                            username: username
+                        }
+                    },
 
                     current: currentMovement.currentCode ? {
                         connect: {
@@ -136,7 +154,7 @@ export class CurrentMovementService {
             }
             if (vaultMovement) {
                 // VaultMovement bilgilerini güncelliyoruz
-                await this.vaultMovementService.updateVaultMovement(vaultMovement.id, vaultMovementData);
+                await this.vaultMovementService.updateVaultMovement(vaultMovement.id, vaultMovementData, bearerToken);
             }
 
             // İlişkili olan bankMovement bilgilerini alıyoruz
@@ -153,7 +171,7 @@ export class CurrentMovementService {
             }
             if (bankMovement) {
                 // BankMovement bilgilerini güncelliyoruz
-                await this.bankMovementService.updateBankMovement(bankMovement.id, bankMovementData);
+                await this.bankMovementService.updateBankMovement(bankMovement.id, bankMovementData, bearerToken);
             }
 
             // İlişkili olan posMovement bilgilerini alıyoruz
@@ -170,7 +188,7 @@ export class CurrentMovementService {
             }
             if (posMovement) {
                 // PosMovement bilgilerini güncelliyoruz
-                await this.posMovementService.updatePosMovement(posMovement.id, posMovementData);
+                await this.posMovementService.updatePosMovement(posMovement.id, posMovementData, bearerToken);
             }
 
             return updatedCurrentMovement;
