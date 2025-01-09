@@ -12,6 +12,7 @@ export const StockMovementRoutes = (app: Elysia) => {
       .get("/sales", StockMovementController.getAllSalesStockMovements, { tags: ["Stock Movements"] })
       .get("/purchase", StockMovementController.getAllPurchaseStockMovements, { tags: ["Stock Movements"] })
       .get("/byProductCode/:productCode", StockMovementController.getAllStockMovementsByStockCardCode, { tags: ["Stock Movements"] })
+      .get("/byStockCardId/:stockCardId", StockMovementController.getAllStockMovementsByStockCardId, { tags: ["Stock Movements"] })
   );
   return app;
 };

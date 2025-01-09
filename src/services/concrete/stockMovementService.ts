@@ -1,4 +1,3 @@
-
 import prisma from "../../config/prisma";
 import { Prisma, StockMovement } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
@@ -30,7 +29,7 @@ export class StockMovementService {
                     createdByUser: {
                         connect: {
                             username: username
-                            }
+                        }
                     },
                     warehouse: stockMovementData.warehouseCode ? {
                         connect: {
@@ -217,6 +216,26 @@ export class StockMovementService {
             });
         } catch (error) {
             logger.error(`Error fetching all stock movements for stock card with id ${stockCardCode}`, error);
+            throw error;
+        }
+    }
+
+    async getAllStockMovementsByStockCardId(stockCardId: string): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    stockCard: {
+                        id: stockCardId
+                    }
+                },
+                include: {
+                    stockCard: true,
+                    warehouse: true,
+                    branch: true
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching all stock movements for stock card with id ${stockCardId}`, error);
             throw error;
         }
     }

@@ -1,16 +1,7 @@
-import WarehouseService from '../../services/concrete/warehouseService';
+import WarehouseService, { OrderReturnWarehouse, StockTakeWarehouse } from '../../services/concrete/warehouseService';
 import { Context } from 'elysia';
 import { Warehouse } from '@prisma/client';
 
-export interface StocktakeWarehouse {
-    id: string;
-    warehouseId: string;
-    branchCode: string;
-    products: Array<{
-        stockCardId: string;
-        quantity: number;
-    }>
-}
 
 export interface OrderPrepareWarehouse {
     id: string;
@@ -110,7 +101,7 @@ export const WarehouseController = {
     },
 
     createStocktakeWarehouse: async (ctx: Context) => {
-        const stockTakeData: StocktakeWarehouse = ctx.body as StocktakeWarehouse;
+        const stockTakeData: StockTakeWarehouse = ctx.body as StockTakeWarehouse;
         const bearerToken = ctx.request.headers.get("Authorization");
 
         if (!bearerToken) {
@@ -140,7 +131,7 @@ export const WarehouseController = {
 
     updateStocktakeWarehouse: async (ctx: Context) => {
         const { id } = ctx.params;
-        const stockTakeData: StocktakeWarehouse = ctx.body as StocktakeWarehouse;
+        const stockTakeData: StockTakeWarehouse = ctx.body as StockTakeWarehouse;
         try {
             const warehouse = await warehouseService.updateStocktakeWarehouse(id, stockTakeData);
             ctx.set.status = 200;
@@ -215,6 +206,61 @@ export const WarehouseController = {
                 error: "Sipariş hazırlama işlemi oluşturulurken hata oluştu",
                 details: error.message
             };
+        }
+    },
+
+    createOrderReturnWarehouse: async (ctx: Context) => {
+        const orderReturnData: OrderReturnWarehouse = ctx.body as OrderReturnWarehouse;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
+        try {
+            const result = await warehouseService.createOrderReturnWarehouse(orderReturnData, bearerToken);
+            if (!result) {
+                return ctx.error(400, 'Sipariş iade işlemi oluşturulamadı');
+            }
+            ctx.set.status = 201;
+            return {
+                success: true,
+                data: result,
+                message: 'Sipariş iade işlemi başarıyla oluşturuldu'
+            };
+        } catch (error: any) {
+            ctx.set.status = error.status || 500;
+            return {
+                success: false,
+                error: "Sipariş iade işlemi oluşturulurken hata oluştu",
+                details: error.message
+            };
+        }
+    },
+
+    getAllReceipts: async (ctx: Context) => {
+        try {
+            const receipts = await warehouseService.getAllReceipts();
+            ctx.set.status = 200;
+            return receipts;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Fişler getirilirken hata oluştu", details: error.message };
+        }
+    },
+
+    getReceiptById: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const receipt = await warehouseService.getReceiptById(id);
+            if (!receipt) {
+                return ctx.error(404, 'Fiş bulunamadı');
+            }
+            ctx.set.status = 200;
+            return receipt;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Fiş getirilirken hata oluştu", details: error.message };
         }
     }
 }

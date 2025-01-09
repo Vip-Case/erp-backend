@@ -29,6 +29,7 @@ enum DocumentType {
 }
 
 enum StokManagementType {
+  Sayim
   Devir
   DepolarArasiTransfer
   Uretim
@@ -168,6 +169,20 @@ enum VaultDocumentType {
   Official
 }
 
+enum StockTakeStatus {
+  Draft
+  InProgress
+  Completed
+  Cancelled
+}
+
+enum StockTakeType {
+  Full
+  Partial
+  Spot
+  Periodic
+}
+
 model Role {
   id            String       @id @default(cuid())
   roleName      String       @unique @db.VarChar(50)
@@ -254,6 +269,7 @@ model StockCard {
   stockCardWarehouse      StockCardWarehouse[]
   stockMovement           StockMovement[]
   Store                   Store[]                   @relation("StockCardToStore")
+  StockTakeDetail         StockTakeDetail[]
 }
 
 model StockCardEFatura {
@@ -482,6 +498,7 @@ model Branch {
   stockCard       StockCard[]
   stockMovement   StockMovement[]
   vault           Vault[]
+  StockTake       StockTake[]
 }
 
 model Warehouse {
@@ -535,37 +552,64 @@ model StockCardWarehouse {
 }
 
 model StockTake {
-  id            String    @id @default(cuid())
-  stockCardIds  String[]
+  id            String          @id @default(cuid())
+  documentNo    String          @unique @db.VarChar(50)
   warehouseId   String
-  warehouse     Warehouse @relation(fields: [warehouseId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  branchCode    String
+  stockTakeType StockTakeType   @default(Full)
+  status        StockTakeStatus @default(Draft)
+  description   String?
+  reference     String?         @db.VarChar(100)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   createdBy     String?
   updatedBy     String?
-  createdByUser User?     @relation("StockTakeCreatedBy", fields: [createdBy], references: [username])
-  updatedByUser User?     @relation("StockTakeUpdatedBy", fields: [updatedBy], references: [username])
+
+  warehouse     Warehouse         @relation(fields: [warehouseId], references: [id])
+  branch        Branch            @relation(fields: [branchCode], references: [branchCode])
+  createdByUser User?             @relation("StockTakeCreatedBy", fields: [createdBy], references: [username])
+  updatedByUser User?             @relation("StockTakeUpdatedBy", fields: [updatedBy], references: [username])
+  details       StockTakeDetail[]
+}
+
+model StockTakeDetail {
+  id          String  @id @default(cuid())
+  stockTakeId String
+  stockCardId String
+  quantity    Decimal @db.Decimal(15, 4)
+  difference  Decimal @db.Decimal(15, 4)
+  note        String?
+
+  stockTake StockTake @relation(fields: [stockTakeId], references: [id])
+  stockCard StockCard @relation(fields: [stockCardId], references: [id])
 }
 
 model Receipt {
-  id                  String          @id @default(cuid())
+  id                  String           @id @default(cuid())
   receiptType         ReceiptType
-  receiptDate         DateTime        @default(now())
-  documentNo          String          @db.VarChar(50)
-  branchCode          String          @db.VarChar(50)
-  isTransfer          Boolean         @default(false)
+  receiptDate         DateTime         @default(now())
+  documentNo          String           @db.VarChar(50)
+  branchCode          String           @db.VarChar(50)
+  isTransfer          Boolean          @default(false)
   outWarehouse        String?
   inWarehouse         String?
   description         String?
   createdBy           String?
   updatedBy           String?
+  createdAt           DateTime         @default(now())
+  currentId           String?
+  currentMovementId   String?
+  current             Current?         @relation(fields: [currentId], references: [id])
+  currentMovement     CurrentMovement? @relation(fields: [currentMovementId], references: [id])
   BankMovement        BankMovement[]
   PosMovement         PosMovement[]
-  branch              Branch          @relation(fields: [branchCode], references: [branchCode])
-  createdByUser       User?           @relation("ReceiptCreatedBy", fields: [createdBy], references: [username])
-  inReceiptWarehouse  Warehouse?      @relation("ReceiptInWarehouse", fields: [inWarehouse], references: [warehouseCode])
-  outReceiptWarehouse Warehouse?      @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
-  updatedByUser       User?           @relation("ReceiptUpdatedBy", fields: [updatedBy], references: [username])
+  branch              Branch           @relation(fields: [branchCode], references: [branchCode])
+  createdByUser       User?            @relation("ReceiptCreatedBy", fields: [createdBy], references: [username])
+  inReceiptWarehouse  Warehouse?       @relation("ReceiptInWarehouse", fields: [inWarehouse], references: [warehouseCode])
+  outReceiptWarehouse Warehouse?       @relation("ReceiptOutWarehouse", fields: [outWarehouse], references: [warehouseCode])
+  updatedByUser       User?            @relation("ReceiptUpdatedBy", fields: [updatedBy], references: [username])
   receiptDetail       ReceiptDetail[]
   vaultMovement       VaultMovement[]
 }
@@ -627,6 +671,8 @@ model Current {
   stockMovement         StockMovement[]
 
   OrderPrepareWarehouse OrderPrepareWarehouse[]
+
+  Receipt Receipt[]
 }
 
 model CurrentBranch {
@@ -736,6 +782,8 @@ model CurrentMovement {
   PosMovement   PosMovement[]
 
   OrderPrepareWarehouse OrderPrepareWarehouse[]
+
+  Receipt Receipt[]
 }
 
 model CurrentCategory {
@@ -1200,6 +1248,7 @@ model Notification {
 
 model OrderPrepareWarehouse {
   id                String           @id @default(cuid())
+  status            String           @default("Completed")
   warehouseId       String
   warehouse         Warehouse        @relation(fields: [warehouseId], references: [id])
   currentId         String?
