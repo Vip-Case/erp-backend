@@ -36,7 +36,7 @@ const StockCardController = {
         const { id } = ctx.params;
         const stockCardData: Partial<StockCard> = ctx.body as Partial<StockCard>;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -94,10 +94,14 @@ const StockCardController = {
     // Tüm StockCard'ları ilişkili tabloları ile oluşturan API
     createStockCardsWithRelations: async (ctx: Context) => {
         try {
+            const bearerToken = ctx.request.headers.get("Authorization");
+            if (!bearerToken) {
+                return ctx.error(401, "Authorization header is missing.");
+            }
             const body = ctx.body as any;
 
             // Servisi çağırarak StockCard ve ilişkilerini oluşturuyoruz
-            const createdStockCard = await stockCardService.createStockCardsWithRelations(body);
+            const createdStockCard = await stockCardService.createStockCardsWithRelations(body, bearerToken);
             ctx.set.status = 200;
             return createdStockCard;
         } catch (error: any) {
@@ -110,10 +114,14 @@ const StockCardController = {
     updateStockCardsWithRelations: async (ctx: Context) => {
         const { id } = ctx.params;
         try {
+            const bearerToken = ctx.request.headers.get("Authorization");
+            if (!bearerToken) {
+                return ctx.error(401, "Authorization header is missing.");
+            }
             const body = ctx.body as any;
             console.log(body);
             // Servisi çağırarak StockCard ve ilişkilerini güncelliyoruz
-            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body);
+            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body, bearerToken);
             ctx.set.status = 200;
             return updatedStockCard;
         } catch (error: any) {
