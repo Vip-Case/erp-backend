@@ -232,6 +232,7 @@ model StockCard {
   branchCode              String?                   @db.VarChar(50)
   brandId                 String?                   @db.VarChar(100)
   productType             ProductType               @default(BasitUrun)
+  kdv                     Decimal?                  @db.Decimal(15, 4)
   gtip                    String?                   @db.VarChar(50)
   pluCode                 String?                   @db.VarChar(50)
   desi                    Decimal?                  @db.Decimal(15, 4)
@@ -912,6 +913,7 @@ model InvoiceDetail {
   id          String    @id @default(cuid())
   invoiceId   String
   productCode String
+  costCode    String?
   quantity    Decimal   @db.Decimal(15, 4)
   unitPrice   Decimal   @db.Decimal(15, 4)
   totalPrice  Decimal   @db.Decimal(15, 4)

@@ -64,6 +64,7 @@ export const importStockCards = async (file: File) => {
                     shortDescription: stockCard.shortDescription || null,
                     description: stockCard.description || null,
                     productType: stockCard.productType,
+                    kdv: stockCard.vatRate ? Number(stockCard.vatRate) : null,
                     gtip: stockCard.gtip || null,
                     pluCode: stockCard.pluCode || null,
                     desi: stockCard.desi ? Number(stockCard.desi) : null,
