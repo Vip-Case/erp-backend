@@ -34,7 +34,7 @@ export interface InvoiceDetailResponse {
         postcode?: string; // Posta Kodu
         country?: string; // Ülke
         email?: string; // E-posta
-        phone?: string; 
+        phone?: string;
         priceList?: {
             id: string;
             priceListName: string;
@@ -89,7 +89,7 @@ export interface InvoiceDetailResponse {
         fullName: string;
         email: string;
     };
-    
+
     // Toplam Değerler
     subtotal: number;
     totalVat: number;
@@ -169,6 +169,8 @@ export interface InvoiceInfo {
 
 export interface InvoiceItems {
     stockCardId: string | null;
+    costCode: string | null;
+    costName: string | null;
     quantity: number | null;
     unitPrice: number | null;
     vatRate: number | null;
