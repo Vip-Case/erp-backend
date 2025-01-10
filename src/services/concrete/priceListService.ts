@@ -30,7 +30,15 @@ export class PriceListService {
 
     async deletePriceList(id: string): Promise<boolean> {
         try {
-            return await this.priceListRepository.delete(id);
+            const priceList = await prisma.stockCardPriceList.delete({
+                where: {
+                    id: id
+                },
+                include: {
+                    stockCardPriceListItems: true
+                }
+            });
+            return priceList ? true : false;
         } catch (error) {
             logger.error(`Error deleting price list with id ${id}`, error);
             throw error;
