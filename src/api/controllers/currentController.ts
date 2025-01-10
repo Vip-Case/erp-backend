@@ -47,11 +47,11 @@ export const CurrentController = {
         };
 
         const bearerToken = ctx.request.headers.get("Authorization");
-            
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
-        
+
         try {
             const createData = {
                 current: {
@@ -82,7 +82,7 @@ export const CurrentController = {
                 return ctx.error(401, "Authorization header is missing.");
             }
             const updatedCurrent = await currentService.updateCurrent(id, ctx.body, bearerToken);
-                
+
             ctx.set.status = 200;
             return updatedCurrent;
         } catch (error: any) {
@@ -159,9 +159,13 @@ export const CurrentController = {
 
     createWithRelations: async (ctx: Context) => {
         const data = ctx.body as any;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         console.log(data);
         try {
-            const newCurrent = await currentService.createCurrentWithRelations(data);
+            const newCurrent = await currentService.createCurrentWithRelations(data, bearerToken);
             ctx.set.status = 200;
             return newCurrent;
         } catch (error: any) {

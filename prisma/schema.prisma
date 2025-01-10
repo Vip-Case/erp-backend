@@ -914,6 +914,7 @@ model InvoiceDetail {
   invoiceId   String
   productCode String
   costCode    String?
+  costName    String?
   quantity    Decimal   @db.Decimal(15, 4)
   unitPrice   Decimal   @db.Decimal(15, 4)
   totalPrice  Decimal   @db.Decimal(15, 4)
