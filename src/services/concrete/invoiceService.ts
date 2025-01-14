@@ -668,8 +668,12 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdBy: username,
-                        updatedBy: username,
+                        createdByUser: {
+                            connect: { username: username }
+                        },
+                        updatedByUser: {
+                            connect: { username: username }
+                        },
                     },
                 });
 
@@ -688,8 +692,12 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdBy: username,
-                            updatedBy: username,
+                            createdByUser: {
+                                connect: { username: username }
+                            },
+                            updatedByUser: {
+                                connect: { username: username }
+                            },
                         },
                     });
                 }
@@ -998,8 +1006,12 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdBy: username,
-                        updatedBy: username,
+                        createdByUser: {
+                            connect: { username: username }
+                        },
+                        updatedByUser: {
+                            connect: { username: username }
+                        },
                     },
                 });
 
@@ -1018,8 +1030,12 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdBy: username,
-                            updatedBy: username,
+                            createdByUser: {
+                                connect: { username: username }
+                            },
+                            updatedByUser: {
+                                connect: { username: username }
+                            },
                         },
                     });
                 }
