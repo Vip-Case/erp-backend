@@ -11,7 +11,7 @@ const InvoiceController = {
     createInvoice: async (ctx: Context) => {
         const invoiceData = ctx.body as Invoice;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -30,7 +30,7 @@ const InvoiceController = {
         const { id } = ctx.params;
         const invoiceData: Partial<InvoiceDetail> = ctx.body as Partial<Invoice>;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -88,9 +88,14 @@ const InvoiceController = {
     // API to create an purchase invoice with relations
     createPurchaseInvoiceWithRelations: async (ctx: Context) => {
         const data = ctx.body as InvoiceInfo
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
 
         try {
-            const invoice = await invoiceService.createPurchaseInvoiceWithRelations(data);
+            const invoice = await invoiceService.createPurchaseInvoiceWithRelations(data, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -102,9 +107,14 @@ const InvoiceController = {
     // API to create an sales invoice with relations
     createSalesInvoiceWithRelations: async (ctx: Context) => {
         const data = ctx.body as InvoiceInfo
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
 
         try {
-            const invoice = await invoiceService.createSalesInvoiceWithRelations(data);
+            const invoice = await invoiceService.createSalesInvoiceWithRelations(data, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -117,8 +127,14 @@ const InvoiceController = {
     deleteSalesInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
         const { id } = ctx.params;
         const data = ctx.body as InvoiceInfo
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const invoice = await invoiceService.deleteSalesInvoiceWithRelationsAndRecreate(id, data);
+            const invoice = await invoiceService.deleteSalesInvoiceWithRelationsAndRecreate(id, data, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -135,8 +151,14 @@ const InvoiceController = {
     deletePurchaseInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
         const { id } = ctx.params;
         const data = ctx.body as InvoiceInfo
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const invoice = await invoiceService.deletePurchaseInvoiceWithRelationsAndRecreate(id, data);
+            const invoice = await invoiceService.deletePurchaseInvoiceWithRelationsAndRecreate(id, data, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -264,9 +286,14 @@ const InvoiceController = {
 
     createQuickSaleInvoiceWithRelations: async (ctx: Context) => {
         const data = ctx.body as any
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
 
         try {
-            const invoice = await invoiceService.createQuickSaleInvoiceWithRelations(data);
+            const invoice = await invoiceService.createQuickSaleInvoiceWithRelations(data, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
@@ -304,8 +331,14 @@ const InvoiceController = {
     deleteQuickSaleInvoiceWithRelationsAndRecreate: async (ctx: Context) => {
         const { id } = ctx.params;
         const data = ctx.body as QuickSaleResponse
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
         try {
-            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelationsAndRecreate(id, data);
+            const invoice = await invoiceService.deleteQuickSaleInvoiceWithRelationsAndRecreate(id, data, bearerToken);
             ctx.set.status = 200;
             return invoice;
         } catch (error: any) {
