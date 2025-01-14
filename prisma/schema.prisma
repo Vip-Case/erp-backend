@@ -910,21 +910,22 @@ model Invoice {
 }
 
 model InvoiceDetail {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   invoiceId   String
-  productCode String
+  productCode String?
   costCode    String?
   costName    String?
-  quantity    Decimal   @db.Decimal(15, 4)
-  unitPrice   Decimal   @db.Decimal(15, 4)
-  totalPrice  Decimal   @db.Decimal(15, 4)
-  vatRate     Decimal   @db.Decimal(15, 4)
-  discount    Decimal   @db.Decimal(15, 4)
-  netPrice    Decimal   @db.Decimal(15, 4)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
-  stockCard   StockCard @relation(fields: [productCode], references: [productCode])
+  currency    String?
+  quantity    Decimal?   @db.Decimal(15, 4)
+  unitPrice   Decimal?   @db.Decimal(15, 4)
+  totalPrice  Decimal?   @db.Decimal(15, 4)
+  vatRate     Decimal?   @db.Decimal(15, 4)
+  discount    Decimal?   @db.Decimal(15, 4)
+  netPrice    Decimal?   @db.Decimal(15, 4)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  invoice     Invoice    @relation(fields: [invoiceId], references: [id])
+  stockCard   StockCard? @relation(fields: [productCode], references: [productCode])
 }
 
 model Vault {

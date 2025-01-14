@@ -987,7 +987,11 @@ export class WarehouseService {
                             stockCard: true
                         }
                     },
-                    current: true,
+                    current: {
+                        include: {
+                            priceList: true,
+                        }
+                    },
                     currentMovement: true,
                     createdByUser: true
                 }
