@@ -668,16 +668,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdBy: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedBy: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -696,16 +688,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdBy: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedBy: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1014,16 +998,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -1042,16 +1018,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
