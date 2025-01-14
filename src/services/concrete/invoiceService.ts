@@ -60,6 +60,14 @@ export interface InvoiceDetailResponse {
         isVatIncluded: boolean;
     }>;
 
+    expenses: Array<{
+        id: string;
+        expenseCode: string;
+        expenseName: string;
+        price: number;
+        currency: string;
+    }>;
+
     // Ödeme Bilgileri
     payments: Array<{
         id: string;
@@ -163,8 +171,17 @@ export interface InvoiceInfo {
     totalVat: number | null;
     totalPaid: number | null;
     totalDebt: number | null;
+    expenses: Expenses[] | null;
     items: InvoiceItems[] | null;
     payments: InvoicePayments[] | null;
+}
+
+export interface Expenses {
+    id: string;
+    expenseCode: string;
+    expenseName: string;
+    price: number;
+    currency: string;
 }
 
 export interface InvoiceItems {
@@ -429,7 +446,24 @@ export class InvoiceService {
                     });
                 }
 
-                // Alış işlemleri
+                // 3. Masrafların fatura detaylarını ekleme
+                if (data.expenses) {
+                    for (const detail of data.expenses) {
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: newInvoice.id,
+                                costCode: detail.expenseCode,
+                                costName: detail.expenseName,
+                                currency: detail.currency,
+                                quantity: 1,
+                                totalPrice: detail.price,
+                                discount: 0,
+                            },
+                        });
+                    }
+                }
+
+                // 4. Alış işlemleri
                 for (const detail of data.items) {
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { id: detail.stockCardId },
@@ -673,7 +707,25 @@ export class InvoiceService {
                     });
                 }
 
-                // Satış işlemleri
+                // 3. Masrafların fatura detaylarını ekleme
+                if (data.expenses) {
+                    for (const detail of data.expenses) {
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: newInvoice.id,
+                                costCode: detail.expenseCode,
+                                costName: detail.expenseName,
+                                currency: detail.currency,
+                                quantity: 1,
+                                totalPrice: detail.price,
+                                discount: 0,
+                            },
+                        });
+                    }
+                }
+
+
+                // 4. Satış işlemleri
                 for (const detail of data.items) {
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { id: detail.stockCardId },
@@ -1039,9 +1091,9 @@ export class InvoiceService {
                     select: { companyCode: true },
                 });
                 // data.paymensts içindeki tüm amount'ları topla
-                const totalAmount = data.payments.reduce((sum, p) => sum + p.amount, 0);
+                const totalAmount = data.payments.reduce((sum, p) => sum + (p.amount || 0), 0);
                 // data.paymensts içinden methodu openAccount olmayanları al ve amount'larını topla
-                const totalPaid = data.payments.filter((p) => p.method !== "openAccount").reduce((sum, p) => sum + p.amount, 0);
+                const totalPaid = data.payments.filter((p) => p.method !== "openAccount").reduce((sum, p) => sum + (p.amount || 0), 0);
                 await prisma.currentMovement.create({
                     data: {
                         currentCode: data.customer.code,
@@ -1261,20 +1313,32 @@ export class InvoiceService {
 
         if (!invoice) return null;
 
-        const items = invoice.invoiceDetail.map(detail => ({
+        const items = invoice.invoiceDetail
+            .filter(detail => detail.productCode !== null)
+            .map(detail => ({
+                id: detail.id,
+                stockId: detail.productCode,
+                stockCode: detail.productCode,
+                stockName: detail.productCode,
+                quantity: detail.quantity.toNumber(),
+                unit: 'Adet', // Assuming unit is 'Adet', adjust as necessary
+                unitPrice: detail.unitPrice.toNumber(),
+                vatRate: detail.vatRate.toNumber(),
+                vatAmount: detail.totalPrice.toNumber() - detail.netPrice.toNumber(),
+                totalAmount: detail.totalPrice.toNumber(),
+                priceListId: invoice.priceListId ?? null,
+                currency: invoice.priceList?.currency ?? null,
+                isVatIncluded: invoice.priceList?.isVatIncluded,
+            }));
+
+        const expenses = invoice.invoiceDetail.filter(detail => detail.costCode !== null);
+        const expenseItems = expenses.map(detail => ({
             id: detail.id,
-            stockId: detail.productCode,
-            stockCode: detail.productCode,
-            stockName: detail.productCode,
-            quantity: detail.quantity.toNumber(),
-            unit: 'Adet', // Assuming unit is 'Adet', adjust as necessary
-            unitPrice: detail.unitPrice.toNumber(),
-            vatRate: detail.vatRate.toNumber(),
-            vatAmount: detail.totalPrice.toNumber() - detail.netPrice.toNumber(),
-            totalAmount: detail.totalPrice.toNumber(),
-            priceListId: invoice.priceListId ?? null,
-            currency: invoice.priceList?.currency ?? null,
-            isVatIncluded: invoice.priceList?.isVatIncluded,
+            costCode: detail.costCode,
+            costName: detail.costName,
+            quantity: 1,
+            price: detail.totalPrice,
+            currency: detail.currency,
         }));
 
         const payments: InvoicePayments[] = [];
@@ -1360,6 +1424,7 @@ export class InvoiceService {
             },
             items,
             payments,
+            expenses: expenseItems,
         };
 
         return invoiceDetailResponse;
@@ -1507,6 +1572,22 @@ export class InvoiceService {
                             discount: 0,
                         },
                     });
+                }
+
+                if (data.expenses) {
+                    for (const detail of data.expenses) {
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: invoiceId,
+                                costCode: detail.expenseCode,
+                                costName: detail.expenseName,
+                                currency: detail.currency,
+                                quantity: 1,
+                                totalPrice: detail.price,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 // Satış işlemleri
@@ -1831,6 +1912,23 @@ export class InvoiceService {
                             discount: 0,
                         },
                     });
+                }
+
+                // Masrafların fatura detaylarını ekleme
+                if (data.expenses) {
+                    for (const detail of data.expenses) {
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: invoiceId,
+                                costCode: detail.expenseCode,
+                                costName: detail.expenseName,
+                                currency: detail.currency,
+                                quantity: 1,
+                                totalPrice: detail.price,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 // Alış işlemleri

@@ -42,7 +42,6 @@ export const CurrentController = {
             currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
             currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
             currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-            currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
             currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
         };
 
@@ -62,7 +61,6 @@ export const CurrentController = {
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
                 currentFinancial: data.currentFinancial,
-                currentRisk: data.currentRisk,
                 currentOfficials: data.currentOfficials,
             };
             const newCurrent = await currentService.createCurrent(createData, bearerToken);

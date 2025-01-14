@@ -85,7 +85,7 @@ app.onRequest(async (ctx) => {
   if (publicRoutes.some(r => route.startsWith(r))) {
     console.log("Public route, skipping auth.");
     return;
-}
+  }
 
   const authHeader = ctx.request.headers.get("Authorization");
   if (!authHeader) {
@@ -166,14 +166,16 @@ app.onRequest(async (ctx) => {
 const notificationService = new NotificationService();
 cron.schedule('*/30 * * * *', async () => {
   try {
-      logger.info('Stok seviyesi kontrolü başlatılıyor...');
-      
-      // Stok seviyelerini kontrol et
-      await notificationService.checkStockLevels();
-      
-      logger.info('Stok seviyesi kontrolü tamamlandı');
+    console.log("Stok seviyesi kontrolü başlatılıyor...");
+    logger.info('Stok seviyesi kontrolü başlatılıyor...');
+
+    // Stok seviyelerini kontrol et
+    await notificationService.checkStockLevels();
+    console.log("Stok seviyesi kontrolü tamamlandı");
+    logger.info('Stok seviyesi kontrolü tamamlandı');
   } catch (error) {
-      logger.error('Stok seviyesi kontrolü sırasında hata:', error);
+    console.error('Stok seviyesi kontrolü sırasında hata:', error);
+    logger.error('Stok seviyesi kontrolü sırasında hata:', error);
   }
 });
 console.log("Bildirimler kontrol ediliyor...");

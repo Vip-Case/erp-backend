@@ -65,8 +65,13 @@ export class NotificationService {
 
                 for (const warehouse of stockCardWarehouse) {
                     if (warehouse.quantity.toNumber() <= riskQuantities!.toNumber()) {
+                        const warehouseName = await this.prisma.warehouse.findUnique({
+                            where: {
+                                id: warehouse.warehouseId
+                            }
+                        });
                         const severity = warehouse.quantity.toNumber() === 0 ? 'CRITICAL' : 'WARNING';
-                        const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouse.warehouseId} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
+                        const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
 
                         // Bildirim oluştur
                         await this.prisma.notification.create({
@@ -151,7 +156,7 @@ export class NotificationService {
         try {
             const username = this.extractUsernameFromToken(bearerToken);
             const idList = Array.isArray(ids) ? ids : [ids];
-            
+
             await this.prisma.notification.deleteMany({
                 where: {
                     id: {
@@ -179,7 +184,7 @@ export class NotificationService {
         try {
             const username = this.extractUsernameFromToken(bearerToken);
             const idList = Array.isArray(ids) ? ids : [ids];
-            
+
             await this.prisma.notification.updateMany({
                 where: {
                     id: {
