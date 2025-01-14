@@ -668,12 +668,12 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
+                        createdBy: {
                             connect: {
                                 username: username
                             }
                         },
-                        updatedByUser: {
+                        updatedBy: {
                             connect: {
                                 username: username
                             }
@@ -696,12 +696,12 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
+                            createdBy: {
                                 connect: {
                                     username: username
                                 }
                             },
-                            updatedByUser: {
+                            updatedBy: {
                                 connect: {
                                     username: username
                                 }
