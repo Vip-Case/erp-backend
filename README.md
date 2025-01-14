@@ -29,7 +29,6 @@ Bu proje, işletmelerin iş süreçlerini optimize etmelerine, envanterlerini et
 - Satış ve satın alma yönetimi
 - Müşteri ve tedarikçi ilişkileri yönetimi
 - Raporlama ve analiz araçları
-- Çok dilli destek
 - Kullanıcı yetkilendirme ve rol bazlı erişim kontrolü
 
 ## Teknoloji Yığını
