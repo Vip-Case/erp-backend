@@ -26,9 +26,13 @@ async function main() {
     await prisma.receipt.deleteMany({});
     await prisma.stockMovement.deleteMany({});
     await prisma.currentMovement.deleteMany({});
-
-
-
+    await prisma.receiptDetail.deleteMany({});
+    await prisma.receipt.deleteMany({});
+    await prisma.orderPrepareWarehouse.deleteMany({});
+    await prisma.stockTake.deleteMany({});
+    await prisma.stockTakeDetail.deleteMany({});
+    await prisma.notification.deleteMany({});
+    await prisma.productMatch.deleteMany({});
 }
 
 main()
