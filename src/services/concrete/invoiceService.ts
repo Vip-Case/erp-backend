@@ -62,8 +62,8 @@ export interface InvoiceDetailResponse {
 
     expenses: Array<{
         id: string;
-        expenseCode: string;
-        expenseName: string;
+        costCode: string;
+        costName: string;
         price: number;
         currency: string;
     }>;
@@ -178,8 +178,8 @@ export interface InvoiceInfo {
 
 export interface Expenses {
     id: string;
-    expenseCode: string;
-    expenseName: string;
+    costCode: string;
+    costName: string;
     price: number;
     currency: string;
 }
@@ -423,16 +423,8 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdByUser: { connect: { username: username } },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
@@ -463,8 +455,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: newInvoice.id,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -539,18 +531,10 @@ export class InvoiceService {
                             quantity: quantity,
                             unitPrice: detail.unitPrice,
                             totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit, // Birim
+                            unitOfMeasure: stockCard.unit,
                             priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -566,16 +550,8 @@ export class InvoiceService {
                                 vaultDirection: "Exit",
                                 vaultType: "PurchaseInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -597,16 +573,8 @@ export class InvoiceService {
                                 bankDirection: "Exit",
                                 bankType: "PurchaseInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -628,16 +596,8 @@ export class InvoiceService {
                                 posDirection: "Exit",
                                 posType: "PurchaseInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -668,12 +628,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: { username: username }
-                        },
-                        updatedByUser: {
-                            connect: { username: username }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -692,12 +648,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: { username: username }
-                            },
-                            updatedByUser: {
-                                connect: { username: username }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -747,16 +699,8 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdByUser: { connect: { username: username } },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
@@ -777,16 +721,6 @@ export class InvoiceService {
                             netPrice: detail.totalAmount - detail.vatAmount,
                             totalPrice: detail.totalAmount,
                             discount: 0,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
                         },
                     });
                 }
@@ -797,8 +731,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: newInvoice.id,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -879,16 +813,8 @@ export class InvoiceService {
                             totalPrice: detail.totalAmount,
                             unitOfMeasure: stockCard.unit, // Birim
                             priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -904,16 +830,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -935,16 +853,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -966,16 +876,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -1006,12 +908,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: { username: username }
-                        },
-                        updatedByUser: {
-                            connect: { username: username }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -1030,12 +928,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: { username: username }
-                            },
-                            updatedByUser: {
-                                connect: { username: username }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1073,16 +967,8 @@ export class InvoiceService {
                         totalPaid: totalPaidd,
                         totalDebt: totalAmountt,
                         description: `${_invoiceNo} no'lu hızlı satış faturası`,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdByUser: { connect: { username: username } },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
@@ -1164,16 +1050,8 @@ export class InvoiceService {
                             unitPrice: detail.unitPrice,
                             totalPrice: detail.totalAmount,
                             unitOfMeasure: stockCard.unit, // Birim
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1189,16 +1067,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -1220,16 +1090,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -1251,16 +1113,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -1294,16 +1148,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
                 if (totalPaid > 0) {
@@ -1320,16 +1166,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1555,7 +1393,7 @@ export class InvoiceService {
                 ...invoice.vaultMovement.map(payment => ({
                     method: 'cash',
                     accountId: payment.vaultId,
-                    amount: payment.entering.toNumber(),
+                    amount: payment.entering.toNumber() === 0 ? payment.emerging.toNumber() : payment.entering.toNumber(),
                     currency: invoice.priceList?.currency ?? null,
                     description: payment.description,
                 }))
@@ -1567,7 +1405,7 @@ export class InvoiceService {
                 ...invoice.BankMovement.map(payment => ({
                     method: 'bank',
                     accountId: payment.bankId,
-                    amount: payment.entering.toNumber(),
+                    amount: payment.entering.toNumber() === 0 ? payment.emerging.toNumber() : payment.entering.toNumber(),
                     currency: invoice.priceList?.currency ?? null,
                     description: payment.description,
                 }))
@@ -1579,7 +1417,7 @@ export class InvoiceService {
                 ...invoice.PosMovement.map(payment => ({
                     method: 'card',
                     accountId: payment.posId,
-                    amount: payment.entering.toNumber(),
+                    amount: payment.entering.toNumber() === 0 ? payment.emerging.toNumber() : payment.entering.toNumber(),
                     currency: invoice.priceList?.currency ?? null,
                     description: payment.description,
                 }))
@@ -1760,11 +1598,7 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
                 // Fatura detaylarını ekleme
@@ -1792,8 +1626,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: invoiceId,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -1873,16 +1707,8 @@ export class InvoiceService {
                             totalPrice: detail.totalAmount,
                             unitOfMeasure: stockCard.unit, // Birim
                             priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1898,16 +1724,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -1929,16 +1747,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -1960,16 +1770,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -2000,16 +1802,8 @@ export class InvoiceService {
                         documentNo: data.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -2028,16 +1822,8 @@ export class InvoiceService {
                             documentNo: data.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -2166,11 +1952,7 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
                 // Fatura detaylarını ekleme
@@ -2199,8 +1981,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: invoiceId,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -2285,16 +2067,8 @@ export class InvoiceService {
                             totalPrice: detail.totalAmount,
                             unitOfMeasure: stockCard.unit,
                             priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -2310,16 +2084,8 @@ export class InvoiceService {
                                 vaultDirection: "Exit",
                                 vaultType: "PurchaseInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -2341,16 +2107,8 @@ export class InvoiceService {
                                 bankDirection: "Exit",
                                 bankType: "PurchaseInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -2372,16 +2130,8 @@ export class InvoiceService {
                                 posDirection: "Exit",
                                 posType: "PurchaseInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -2412,16 +2162,8 @@ export class InvoiceService {
                         documentNo: data.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -2440,16 +2182,8 @@ export class InvoiceService {
                             documentNo: data.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -2513,12 +2247,16 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+
+                    if (!detail.productCode) {
+                        continue;
+                    }
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        continue;
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
@@ -2621,12 +2359,16 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+
+                    if (!detail.productCode) {
+                        continue;
+                    }
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        continue;
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
@@ -3047,11 +2789,7 @@ export class InvoiceService {
                         totalPaid: new Prisma.Decimal(data.payments.reduce((sum, p) => sum + (p.amount || 0), 0)),
                         totalDebt: new Prisma.Decimal(data.payments.filter(p => p.method === "openAccount").reduce((sum, p) => sum + (p.amount || 0), 0)),
                         description: `${_invoiceNo} no'lu hızlı satış faturası`,
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
@@ -3142,16 +2880,8 @@ export class InvoiceService {
                             unitPrice: new Prisma.Decimal(detail.unitPrice),
                             totalPrice: new Prisma.Decimal(detail.totalAmount),
                             unitOfMeasure: stockCard.unit,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -3168,16 +2898,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -3199,16 +2921,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -3230,16 +2944,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -3275,16 +2981,8 @@ export class InvoiceService {
                         documentNo: _invoiceNo ?? data.id,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -3302,16 +3000,8 @@ export class InvoiceService {
                             documentNo: _invoiceNo ?? data.id,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
