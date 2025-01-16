@@ -430,23 +430,25 @@ export class InvoiceService {
 
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
-                for (const detail of data.items) {
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                        select: { productCode: true },
-                    });
-                    await prisma.invoiceDetail.create({
-                        data: {
-                            invoiceId: newInvoice.id,
-                            productCode: _productCode?.productCode || "",
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: detail.vatRate,
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
-                        },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const _productCode = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                            select: { productCode: true },
+                        });
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: newInvoice.id,
+                                productCode: _productCode?.productCode || "",
+                                quantity: detail.quantity,
+                                unitPrice: detail.unitPrice,
+                                vatRate: detail.vatRate,
+                                netPrice: detail.totalAmount - detail.vatAmount,
+                                totalPrice: detail.totalAmount,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 // 3. Masrafların fatura detaylarını ekleme
@@ -467,76 +469,78 @@ export class InvoiceService {
                 }
 
                 // 4. Alış işlemleri
-                for (const detail of data.items) {
-                    const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                        });
 
-                    if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
-                    }
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        }
 
-                    const warehouse = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                    });
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
 
-                    if (!warehouse) {
-                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
-                    }
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
 
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-                        where: {
-                            stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
-                                warehouseId: data.warehouseId,
-                            },
-                        },
-                    });
-
-                    const productCode = stockCard.productCode;
-                    const quantity = detail.quantity;
-
-                    // Stok miktarını güncelleme
-
-                    if (stockCardWarehouse) {
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: stockCardWarehouse.quantity.plus(quantity),
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: detail.stockCardId,
+                                    warehouseId: data.warehouseId,
+                                },
                             },
                         });
-                    } else {
-                        await prisma.stockCardWarehouse.create({
+
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
+
+                        // Stok miktarını güncelleme
+
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.plus(quantity),
+                                },
+                            });
+                        } else {
+                            await prisma.stockCardWarehouse.create({
+                                data: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: warehouse.id,
+                                    quantity,
+                                },
+                            });
+                        }
+
+                        // StockMovement oluşturma
+                        await prisma.stockMovement.create({
                             data: {
-                                stockCardId: stockCard.id,
-                                warehouseId: warehouse.id,
-                                quantity,
+                                productCode: productCode,
+                                warehouseCode: warehouse.warehouseCode,
+                                branchCode: data.branchCode,
+                                currentCode: data.currentCode,
+                                documentType: "Invoice",
+                                invoiceType: "Purchase",
+                                movementType: "AlisFaturasi",
+                                documentNo: newInvoice.invoiceNo,
+                                gcCode: "Giris",
+                                description: `${newInvoice.invoiceNo} no'lu alış faturası için stok hareketi`,
+                                quantity: quantity,
+                                unitPrice: detail.unitPrice,
+                                totalPrice: detail.totalAmount,
+                                unitOfMeasure: stockCard.unit,
+                                priceListId: detail.priceListId,
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                     }
-
-                    // StockMovement oluşturma
-                    await prisma.stockMovement.create({
-                        data: {
-                            productCode: productCode,
-                            warehouseCode: warehouse.warehouseCode,
-                            branchCode: data.branchCode,
-                            currentCode: data.currentCode,
-                            documentType: "Invoice",
-                            invoiceType: "Purchase",
-                            movementType: "AlisFaturasi",
-                            documentNo: newInvoice.invoiceNo,
-                            gcCode: "Giris",
-                            description: `${newInvoice.invoiceNo} no'lu alış faturası için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit,
-                            priceListId: detail.priceListId,
-                            createdBy: username,
-                            updatedBy: username,
-                        },
-                    });
                 }
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
@@ -706,23 +710,25 @@ export class InvoiceService {
 
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
-                for (const detail of data.items) {
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                        select: { productCode: true },
-                    });
-                    await prisma.invoiceDetail.create({
-                        data: {
-                            invoiceId: newInvoice.id,
-                            productCode: _productCode?.productCode || "",
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: detail.vatRate,
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
-                        },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const _productCode = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                            select: { productCode: true },
+                        });
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: newInvoice.id,
+                                productCode: _productCode?.productCode || "",
+                                quantity: detail.quantity,
+                                unitPrice: detail.unitPrice,
+                                vatRate: detail.vatRate,
+                                netPrice: detail.totalAmount - detail.vatAmount,
+                                totalPrice: detail.totalAmount,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 // 3. Masrafların fatura detaylarını ekleme
@@ -744,79 +750,81 @@ export class InvoiceService {
 
 
                 // 4. Satış işlemleri
-                for (const detail of data.items) {
-                    const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                        });
 
-                    if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
-                    }
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        }
 
-                    const warehouse = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                    });
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
 
-                    if (!warehouse) {
-                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
-                    }
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
 
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-                        where: {
-                            stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
-                                warehouseId: data.warehouseId,
-                            },
-                        },
-                    });
-
-                    const productCode = stockCard.productCode;
-                    const quantity = detail.quantity;
-
-                    // Stok miktarını güncelleme
-
-                    if (stockCardWarehouse) {
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: stockCardWarehouse.quantity.minus(quantity),
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: detail.stockCardId,
+                                    warehouseId: data.warehouseId,
+                                },
                             },
                         });
-                    } else {
-                        console.error("Ürün'ün stoğu bulunamadı. Stoğu olmayan ürünün satışı yapılamaz.");
+
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
+
+                        // Stok miktarını güncelleme
+
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.minus(quantity),
+                                },
+                            });
+                        } else {
+                            console.error("Ürün'ün stoğu bulunamadı. Stoğu olmayan ürünün satışı yapılamaz.");
+                        }
+
+                        // Ensure warehouseCode exists before creating stockMovement
+                        const warehouseExists = await prisma.warehouse.findUnique({
+                            where: { warehouseCode: _warehouseCode.warehouseCode },
+                        });
+
+                        if (!warehouseExists) {
+                            throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
+                        }
+
+                        // StockMovement oluşturma
+                        await prisma.stockMovement.create({
+                            data: {
+                                productCode: productCode,
+                                warehouseCode: warehouse.warehouseCode,
+                                branchCode: data.branchCode,
+                                currentCode: data.currentCode,
+                                documentType: "Invoice",
+                                invoiceType: "Sales",
+                                movementType: "SatisFaturasi",
+                                documentNo: newInvoice.invoiceNo,
+                                gcCode: "Cikis",
+                                description: `${newInvoice.invoiceNo} no'lu satış faturası için stok hareketi`,
+                                quantity: quantity,
+                                unitPrice: detail.unitPrice,
+                                totalPrice: detail.totalAmount,
+                                unitOfMeasure: stockCard.unit, // Birim
+                                priceListId: detail.priceListId,
+                                createdBy: username,
+                                updatedBy: username,
+                            },
+                        });
                     }
-
-                    // Ensure warehouseCode exists before creating stockMovement
-                    const warehouseExists = await prisma.warehouse.findUnique({
-                        where: { warehouseCode: _warehouseCode.warehouseCode },
-                    });
-
-                    if (!warehouseExists) {
-                        throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
-                    }
-
-                    // StockMovement oluşturma
-                    await prisma.stockMovement.create({
-                        data: {
-                            productCode: productCode,
-                            warehouseCode: warehouse.warehouseCode,
-                            branchCode: data.branchCode,
-                            currentCode: data.currentCode,
-                            documentType: "Invoice",
-                            invoiceType: "Sales",
-                            movementType: "SatisFaturasi",
-                            documentNo: newInvoice.invoiceNo,
-                            gcCode: "Cikis",
-                            description: `${newInvoice.invoiceNo} no'lu satış faturası için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit, // Birim
-                            priceListId: detail.priceListId,
-                            createdBy: username,
-                            updatedBy: username,
-                        },
-                    });
                 }
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
