@@ -21,6 +21,6 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
             cd /var/www/erp-backend/
-            git pull origin master
+            git pull origin production
             docker-compose down
             docker-compose up --build -d
