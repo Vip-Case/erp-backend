@@ -964,7 +964,9 @@ export class WarehouseService {
     async getAllReceipts(): Promise<any> {
         try {
             const receipts = await prisma.receipt.findMany({
-
+                include: {
+                    current: true,
+                },
                 orderBy: {
                     createdAt: 'desc'
                 }

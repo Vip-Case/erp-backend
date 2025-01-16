@@ -65,3 +65,5 @@ coverage
 prisma/prismabox
 prisma/docs
 responses
+prisma/seed.ts
+prisma/seed copy.ts
