@@ -11,7 +11,10 @@ export class NotificationService {
     private prisma: PrismaClient;
 
     constructor() {
-        this.prisma = new PrismaClient();
+        this.prisma = new PrismaClient({
+            log: ['error', 'warn'],
+            errorFormat: 'minimal',
+        });
     }
 
     /**
@@ -92,8 +95,14 @@ export class NotificationService {
             }
 
             logger.info(`${notificationCount} adet düşük stok bildirimi oluşturuldu.`);
+
+            // İşlem bittikten sonra bağlantıyı kapatalım
+            await this.prisma.$disconnect();
+
         } catch (error) {
             logger.error('Stok seviyesi kontrolü sırasında hata:', error);
+            // Hata durumunda da bağlantıyı kapatalım
+            await this.prisma.$disconnect();
             throw new Error('Stok seviyesi bildirimleri oluşturulurken bir hata oluştu.');
         }
     }
@@ -106,7 +115,7 @@ export class NotificationService {
         try {
             const username = this.extractUsernameFromToken(bearerToken);
 
-            return await this.prisma.notification.findMany({
+            const result = await this.prisma.notification.findMany({
                 where: {
                     read: false,
                     user: {
@@ -117,7 +126,10 @@ export class NotificationService {
                     createdAt: 'desc'
                 }
             });
+            await this.prisma.$disconnect();
+            return result;
         } catch (error) {
+            await this.prisma.$disconnect();
             logger.error('Okunmamış bildirimler getirilirken hata:', error);
             throw new Error('Okunmamış bildirimler getirilirken bir hata oluştu');
         }
@@ -206,5 +218,10 @@ export class NotificationService {
             logger.error('Bildirimler okundu olarak işaretlenirken hata:', error);
             throw new Error('Bildirimler okundu olarak işaretlenirken bir hata oluştu');
         }
+    }
+
+    // Yeni bir disconnect metodu ekleyelim
+    async disconnect() {
+        await this.prisma.$disconnect();
     }
 }
