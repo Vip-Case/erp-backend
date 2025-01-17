@@ -1,4 +1,4 @@
-FROM oven/bun:debian
+FROM oven/bun:latest
 
 # Çalışma dizini ayarla
 WORKDIR /app
