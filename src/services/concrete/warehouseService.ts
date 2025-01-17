@@ -496,7 +496,11 @@ export class WarehouseService {
 
     async getStocktakeWarehouses(): Promise<any> {
         try {
-            return await prisma.stockTake.findMany({});
+            return await prisma.stockTake.findMany({
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
         } catch (error) {
             logger.error("Error fetching stocktaking warehouses", error);
             throw error;
