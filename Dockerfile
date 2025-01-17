@@ -1,4 +1,4 @@
-FROM oven/bun:latest
+FROM oven/bun:debian
 
 # Çalışma dizini ayarla
 WORKDIR /app
@@ -10,7 +10,7 @@ COPY package.json bun.lockb ./
 COPY .env .env
 
 # Bağımlılıkları kur
-RUN bun install --frozen-lockfile
+RUN bun install
 RUN bun add prisma --global
 
 # Uygulama dosyalarını kopyala
