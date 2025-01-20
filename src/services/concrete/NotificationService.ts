@@ -93,7 +93,7 @@ export class NotificationService {
                     }
                 }
             }
-
+            console.log(`${notificationCount} adet düşük stok bildirimi oluşturuldu.`);
             logger.info(`${notificationCount} adet düşük stok bildirimi oluşturuldu.`);
 
             // İşlem bittikten sonra bağlantıyı kapatalım
