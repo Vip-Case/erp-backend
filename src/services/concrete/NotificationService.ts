@@ -111,16 +111,11 @@ export class NotificationService {
      * Okunmamış bildirimleri getirir
      * @param bearerToken - Bearer token
      */
-    async getUnreadNotifications(bearerToken: string) {
+    async getUnreadNotifications() {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
-
             const result = await this.prisma.notification.findMany({
                 where: {
                     read: false,
-                    user: {
-                        username: username
-                    }
                 },
                 orderBy: {
                     createdAt: 'desc'
@@ -139,16 +134,10 @@ export class NotificationService {
      * Tüm bildirimleri getirir
      * @param bearerToken - Bearer token
      */
-    async getAllNotifications(bearerToken: string) {
+    async getAllNotifications() {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
 
             return await this.prisma.notification.findMany({
-                where: {
-                    user: {
-                        username: username
-                    }
-                },
                 orderBy: {
                     createdAt: 'desc'
                 }
@@ -161,21 +150,16 @@ export class NotificationService {
 
     /**
      * Belirtilen bildirimleri siler
-     * @param bearerToken - Bearer token
      * @param ids - Silinecek bildirimlerin ID listesi
      */
-    async deleteNotifications(bearerToken: string, ids: string | string[]) {
+    async deleteNotifications(ids: string | string[]) {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
             const idList = Array.isArray(ids) ? ids : [ids];
 
             await this.prisma.notification.deleteMany({
                 where: {
                     id: {
                         in: idList
-                    },
-                    user: {
-                        username: username
                     }
                 }
             });
@@ -201,9 +185,6 @@ export class NotificationService {
                 where: {
                     id: {
                         in: idList
-                    },
-                    user: {
-                        username: username
                     }
                 },
                 data: {
