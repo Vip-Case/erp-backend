@@ -104,7 +104,6 @@ app.onRequest(async (ctx) => {
       permissions: decoded.permissions || [],
     };
 
-    console.log("Kullanıcı doğrulandı:", (ctx.request as any).user);
   } catch (error) {
     throw new Error("Unauthorized: Invalid or expired token.");
   }
