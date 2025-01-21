@@ -3,3 +3,7 @@ http.port: 9200
 discovery.type: single-node
 http.cors.enabled: true
 http.cors.allow-origin: "*"
+
+# Single node için index ayarları
+index.number_of_replicas: 0
+index.number_of_shards: 1
