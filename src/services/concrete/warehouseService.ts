@@ -525,12 +525,12 @@ export class WarehouseService {
                 let receiptDetails = [];
 
                 // Cariye ait aktif fiyat listesini al
-                const currentPriceList = await prisma.stockCardPriceList.findFirst({
+                const currentPriceList = await prisma.current.findFirst({
                     where: {
-                        isActive: true
+                        id: data.currentId
                     },
                     include: {
-                        stockCardPriceListItems: true
+                        priceList: true
                     }
                 });
 
@@ -543,7 +543,7 @@ export class WarehouseService {
                     const stockCardPrice = await prisma.stockCardPriceListItems.findFirst({
                         where: {
                             stockCardId: product.stockCardId,
-                            priceListId: currentPriceList.id
+                            priceListId: currentPriceList.priceListId
                         }
                     });
 
