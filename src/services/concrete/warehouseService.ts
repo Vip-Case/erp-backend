@@ -609,20 +609,6 @@ export class WarehouseService {
                         }
                     });
 
-                    // Ürünün fiyatını al ve toplam tutara ekle
-                    const stockCardPriceList = await prisma.stockCardPriceListItems.findFirst({
-                        where: {
-                            stockCardId: product.stockCardId,
-                            priceList: {
-                                isActive: true
-                            }
-                        }
-                    });
-
-                    const unitPrice = stockCardPriceList ? stockCardPriceList.price.toNumber() : 0;
-                    const productTotal = unitPrice * product.quantity;
-                    totalAmount += productTotal;
-
                     const _productCode = await prisma.stockCard.findUnique({
                         where: { id: product.stockCardId },
                         select: { productCode: true },
@@ -630,10 +616,6 @@ export class WarehouseService {
                     const _warehouseCode = await prisma.warehouse.findUnique({
                         where: { id: data.warehouseId },
                         select: { warehouseCode: true },
-                    });
-                    const _branch = await prisma.branchWarehouse.findUnique({
-                        where: { id: data.warehouseId },
-                        select: { branch: { select: { branchCode: true } } },
                     });
 
                     await prisma.stockMovement.create({
@@ -763,12 +745,12 @@ export class WarehouseService {
                 let receiptDetails = [];
 
                 // Cariye ait aktif fiyat listesini al
-                const currentPriceList = await prisma.stockCardPriceList.findFirst({
+                const currentPriceList = await prisma.current.findFirst({
                     where: {
-                        isActive: true
+                        id: data.currentId
                     },
                     include: {
-                        stockCardPriceListItems: true
+                        priceList: true
                     }
                 });
 
@@ -781,7 +763,7 @@ export class WarehouseService {
                     const stockCardPrice = await prisma.stockCardPriceListItems.findFirst({
                         where: {
                             stockCardId: product.stockCardId,
-                            priceListId: currentPriceList.id
+                            priceListId: currentPriceList.priceListId
                         }
                     });
 
