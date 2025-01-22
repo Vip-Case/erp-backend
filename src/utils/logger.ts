@@ -2,6 +2,7 @@ import pino from 'pino';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import pinoCaller from 'pino-caller';
+import net from 'net';
 
 dotenv.config();
 
@@ -15,36 +16,39 @@ if (!fs.existsSync('./logs')) {
 
 const logFilePath = `./logs/app-log-${new Date().toISOString().split('T')[0]}.log`;
 
+// Logstash bağlantısı için stream oluştur
+const logstashStream = (() => {
+    const stream = new net.Socket();
+    const logstashHost = process.env.LOGSTASH_URL?.split(':')[0] || 'localhost';
+    const logstashPort = parseInt(process.env.LOGSTASH_URL?.split(':')[1] || '5044');
+
+    stream.connect(logstashPort, logstashHost, () => {
+        console.log('Logstash bağlantısı başarılı');
+    });
+
+    stream.on('error', (err) => {
+        console.error('Logstash bağlantı hatası:', err);
+    });
+
+    return stream;
+})();
+
 // Stream'leri oluştur
 const streams = [
-    { stream: fs.createWriteStream(logFilePath, { flags: 'a' }) }
-];
-
-// Sadece production ortamında Logstash'e bağlanmayı dene
-if (isProduction) {
-    try {
-        streams.push({
-            stream: pino.transport({
-                target: 'pino-socket',
-                options: {
-                    address: 'logstash',
-                    port: 5044,
-                    reconnectInterval: 1000,
-                    timeout: 2000,
-                    onError: (error: Error) => {
-                        console.warn('Logstash bağlantı hatası:', error.message);
-                    }
+    { stream: fs.createWriteStream(logFilePath, { flags: 'a' }) },
+    {
+        stream: {
+            write: (msg: string) => {
+                try {
+                    const logObject = JSON.parse(msg);
+                    logstashStream.write(JSON.stringify(logObject) + '\n');
+                } catch (err) {
+                    console.error('Log gönderme hatası:', err);
                 }
-            })
-        });
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.warn('Logstash transport oluşturulamadı:', error.message);
-        } else {
-            console.warn('Logstash transport oluşturulamadı: Bilinmeyen hata');
+            }
         }
     }
-}
+];
 
 // Pino logger'ı oluşturuyoruz
 const logger = pino(
