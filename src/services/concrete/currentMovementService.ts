@@ -245,6 +245,9 @@ export class CurrentMovementService {
                     current: {
                         id: currentId
                     }
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
         } catch (error) {
