@@ -1,6 +1,7 @@
 import StockCardService from '../../services/concrete/StockCardService';
 import { Context } from 'elysia';
 import { StockCard, StockCardAttribute, StockCardBarcode, StockCardCategoryItem, StockCardPriceListItems, StockCardTaxRate, Warehouse } from '@prisma/client';
+import { BulkPriceUpdateInput } from '../../types/stockCard';
 
 interface SearchCriteria {
     search: string;
@@ -240,6 +241,53 @@ const StockCardController = {
             return { error: "Barkodlar getirilirken hata oluştu", details: error.message };
         }
     },
+
+    bulkUpdatePrices: async (ctx: Context) => {
+        try {
+            const bearerToken = ctx.request.headers.get("Authorization");
+            if (!bearerToken) {
+                return ctx.error(401, "Yetkilendirme başlığı eksik");
+            }
+
+            const updateData = ctx.body as BulkPriceUpdateInput;
+
+            // Validasyonlar
+            if (!updateData.priceListId) {
+                return ctx.error(400, "Fiyat listesi ID'si gereklidir");
+            }
+            if (!updateData.stockCardIds || updateData.stockCardIds.length === 0) {
+                return ctx.error(400, "En az bir stok kartı seçilmelidir");
+            }
+            if (!updateData.updateType) {
+                return ctx.error(400, "Güncelleme tipi gereklidir");
+            }
+            if (updateData.value === undefined || updateData.value === null) {
+                return ctx.error(400, "Güncelleme değeri gereklidir");
+            }
+
+            const result = await stockCardService.bulkUpdatePrices(updateData, bearerToken);
+
+            if (result.failedCount > 0) {
+                ctx.set.status = 207; // Multi-Status
+                return {
+                    message: "Bazı fiyat güncellemeleri başarısız oldu",
+                    ...result
+                };
+            }
+
+            ctx.set.status = 200;
+            return {
+                message: "Fiyatlar başarıyla güncellendi",
+                ...result
+            };
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return {
+                error: "Toplu fiyat güncellemesi sırasında hata oluştu",
+                details: error.message
+            };
+        }
+    }
 
 }
 
