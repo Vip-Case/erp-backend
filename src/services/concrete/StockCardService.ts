@@ -881,6 +881,9 @@ export class StockCardService {
     getAllStockCardsWithRelations = asyncHandler(async (): Promise<StockCard[]> => {
 
         const stockCards = await prisma.stockCard.findMany({
+            orderBy: {
+                productCode: 'asc',
+            },
             include: {
                 barcodes: true,
                 brand: true,
@@ -1021,6 +1024,9 @@ export class StockCardService {
                         stockCardCategory: true,
                     },
                 },
+            },
+            orderBy: {
+                productCode: 'asc',
             },
         });
 
