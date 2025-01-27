@@ -620,7 +620,7 @@ export class WarehouseService {
 
                     await prisma.stockMovement.create({
                         data: {
-                            documentType: "Other",
+                            documentType: "Order",
                             invoiceType: "Other",
                             movementType: "Devir",
                             gcCode: "Cikis",
@@ -837,7 +837,7 @@ export class WarehouseService {
 
                     await prisma.stockMovement.create({
                         data: {
-                            documentType: "Other",
+                            documentType: "Order",
                             invoiceType: "Other",
                             movementType: "Devir",
                             gcCode: "Giris",

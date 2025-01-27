@@ -194,11 +194,43 @@ export class StockMovementService {
         }
     }
 
+    async getAllOrderStockMovementsByStockCardId(stockCardId: string): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    documentType: "Order",
+                    stockCard: {
+                        id: stockCardId
+                    }
+                }
+            });
+        } catch (error) {
+            logger.error("Error fetching all order stock movements", error);
+            throw error;
+        }
+    }
+
     async getAllSalesStockMovements(): Promise<StockMovement[]> {
         try {
             return await prisma.stockMovement.findMany({
                 where: {
                     invoiceType: "Sales"
+                }
+            });
+        } catch (error) {
+            logger.error("Error fetching all sales stock movements", error);
+            throw error;
+        }
+    }
+
+    async getAllSalesStockMovementsByStockCardId(stockCardId: string): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    invoiceType: "Sales",
+                    stockCard: {
+                        id: stockCardId
+                    }
                 }
             });
         } catch (error) {
@@ -216,6 +248,22 @@ export class StockMovementService {
             });
         } catch (error) {
             logger.error("Error fetching all purchase stock movements", error);
+            throw error;
+        }
+    }
+
+    async getAllPurchaseStockMovementsByStockCardId(stockCardId: string): Promise<StockMovement[]> {
+        try {
+            return await prisma.stockMovement.findMany({
+                where: {
+                    invoiceType: "Purchase",
+                    stockCard: {
+                        id: stockCardId
+                    }
+                }
+            });
+        } catch (error) {
+            logger.error(`Error fetching all purchase stock movements for stock card with id ${stockCardId}`, error);
             throw error;
         }
     }
