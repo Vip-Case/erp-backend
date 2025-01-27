@@ -214,7 +214,7 @@ export class StockMovementService {
         try {
             return await prisma.stockMovement.findMany({
                 where: {
-                    invoiceType: "Sales"
+                    gcCode: "Cikis"
                 }
             });
         } catch (error) {
@@ -227,7 +227,7 @@ export class StockMovementService {
         try {
             return await prisma.stockMovement.findMany({
                 where: {
-                    invoiceType: "Sales",
+                    gcCode: "Cikis",
                     stockCard: {
                         id: stockCardId
                     }
@@ -243,7 +243,7 @@ export class StockMovementService {
         try {
             return await prisma.stockMovement.findMany({
                 where: {
-                    invoiceType: "Purchase"
+                    gcCode: "Giris"
                 }
             });
         } catch (error) {
@@ -256,7 +256,7 @@ export class StockMovementService {
         try {
             return await prisma.stockMovement.findMany({
                 where: {
-                    invoiceType: "Purchase",
+                    gcCode: "Giris",
                     stockCard: {
                         id: stockCardId
                     }
