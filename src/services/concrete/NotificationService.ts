@@ -73,23 +73,38 @@ export class NotificationService {
                                 id: warehouse.warehouseId
                             }
                         });
-                        const severity = warehouse.quantity.toNumber() === 0 ? 'CRITICAL' : 'WARNING';
-                        const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
 
-                        // Bildirim oluştur
-                        await this.prisma.notification.create({
-                            data: {
-                                title: 'Düşük Stok Uyarısı',
-                                message,
+                        // Aynı ürün ve depo için okunmamış bildirim var mı kontrol et
+                        const existingNotification = await this.prisma.notification.findFirst({
+                            where: {
                                 type: 'STOCK_ALERT',
-                                severity,
                                 read: false,
-                                createdAt: new Date()
+                                message: {
+                                    contains: `${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName}`
+                                }
                             }
                         });
 
-                        logger.info(`Bildirim oluşturuldu: ${message}`);
-                        notificationCount++;
+                        // Eğer okunmamış bildirim yoksa yeni bildirim oluştur
+                        if (!existingNotification) {
+                            const severity = warehouse.quantity.toNumber() === 0 ? 'CRITICAL' : 'WARNING';
+                            const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
+
+                            // Bildirim oluştur
+                            await this.prisma.notification.create({
+                                data: {
+                                    title: 'Düşük Stok Uyarısı',
+                                    message,
+                                    type: 'STOCK_ALERT',
+                                    severity,
+                                    read: false,
+                                    createdAt: new Date()
+                                }
+                            });
+
+                            logger.info(`Bildirim oluşturuldu: ${message}`);
+                            notificationCount++;
+                        }
                     }
                 }
             }
