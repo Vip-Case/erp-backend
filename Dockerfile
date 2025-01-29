@@ -1,27 +1,25 @@
 FROM oven/bun:debian
 
-# Çalışma dizini ayarla
 WORKDIR /app
 
-# Paket dosyalarını kopyala
-COPY package.json bun.lockb ./
+# Prisma'nın ihtiyaç duyduğu OpenSSL'i ekleyelim
+RUN apt-get update && apt-get install -y openssl
 
-# Çevresel değişken dosyasını kopyala
+COPY package.json bun.lockb ./
 COPY .env .env
 
-# Bağımlılıkları kur
+# Prisma'yı global yerine lokal olarak kuralım
 RUN bun install
-RUN bun add prisma --global
+# Bu satırı kaldıralım: RUN bun add prisma --global
 
-# Uygulama dosyalarını kopyala
+# Prisma için gerekli dizini ve izinleri ayarlayalım
+RUN mkdir -p /app/node_modules/.prisma
+RUN chmod -R 777 /app/node_modules/.prisma
+
 COPY . .
-
-# wait-for-it.sh ve init.sh dosyalarını kopyala
 COPY wait-for-it.sh /wait-for-it.sh
 COPY init.sh /init.sh
 
-# Çalıştırma izinlerini ayarla
 RUN chmod +x /wait-for-it.sh /init.sh
 
-# Uygulamayı başlatma komutu
 CMD ["/wait-for-it.sh", "postgres:5432", "--", "/init.sh"]
