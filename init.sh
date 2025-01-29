@@ -4,10 +4,13 @@ echo "📡 Waiting for PostgreSQL to be ready..."
 /wait-for-it.sh postgres:5432 -- echo "✅ PostgreSQL is ready."
 
 echo "📡 Running Prisma Generate..."
-# Debug modunu ekleyelim
-DEBUG="prisma:*" bunx prisma generate
+# Timeout ekleyelim
+timeout 300 bunx prisma generate
 
-if [ $? -ne 0 ]; then
+if [ $? -eq 124 ]; then
+    echo "❌ Prisma generate timed out after 5 minutes"
+    exit 1
+elif [ $? -ne 0 ]; then
     echo "❌ Prisma generate failed"
     exit 1
 fi
