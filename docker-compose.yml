@@ -23,9 +23,6 @@ services:
       - LOGSTASH_URL=logstash:5044
     depends_on:
       - postgres
-      - elasticsearch
-      - logstash
-    entrypoint: ["/bin/sh", "-c", "/init.sh"]
 
     develop:
       watch:
