@@ -434,7 +434,6 @@ export const importExcelService = async (file: File) => {
                                 description: currentMovementData.description,
                                 debtAmount: currentMovementData.debtAmount,
                                 creditAmount: currentMovementData.creditAmount,
-                                balanceAmount: currentMovementData.balanceAmount,
                                 priceListId: priceListId, // `priceListName` yerine `priceListId` kullanıyoruz
                                 movementType: currentMovementData.movementType,
                                 documentType: currentMovementData.documentType,

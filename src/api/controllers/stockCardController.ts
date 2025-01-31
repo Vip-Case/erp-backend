@@ -95,9 +95,13 @@ const StockCardController = {
     createStockCardsWithRelations: async (ctx: Context) => {
         try {
             const body = ctx.body as any;
-
+            const bearerToken = ctx.request.headers.get("Authorization");
+        
+            if (!bearerToken) {
+                return ctx.error(401, "Authorization header is missing.");
+            }
             // Servisi çağırarak StockCard ve ilişkilerini oluşturuyoruz
-            const createdStockCard = await stockCardService.createStockCardsWithRelations(body);
+            const createdStockCard = await stockCardService.createStockCardsWithRelations(body, bearerToken);
             ctx.set.status = 200;
             return createdStockCard;
         } catch (error: any) {
@@ -111,9 +115,14 @@ const StockCardController = {
         const { id } = ctx.params;
         try {
             const body = ctx.body as any;
+            const bearerToken = ctx.request.headers.get("Authorization");
+        
+            if (!bearerToken) {
+                return ctx.error(401, "Authorization header is missing.");
+            }
             console.log(body);
             // Servisi çağırarak StockCard ve ilişkilerini güncelliyoruz
-            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body);
+            const updatedStockCard = await stockCardService.updateStockCardsWithRelations(id, body, bearerToken);
             ctx.set.status = 200;
             return updatedStockCard;
         } catch (error: any) {

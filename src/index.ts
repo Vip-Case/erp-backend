@@ -48,6 +48,7 @@ import OrderInvoiceRoutes from './api/routes/v1/orderInvoiceRoutes';
 import DynamicRoutes from './api/routes/v1/dynamicRoutes';
 import MarketPlaceRoutes from './api/routes/v1/marketPlaceRoutes';
 import StoreRoutes from './api/routes/v1/storeRoutes';
+import TrendyolRoutes from './api/routes/v1/trendyolRoutes';
 
 dotenv.config();
 
@@ -85,7 +86,7 @@ app.onRequest(async (ctx) => {
   if (publicRoutes.some(r => route.startsWith(r))) {
     console.log("Public route, skipping auth.");
     return;
-}
+  }
 
   const authHeader = ctx.request.headers.get("Authorization");
   if (!authHeader) {
@@ -166,14 +167,14 @@ app.onRequest(async (ctx) => {
 const notificationService = new NotificationService();
 cron.schedule('*/30 * * * *', async () => {
   try {
-      logger.info('Stok seviyesi kontrolü başlatılıyor...');
-      
-      // Stok seviyelerini kontrol et
-      await notificationService.checkStockLevels();
-      
-      logger.info('Stok seviyesi kontrolü tamamlandı');
+    logger.info('Stok seviyesi kontrolü başlatılıyor...');
+
+    // Stok seviyelerini kontrol et
+    await notificationService.checkStockLevels();
+
+    logger.info('Stok seviyesi kontrolü tamamlandı');
   } catch (error) {
-      logger.error('Stok seviyesi kontrolü sırasında hata:', error);
+    logger.error('Stok seviyesi kontrolü sırasında hata:', error);
   }
 });
 console.log("Bildirimler kontrol ediliyor...");
@@ -255,6 +256,7 @@ app.onError(async ({ error, set, request }) => {
   };
 });
 
+
 const routes = [
   StockCardRoutes,
   PriceListRoutes,
@@ -291,6 +293,7 @@ const routes = [
 app.use(NotificationRoutes(app));
 wooCommerceRoutes(app);
 OrderInvoiceRoutes(app);
+TrendyolRoutes(app);
 
 routes.forEach((route) => app.use(route));
 

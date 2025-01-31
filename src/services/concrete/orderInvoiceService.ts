@@ -110,6 +110,8 @@ export class OrderInvoiceService {
                 paymentDay: 30,
                 branchCode,
                 warehouseId,
+                id: "", // Add appropriate value for id
+                warehouseCode,
                 description: `Order from ${order.platform} (${order.platformOrderId})`,
                 currentCode: customerCode,
                 priceListId,

@@ -2786,7 +2786,7 @@ async function main() {
         },
     });
 
-    const marketPlace = await prisma.marketPlace.create({
+    const marketPlace1 = await prisma.marketPlace.create({
         data: {
             name: "Woo",
             apiBaseUrl: "https://api.woo.com",
@@ -2795,11 +2795,20 @@ async function main() {
         },
     });
 
+    const marketPlace2 = await prisma.marketPlace.create({
+        data: {
+            name: "Trendyol",
+            apiBaseUrl: "https://api.trendyol.com/sapigw",
+            logoUrl: "https://example.com/logo-trendyol.png",
+            companyCode: "C1", // Bağlantılı bir şirket kodu varsa eklenmeli
+        },
+    });
+
     // Store ekleme
-    const store = await prisma.store.create({
+    const store1 = await prisma.store.create({
         data: {
             name: "Woocommerce",
-            marketPlaceId: marketPlace.id, // MarketPlace ile ilişkilendirme
+            marketPlaceId: marketPlace1.id, // MarketPlace ile ilişkilendirme
             apiCredentials: JSON.stringify({
                 baseUrl: "https://demo.novent.com.tr",
                 consumerKey: "ck_6ce522841d1f2ea094045f83d155c1897ebf1385",
@@ -2810,8 +2819,22 @@ async function main() {
         },
     });
 
-
-
+    // Store ekleme
+    const store2 = await prisma.store.create({
+        data: {
+            name: "Trendyol Store",
+            marketPlaceId: marketPlace2.id, // MarketPlace ile ilişkilendirme
+            apiCredentials: JSON.stringify({
+                baseUrl: "https://stageapi.trendyol.com/stagesapigw",
+                apiKey: "ij17ZioQkwtNQK6rgWr2",
+                apiSecret: "P6nnQNGk5Ws0eUqslj3N",
+                supplierId: "2738",
+                environment: "STAGE"
+            }),
+            autoInvoiceCreation: true,
+            storeUrl: "https://stagepartner.trendyol.com"
+        },
+    });
 
 
 }

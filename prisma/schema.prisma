@@ -215,6 +215,7 @@ model StockCard {
   description             String?                   @db.Text
   companyCode             String?                   @db.VarChar(50)
   branchCode              String?                   @db.VarChar(50)
+  modelCode               String?                   @db.VarChar(50)
   brandId                 String?                   @db.VarChar(100)
   productType             ProductType               @default(BasitUrun)
   gtip                    String?                   @db.VarChar(50)

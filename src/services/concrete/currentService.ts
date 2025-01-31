@@ -49,8 +49,8 @@ interface CurrentData {
     sicilNo?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    createdBy?: string | null
-    updatedBy?: string | null
+    createdByUser?: string | null
+    updatedByUser?: string | null
     priceListId: string
 }
 
@@ -76,7 +76,7 @@ export class currentService {
         currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
         currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
         currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-        currentRisk?: Prisma.CurrentRiskCreateNestedManyWithoutCurrentInput;
+        currentRisk?: Prisma.CurrentRiskCreateNestedOneWithoutCurrentInput;
         currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
 
     }, bearerToken: string): Promise<Current> {
@@ -84,11 +84,11 @@ export class currentService {
             const username = extractUsernameFromToken(bearerToken);
             // priceListName ile id'yi buluyoruz
             const priceList = await prisma.stockCardPriceList.findUnique({
-                where: { priceListName: data.priceListName }
+                where: { priceListName: data.current.priceListId }
             });
 
             if (!priceList) {
-                throw new Error(`PriceList '${data.priceListName}' bulunamadı.`);
+                throw new Error(`PriceList '${data.current.priceListId}' bulunamadı.`);
             }
 
             const newCurrent = await prisma.current.create({
@@ -179,7 +179,7 @@ export class currentService {
                     });
 
                     await Promise.all(
-                        data.addresses.map((address) =>
+                        data.addresses.map((address: CurrentAddress) =>
                             tx.currentAddress.create({
                                 data: {
                                     addressName: address.addressName,
@@ -207,7 +207,7 @@ export class currentService {
                     });
 
                     await Promise.all(
-                        data.categories.map((categoryId) =>
+                        data.categories.map((categoryId: string) =>
                             tx.currentCategoryItem.create({
                                 data: {
                                     category: { connect: { id: categoryId } },
@@ -630,7 +630,7 @@ export class currentService {
             }
 
             // Extract just the id values
-            const idList = idsArray.map(item => item.id);
+            const idList = idsArray.map((item: any) => item.id);
 
             return await prisma.$transaction(async (prisma) => {
                 await prisma.currentAddress.deleteMany({

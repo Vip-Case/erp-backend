@@ -16,9 +16,9 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=xderensa3
+      - DB_PASSWORD=1234
       - DB_NAME=erp_db
-      - DATABASE_URL=postgresql://postgres:xderensa3@postgres:5432/erp_db?schema=public
+      - DATABASE_URL=postgresql://postgres:1234@postgres:5432/erp_db?schema=public
     depends_on:
       - postgres
     entrypoint: ["/bin/sh", "-c", "/init.sh"]
@@ -40,7 +40,7 @@ services:
     environment:
       POSTGRES_DB: erp_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: xderensa3
+      POSTGRES_PASSWORD: 1234
     ports:
       - "5432:5432"
     volumes:

@@ -22,7 +22,7 @@
     "@elysiajs/swagger": "^1.1.1",
     "@prisma/client": "^6.0.1",
     "@sinclair/typebox": "0.32.34",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.10.7",
     "@types/pino-multi-stream": "^5.1.6",
     "@woocommerce/woocommerce-rest-api": "^1.0.1",
     "bcrypt": "^5.1.1",
@@ -38,6 +38,7 @@
     "pg": "^8.13.0",
     "pino": "^9.4.0",
     "pino-caller": "^3.4.0",
+    "pino-elasticsearch": "^8.1.0",
     "pino-multi-stream": "^6.0.0",
     "pino-pretty": "^11.2.2",
     "pino-socket": "^7.4.0",
@@ -55,7 +56,12 @@
     "@types/supertest": "^6.0.2",
     "@types/woocommerce__woocommerce-rest-api": "^1.0.5",
     "bun-types": "latest",
-    "supertest": "^7.0.0"
+    "supertest": "^7.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   },
-  "type": "module"
+  "type": "module",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
 }
