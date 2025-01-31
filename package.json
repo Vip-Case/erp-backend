@@ -20,7 +20,7 @@
     "@elysiajs/jwt": "^1.1.1",
     "@elysiajs/static": "^1.1.1",
     "@elysiajs/swagger": "^1.1.1",
-    "@prisma/client": "^6.0.1",
+    "@prisma/client": "^6.1.0",
     "@sinclair/typebox": "0.32.34",
     "@types/node": "^22.10.7",
     "@types/pino-multi-stream": "^5.1.6",
@@ -42,7 +42,7 @@
     "pino-multi-stream": "^6.0.0",
     "pino-pretty": "^11.2.2",
     "pino-socket": "^7.4.0",
-    "prisma": "^6.0.1",
+    "prisma": "^6.1.0",
     "soap": "^1.1.5",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"

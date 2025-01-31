@@ -625,7 +625,7 @@ export class TrendyolService {
       });
     }
   }
-
+   
   async matchAndCreateStockCard(marketPlaceProduct: MarketPlaceProducts): Promise<void> {
     try {
       const productDetails = await this.trendyol.getProductDetails(marketPlaceProduct.barcode || '');
@@ -778,11 +778,11 @@ export class TrendyolService {
 
     return brand.id;
   }
-
+ 
   private async processVariations(
     tx: Prisma.TransactionClient,
     marketPlaceProduct: MarketPlaceProducts,
-    parentProductCode: string,
+    parentProductCode: string,  
     stockCardId: string,
     variations: any[]
   ): Promise<void> {

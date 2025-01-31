@@ -1163,6 +1163,95 @@ export class StockCardService {
         return stockCards;
     });
 
+    updateStockCardBarcodes = asyncHandler(async (data: { stockCardId: string, barcodes: string[] }) => {
+        try {
+            // Mevcut barkodları getir
+            const existingBarcodes = await prisma.stockCardBarcode.findMany({
+                where: { stockCardId: data.stockCardId }
+            });
+
+            const existingBarcodeValues = existingBarcodes.map(b => b.barcode);
+            const incomingBarcodes = data.barcodes;
+
+            // Silinecek barkodları bul (mevcut olup gelen listede olmayanlar)
+            const barcodesToDelete = existingBarcodeValues.filter(
+                barcode => !incomingBarcodes.includes(barcode)
+            );
+
+            // Eklenecek barkodları bul (gelen listede olup mevcut olmayanlar)
+            const barcodesToAdd = incomingBarcodes.filter(
+                barcode => !existingBarcodeValues.includes(barcode)
+            );
+
+            // Transaction içinde işlemleri gerçekleştir
+            return await prisma.$transaction(async (prisma) => {
+                // Silinecek barkodları sil
+                if (barcodesToDelete.length > 0) {
+                    await prisma.stockCardBarcode.deleteMany({
+                        where: {
+                            AND: [
+                                { stockCardId: data.stockCardId },
+                                { barcode: { in: barcodesToDelete } }
+                            ]
+                        }
+                    });
+                }
+
+                // Yeni barkodları ekle
+                if (barcodesToAdd.length > 0) {
+                    await prisma.stockCardBarcode.createMany({
+                        data: barcodesToAdd.map(barcode => ({
+                            stockCardId: data.stockCardId,
+                            barcode: barcode
+                        }))
+                    });
+                }
+
+                // Güncellenmiş barkod listesini döndür
+                return await prisma.stockCardBarcode.findMany({
+                    where: { stockCardId: data.stockCardId }
+                });
+            });
+
+        } catch (error) {
+            logger.error("Error updating StockCard barcodes:", error);
+            throw new Error("Barkod güncellemesi sırasında bir hata oluştu");
+        }
+    });
+
+    getStockCardBarcodesBySearch = asyncHandler(async (searchTerm: string) => {
+        try {
+            // Önce stok kartını bul (productCode veya barkod ile)
+            const stockCard = await prisma.stockCard.findFirst({
+                where: {
+                    OR: [
+                        { productCode: searchTerm },
+                        { barcodes: { some: { barcode: searchTerm } } }
+                    ]
+                },
+                include: {
+                    barcodes: true
+                }
+            });
+
+            if (!stockCard) {
+                throw new Error("Stok kartı bulunamadı");
+            }
+
+            // Barkodlar ve stok kartı bilgilerini birleştir
+            return {
+                stockCardId: stockCard.id,
+                productCode: stockCard.productCode,
+                productName: stockCard.productName,
+                barcodes: stockCard.barcodes
+            };
+
+        } catch (error) {
+            logger.error("Error fetching StockCard barcodes:", error);
+            throw new Error("Barkodlar getirilirken bir hata oluştu");
+        }
+    });
+
 }
 
 export default StockCardService;

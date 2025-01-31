@@ -16,7 +16,7 @@ const StockCardController = {
         const stockCardData: StockCard = body.stockCard;
         const warehouseData: string[] = body.warehouseIds !== null ? body.warehouseIds : [];
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -215,6 +215,30 @@ const StockCardController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Error fetching stock cards", details: error.message };
+        }
+    },
+
+    updateStockCardBarcodes: async (ctx: Context) => {
+        const data = ctx.body as { stockCardId: string, barcodes: string[] };
+        try {
+            const updatedBarcodes = await stockCardService.updateStockCardBarcodes(data);
+            ctx.set.status = 200;
+            return updatedBarcodes;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Barkod güncellemesi sırasında hata oluştu", details: error.message };
+        }
+    },
+
+    getStockCardBarcodesBySearch: async (ctx: Context) => {
+        const { searchTerm } = ctx.body as { searchTerm: string };
+        try {
+            const barcodes = await stockCardService.getStockCardBarcodesBySearch(searchTerm);
+            ctx.set.status = 200;
+            return barcodes;
+        } catch (error: any) {
+            ctx.set.status = error.message === "Stok kartı bulunamadı" ? 404 : 500;
+            return { error: "Barkodlar getirilirken hata oluştu", details: error.message };
         }
     },
 
