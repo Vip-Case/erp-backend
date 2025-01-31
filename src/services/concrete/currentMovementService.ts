@@ -25,15 +25,6 @@ export class CurrentMovementService {
         try {
             const username = extractUsernameFromToken(bearerToken);
             const companyCode = await prisma.company.findFirst();
-            console.log("companyCode", companyCode);
-            const getLastBalanceAmountByCurrentId = await prisma.currentMovement.findFirst({
-                where: {
-                    currentCode: currentMovement.currentCode
-                },
-                orderBy: {
-                    createdAt: 'desc'
-                }
-            });
             const createdCurrentMovement = await prisma.currentMovement.create({
                 data: {
                     dueDate: currentMovement.dueDate,
@@ -245,6 +236,9 @@ export class CurrentMovementService {
                     current: {
                         id: currentId
                     }
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
         } catch (error) {

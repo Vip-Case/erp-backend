@@ -496,7 +496,11 @@ export class WarehouseService {
 
     async getStocktakeWarehouses(): Promise<any> {
         try {
-            return await prisma.stockTake.findMany({});
+            return await prisma.stockTake.findMany({
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
         } catch (error) {
             logger.error("Error fetching stocktaking warehouses", error);
             throw error;
@@ -521,12 +525,12 @@ export class WarehouseService {
                 let receiptDetails = [];
 
                 // Cariye ait aktif fiyat listesini al
-                const currentPriceList = await prisma.stockCardPriceList.findFirst({
+                const currentPriceList = await prisma.current.findFirst({
                     where: {
-                        isActive: true
+                        id: data.currentId
                     },
                     include: {
-                        stockCardPriceListItems: true
+                        priceList: true
                     }
                 });
 
@@ -539,7 +543,7 @@ export class WarehouseService {
                     const stockCardPrice = await prisma.stockCardPriceListItems.findFirst({
                         where: {
                             stockCardId: product.stockCardId,
-                            priceListId: currentPriceList.id
+                            priceListId: currentPriceList.priceListId
                         }
                     });
 
@@ -605,20 +609,6 @@ export class WarehouseService {
                         }
                     });
 
-                    // Ürünün fiyatını al ve toplam tutara ekle
-                    const stockCardPriceList = await prisma.stockCardPriceListItems.findFirst({
-                        where: {
-                            stockCardId: product.stockCardId,
-                            priceList: {
-                                isActive: true
-                            }
-                        }
-                    });
-
-                    const unitPrice = stockCardPriceList ? stockCardPriceList.price.toNumber() : 0;
-                    const productTotal = unitPrice * product.quantity;
-                    totalAmount += productTotal;
-
                     const _productCode = await prisma.stockCard.findUnique({
                         where: { id: product.stockCardId },
                         select: { productCode: true },
@@ -627,14 +617,10 @@ export class WarehouseService {
                         where: { id: data.warehouseId },
                         select: { warehouseCode: true },
                     });
-                    const _branch = await prisma.branchWarehouse.findUnique({
-                        where: { id: data.warehouseId },
-                        select: { branch: { select: { branchCode: true } } },
-                    });
 
                     await prisma.stockMovement.create({
                         data: {
-                            documentType: "Other",
+                            documentType: "Order",
                             invoiceType: "Other",
                             movementType: "Devir",
                             gcCode: "Cikis",
@@ -759,12 +745,12 @@ export class WarehouseService {
                 let receiptDetails = [];
 
                 // Cariye ait aktif fiyat listesini al
-                const currentPriceList = await prisma.stockCardPriceList.findFirst({
+                const currentPriceList = await prisma.current.findFirst({
                     where: {
-                        isActive: true
+                        id: data.currentId
                     },
                     include: {
-                        stockCardPriceListItems: true
+                        priceList: true
                     }
                 });
 
@@ -777,7 +763,7 @@ export class WarehouseService {
                     const stockCardPrice = await prisma.stockCardPriceListItems.findFirst({
                         where: {
                             stockCardId: product.stockCardId,
-                            priceListId: currentPriceList.id
+                            priceListId: currentPriceList.priceListId
                         }
                     });
 
@@ -851,7 +837,7 @@ export class WarehouseService {
 
                     await prisma.stockMovement.create({
                         data: {
-                            documentType: "Other",
+                            documentType: "Order",
                             invoiceType: "Other",
                             movementType: "Devir",
                             gcCode: "Giris",
@@ -964,7 +950,9 @@ export class WarehouseService {
     async getAllReceipts(): Promise<any> {
         try {
             const receipts = await prisma.receipt.findMany({
-
+                include: {
+                    current: true,
+                },
                 orderBy: {
                     createdAt: 'desc'
                 }

@@ -11,7 +11,10 @@ export class NotificationService {
     private prisma: PrismaClient;
 
     constructor() {
-        this.prisma = new PrismaClient();
+        this.prisma = new PrismaClient({
+            log: ['error', 'warn'],
+            errorFormat: 'minimal',
+        });
     }
 
     /**
@@ -70,30 +73,51 @@ export class NotificationService {
                                 id: warehouse.warehouseId
                             }
                         });
-                        const severity = warehouse.quantity.toNumber() === 0 ? 'CRITICAL' : 'WARNING';
-                        const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
 
-                        // Bildirim oluştur
-                        await this.prisma.notification.create({
-                            data: {
-                                title: 'Düşük Stok Uyarısı',
-                                message,
+                        // Aynı ürün ve depo için okunmamış bildirim var mı kontrol et
+                        const existingNotification = await this.prisma.notification.findFirst({
+                            where: {
                                 type: 'STOCK_ALERT',
-                                severity,
                                 read: false,
-                                createdAt: new Date()
+                                message: {
+                                    contains: `${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName}`
+                                }
                             }
                         });
 
-                        logger.info(`Bildirim oluşturuldu: ${message}`);
-                        notificationCount++;
+                        // Eğer okunmamış bildirim yoksa yeni bildirim oluştur
+                        if (!existingNotification) {
+                            const severity = warehouse.quantity.toNumber() === 0 ? 'CRITICAL' : 'WARNING';
+                            const message = `Stok Uyarısı: ${productName} (${productCode}) - Depo: ${warehouseName?.warehouseName} stok seviyesi ${warehouse.quantity} adete düşmüştür.`;
+
+                            // Bildirim oluştur
+                            await this.prisma.notification.create({
+                                data: {
+                                    title: 'Düşük Stok Uyarısı',
+                                    message,
+                                    type: 'STOCK_ALERT',
+                                    severity,
+                                    read: false,
+                                    createdAt: new Date()
+                                }
+                            });
+
+                            logger.info(`Bildirim oluşturuldu: ${message}`);
+                            notificationCount++;
+                        }
                     }
                 }
             }
-
+            console.log(`${notificationCount} adet düşük stok bildirimi oluşturuldu.`);
             logger.info(`${notificationCount} adet düşük stok bildirimi oluşturuldu.`);
+
+            // İşlem bittikten sonra bağlantıyı kapatalım
+            await this.prisma.$disconnect();
+
         } catch (error) {
             logger.error('Stok seviyesi kontrolü sırasında hata:', error);
+            // Hata durumunda da bağlantıyı kapatalım
+            await this.prisma.$disconnect();
             throw new Error('Stok seviyesi bildirimleri oluşturulurken bir hata oluştu.');
         }
     }
@@ -102,22 +126,20 @@ export class NotificationService {
      * Okunmamış bildirimleri getirir
      * @param bearerToken - Bearer token
      */
-    async getUnreadNotifications(bearerToken: string) {
+    async getUnreadNotifications() {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
-
-            return await this.prisma.notification.findMany({
+            const result = await this.prisma.notification.findMany({
                 where: {
                     read: false,
-                    user: {
-                        username: username
-                    }
                 },
                 orderBy: {
                     createdAt: 'desc'
                 }
             });
+            await this.prisma.$disconnect();
+            return result;
         } catch (error) {
+            await this.prisma.$disconnect();
             logger.error('Okunmamış bildirimler getirilirken hata:', error);
             throw new Error('Okunmamış bildirimler getirilirken bir hata oluştu');
         }
@@ -127,16 +149,10 @@ export class NotificationService {
      * Tüm bildirimleri getirir
      * @param bearerToken - Bearer token
      */
-    async getAllNotifications(bearerToken: string) {
+    async getAllNotifications() {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
 
             return await this.prisma.notification.findMany({
-                where: {
-                    user: {
-                        username: username
-                    }
-                },
                 orderBy: {
                     createdAt: 'desc'
                 }
@@ -149,21 +165,16 @@ export class NotificationService {
 
     /**
      * Belirtilen bildirimleri siler
-     * @param bearerToken - Bearer token
      * @param ids - Silinecek bildirimlerin ID listesi
      */
-    async deleteNotifications(bearerToken: string, ids: string | string[]) {
+    async deleteNotifications(ids: string | string[]) {
         try {
-            const username = this.extractUsernameFromToken(bearerToken);
             const idList = Array.isArray(ids) ? ids : [ids];
 
             await this.prisma.notification.deleteMany({
                 where: {
                     id: {
                         in: idList
-                    },
-                    user: {
-                        username: username
                     }
                 }
             });
@@ -189,9 +200,6 @@ export class NotificationService {
                 where: {
                     id: {
                         in: idList
-                    },
-                    user: {
-                        username: username
                     }
                 },
                 data: {
@@ -206,5 +214,10 @@ export class NotificationService {
             logger.error('Bildirimler okundu olarak işaretlenirken hata:', error);
             throw new Error('Bildirimler okundu olarak işaretlenirken bir hata oluştu');
         }
+    }
+
+    // Yeni bir disconnect metodu ekleyelim
+    async disconnect() {
+        await this.prisma.$disconnect();
     }
 }

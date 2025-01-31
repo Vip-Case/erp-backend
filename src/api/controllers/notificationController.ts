@@ -22,12 +22,7 @@ export const NotificationController = {
     // Okunmamış bildirimleri getir
     getUnreadNotifications: async (ctx: Context) => {
         try {
-            const authHeader = ctx.request.headers.get("Authorization");
-            if (!authHeader) {
-                return ctx.error(401, "Authorization header is missing");
-            }
-
-            const notifications = await notificationService.getUnreadNotifications(authHeader);
+            const notifications = await notificationService.getUnreadNotifications();
             ctx.set.status = 200;
             return notifications;
         } catch (error: any) {
@@ -39,12 +34,7 @@ export const NotificationController = {
     // Tüm bildirimleri getir
     getAllNotifications: async (ctx: Context) => {
         try {
-            const authHeader = ctx.request.headers.get("Authorization");
-            if (!authHeader) {
-                return ctx.error(401, "Authorization header is missing");
-            }
-
-            const notifications = await notificationService.getAllNotifications(authHeader);
+            const notifications = await notificationService.getAllNotifications();
             ctx.set.status = 200;
             return notifications;
         } catch (error: any) {
@@ -56,17 +46,13 @@ export const NotificationController = {
     // Bildirimleri sil
     deleteNotifications: async (ctx: Context) => {
         try {
-            const authHeader = ctx.request.headers.get("Authorization");
-            if (!authHeader) {
-                return ctx.error(401, "Authorization header is missing");
-            }
 
             const { ids } = ctx.body as { ids: string | string[] };
             if (!ids) {
                 return ctx.error(400, "Notification IDs are required");
             }
 
-            await notificationService.deleteNotifications(authHeader, ids);
+            await notificationService.deleteNotifications(ids);
             ctx.set.status = 200;
             return { message: "Bildirimler başarıyla silindi" };
         } catch (error: any) {

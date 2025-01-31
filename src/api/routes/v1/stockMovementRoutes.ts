@@ -9,8 +9,11 @@ export const StockMovementRoutes = (app: Elysia) => {
       .put("/:id", StockMovementController.updateStockMovement, { tags: ["Stock Movements"] })
       .delete("/:id", StockMovementController.deleteStockMovement, { tags: ["Stock Movements"] })
       .get("/orders", StockMovementController.getAllOrderStockMovements, { tags: ["Stock Movements"] })
+      .get("/orders/:stockCardId", StockMovementController.getAllOrderStockMovementsByStockCardId, { tags: ["Stock Movements"] })
       .get("/sales", StockMovementController.getAllSalesStockMovements, { tags: ["Stock Movements"] })
+      .get("/sales/:stockCardId", StockMovementController.getAllSalesStockMovementsByStockCardId, { tags: ["Stock Movements"] })
       .get("/purchase", StockMovementController.getAllPurchaseStockMovements, { tags: ["Stock Movements"] })
+      .get("/purchase/:stockCardId", StockMovementController.getAllPurchaseStockMovementsByStockCardId, { tags: ["Stock Movements"] })
       .get("/byProductCode/:productCode", StockMovementController.getAllStockMovementsByStockCardCode, { tags: ["Stock Movements"] })
       .get("/byStockCardId/:stockCardId", StockMovementController.getAllStockMovementsByStockCardId, { tags: ["Stock Movements"] })
   );

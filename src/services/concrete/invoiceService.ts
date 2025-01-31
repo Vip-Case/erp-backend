@@ -62,8 +62,8 @@ export interface InvoiceDetailResponse {
 
     expenses: Array<{
         id: string;
-        expenseCode: string;
-        expenseName: string;
+        costCode: string;
+        costName: string;
         price: number;
         currency: string;
     }>;
@@ -178,8 +178,8 @@ export interface InvoiceInfo {
 
 export interface Expenses {
     id: string;
-    expenseCode: string;
-    expenseName: string;
+    costCode: string;
+    costName: string;
     price: number;
     currency: string;
 }
@@ -423,38 +423,32 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdByUser: { connect: { username: username } },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
-                for (const detail of data.items) {
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                        select: { productCode: true },
-                    });
-                    await prisma.invoiceDetail.create({
-                        data: {
-                            invoiceId: newInvoice.id,
-                            productCode: _productCode?.productCode || "",
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: detail.vatRate,
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
-                        },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const _productCode = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                            select: { productCode: true },
+                        });
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: newInvoice.id,
+                                productCode: _productCode?.productCode || "",
+                                quantity: detail.quantity,
+                                unitPrice: detail.unitPrice,
+                                vatRate: detail.vatRate,
+                                netPrice: detail.totalAmount - detail.vatAmount,
+                                totalPrice: detail.totalAmount,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 // 3. Masrafların fatura detaylarını ekleme
@@ -463,8 +457,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: newInvoice.id,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -475,84 +469,78 @@ export class InvoiceService {
                 }
 
                 // 4. Alış işlemleri
-                for (const detail of data.items) {
-                    const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                        });
 
-                    if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
-                    }
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        }
 
-                    const warehouse = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                    });
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
 
-                    if (!warehouse) {
-                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
-                    }
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
 
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-                        where: {
-                            stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
-                                warehouseId: data.warehouseId,
-                            },
-                        },
-                    });
-
-                    const productCode = stockCard.productCode;
-                    const quantity = detail.quantity;
-
-                    // Stok miktarını güncelleme
-
-                    if (stockCardWarehouse) {
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: stockCardWarehouse.quantity.plus(quantity),
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: detail.stockCardId,
+                                    warehouseId: data.warehouseId,
+                                },
                             },
                         });
-                    } else {
-                        await prisma.stockCardWarehouse.create({
+
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
+
+                        // Stok miktarını güncelleme
+
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.plus(quantity),
+                                },
+                            });
+                        } else {
+                            await prisma.stockCardWarehouse.create({
+                                data: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: warehouse.id,
+                                    quantity,
+                                },
+                            });
+                        }
+
+                        // StockMovement oluşturma
+                        await prisma.stockMovement.create({
                             data: {
-                                stockCardId: stockCard.id,
-                                warehouseId: warehouse.id,
-                                quantity,
+                                productCode: productCode,
+                                warehouseCode: warehouse.warehouseCode,
+                                branchCode: data.branchCode,
+                                currentCode: data.currentCode,
+                                documentType: "Invoice",
+                                invoiceType: "Purchase",
+                                movementType: "AlisFaturasi",
+                                documentNo: newInvoice.invoiceNo,
+                                gcCode: "Giris",
+                                description: `${newInvoice.invoiceNo} no'lu alış faturası için stok hareketi`,
+                                quantity: quantity,
+                                unitPrice: detail.unitPrice,
+                                totalPrice: detail.totalAmount,
+                                unitOfMeasure: stockCard.unit,
+                                priceListId: detail.priceListId,
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                     }
-
-                    // StockMovement oluşturma
-                    await prisma.stockMovement.create({
-                        data: {
-                            productCode: productCode,
-                            warehouseCode: warehouse.warehouseCode,
-                            branchCode: data.branchCode,
-                            currentCode: data.currentCode,
-                            documentType: "Invoice",
-                            invoiceType: "Purchase",
-                            movementType: "AlisFaturasi",
-                            documentNo: newInvoice.invoiceNo,
-                            gcCode: "Giris",
-                            description: `${newInvoice.invoiceNo} no'lu alış faturası için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit, // Birim
-                            priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                        },
-                    });
                 }
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
@@ -566,16 +554,8 @@ export class InvoiceService {
                                 vaultDirection: "Exit",
                                 vaultType: "PurchaseInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -597,16 +577,8 @@ export class InvoiceService {
                                 bankDirection: "Exit",
                                 bankType: "PurchaseInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -628,16 +600,8 @@ export class InvoiceService {
                                 posDirection: "Exit",
                                 posType: "PurchaseInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -668,12 +632,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: { username: username }
-                        },
-                        updatedByUser: {
-                            connect: { username: username }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -692,12 +652,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: { username: username }
-                            },
-                            updatedByUser: {
-                                connect: { username: username }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -747,48 +703,32 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdByUser: { connect: { username: username } },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
                 // 2. İlgili fatura detaylarını ve stok işlemlerini ekleme
                 // Fatura detaylarını ekleme
-                for (const detail of data.items) {
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                        select: { productCode: true },
-                    });
-                    await prisma.invoiceDetail.create({
-                        data: {
-                            invoiceId: newInvoice.id,
-                            productCode: _productCode?.productCode || "",
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: detail.vatRate,
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const _productCode = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                            select: { productCode: true },
+                        });
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: newInvoice.id,
+                                productCode: _productCode?.productCode || "",
+                                quantity: detail.quantity,
+                                unitPrice: detail.unitPrice,
+                                vatRate: detail.vatRate,
+                                netPrice: detail.totalAmount - detail.vatAmount,
+                                totalPrice: detail.totalAmount,
+                                discount: 0,
                             },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                        },
-                    });
+                        });
+                    }
                 }
 
                 // 3. Masrafların fatura detaylarını ekleme
@@ -797,8 +737,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: newInvoice.id,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -810,87 +750,81 @@ export class InvoiceService {
 
 
                 // 4. Satış işlemleri
-                for (const detail of data.items) {
-                    const stockCard = await prisma.stockCard.findUnique({
-                        where: { id: detail.stockCardId },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { id: detail.stockCardId },
+                        });
 
-                    if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
-                    }
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        }
 
-                    const warehouse = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                    });
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
 
-                    if (!warehouse) {
-                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
-                    }
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
 
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-                        where: {
-                            stockCardId_warehouseId: {
-                                stockCardId: detail.stockCardId,
-                                warehouseId: data.warehouseId,
-                            },
-                        },
-                    });
-
-                    const productCode = stockCard.productCode;
-                    const quantity = detail.quantity;
-
-                    // Stok miktarını güncelleme
-
-                    if (stockCardWarehouse) {
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: stockCardWarehouse.quantity.minus(quantity),
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: detail.stockCardId,
+                                    warehouseId: data.warehouseId,
+                                },
                             },
                         });
-                    } else {
-                        console.error("Ürün'ün stoğu bulunamadı. Stoğu olmayan ürünün satışı yapılamaz.");
-                    }
 
-                    // Ensure warehouseCode exists before creating stockMovement
-                    const warehouseExists = await prisma.warehouse.findUnique({
-                        where: { warehouseCode: _warehouseCode.warehouseCode },
-                    });
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
 
-                    if (!warehouseExists) {
-                        throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
-                    }
+                        // Stok miktarını güncelleme
 
-                    // StockMovement oluşturma
-                    await prisma.stockMovement.create({
-                        data: {
-                            productCode: productCode,
-                            warehouseCode: warehouse.warehouseCode,
-                            branchCode: data.branchCode,
-                            currentCode: data.currentCode,
-                            documentType: "Invoice",
-                            invoiceType: "Sales",
-                            movementType: "SatisFaturasi",
-                            documentNo: newInvoice.invoiceNo,
-                            gcCode: "Cikis",
-                            description: `${newInvoice.invoiceNo} no'lu satış faturası için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit, // Birim
-                            priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.minus(quantity),
+                                },
+                            });
+                        } else {
+                            console.error("Ürün'ün stoğu bulunamadı. Stoğu olmayan ürünün satışı yapılamaz.");
+                        }
+
+                        // Ensure warehouseCode exists before creating stockMovement
+                        const warehouseExists = await prisma.warehouse.findUnique({
+                            where: { warehouseCode: _warehouseCode.warehouseCode },
+                        });
+
+                        if (!warehouseExists) {
+                            throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
+                        }
+
+                        // StockMovement oluşturma
+                        await prisma.stockMovement.create({
+                            data: {
+                                productCode: productCode,
+                                warehouseCode: warehouse.warehouseCode,
+                                branchCode: data.branchCode,
+                                currentCode: data.currentCode,
+                                documentType: "Invoice",
+                                invoiceType: "Sales",
+                                movementType: "SatisFaturasi",
+                                documentNo: newInvoice.invoiceNo,
+                                gcCode: "Cikis",
+                                description: `${newInvoice.invoiceNo} no'lu satış faturası için stok hareketi`,
+                                quantity: quantity,
+                                unitPrice: detail.unitPrice,
+                                totalPrice: detail.totalAmount,
+                                unitOfMeasure: stockCard.unit, // Birim
+                                priceListId: detail.priceListId,
+                                createdBy: username,
+                                updatedBy: username,
                             },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                        },
-                    });
+                        });
+                    }
                 }
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
@@ -904,16 +838,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -935,16 +861,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -966,16 +884,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -999,19 +909,15 @@ export class InvoiceService {
                         description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
                         debtAmount: totalAmount,
                         creditAmount: 0,
-                        movementType: "Alacak",
+                        movementType: "Borc",
                         priceListId: data.priceListId,
                         documentType: "Fatura",
                         paymentType: "CokluOdeme",
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: { username: username }
-                        },
-                        updatedByUser: {
-                            connect: { username: username }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -1023,19 +929,15 @@ export class InvoiceService {
                             description: `${newInvoice.invoiceNo} no'lu satış faturası için cari hareket`,
                             debtAmount: 0,
                             creditAmount: totalPaid,
-                            movementType: "Borc",
+                            movementType: "Alacak",
                             priceListId: data.priceListId,
                             documentType: "Fatura",
                             paymentType: "CokluOdeme",
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: { username: username }
-                            },
-                            updatedByUser: {
-                                connect: { username: username }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1073,16 +975,8 @@ export class InvoiceService {
                         totalPaid: totalPaidd,
                         totalDebt: totalAmountt,
                         description: `${_invoiceNo} no'lu hızlı satış faturası`,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdByUser: { connect: { username: username } },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
@@ -1164,16 +1058,8 @@ export class InvoiceService {
                             unitPrice: detail.unitPrice,
                             totalPrice: detail.totalAmount,
                             unitOfMeasure: stockCard.unit, // Birim
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1189,16 +1075,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -1220,16 +1098,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -1251,16 +1121,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -1294,16 +1156,8 @@ export class InvoiceService {
                         documentNo: newInvoice.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
                 if (totalPaid > 0) {
@@ -1320,16 +1174,8 @@ export class InvoiceService {
                             documentNo: newInvoice.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -1555,7 +1401,7 @@ export class InvoiceService {
                 ...invoice.vaultMovement.map(payment => ({
                     method: 'cash',
                     accountId: payment.vaultId,
-                    amount: payment.entering.toNumber(),
+                    amount: payment.entering.toNumber() === 0 ? payment.emerging.toNumber() : payment.entering.toNumber(),
                     currency: invoice.priceList?.currency ?? null,
                     description: payment.description,
                 }))
@@ -1567,7 +1413,7 @@ export class InvoiceService {
                 ...invoice.BankMovement.map(payment => ({
                     method: 'bank',
                     accountId: payment.bankId,
-                    amount: payment.entering.toNumber(),
+                    amount: payment.entering.toNumber() === 0 ? payment.emerging.toNumber() : payment.entering.toNumber(),
                     currency: invoice.priceList?.currency ?? null,
                     description: payment.description,
                 }))
@@ -1579,7 +1425,7 @@ export class InvoiceService {
                 ...invoice.PosMovement.map(payment => ({
                     method: 'card',
                     accountId: payment.posId,
-                    amount: payment.entering.toNumber(),
+                    amount: payment.entering.toNumber() === 0 ? payment.emerging.toNumber() : payment.entering.toNumber(),
                     currency: invoice.priceList?.currency ?? null,
                     description: payment.description,
                 }))
@@ -1689,6 +1535,9 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+                    if (!detail.productCode) {
+                        continue
+                    }
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
@@ -1760,31 +1609,29 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
                 // Fatura detaylarını ekleme
-                for (const detail of data.items) {
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { productCode: detail.stockCardId },
-                        select: { productCode: true },
-                    });
-                    await prisma.invoiceDetail.create({
-                        data: {
-                            invoiceId: invoiceId,
-                            productCode: _productCode?.productCode || "",
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: detail.vatRate,
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
-                        },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const _productCode = await prisma.stockCard.findUnique({
+                            where: { productCode: detail.stockCardId },
+                            select: { productCode: true },
+                        });
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: invoiceId,
+                                productCode: _productCode?.productCode || "",
+                                quantity: detail.quantity,
+                                unitPrice: detail.unitPrice,
+                                vatRate: detail.vatRate,
+                                netPrice: detail.totalAmount - detail.vatAmount,
+                                totalPrice: detail.totalAmount,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 if (data.expenses) {
@@ -1792,8 +1639,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: invoiceId,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -1804,87 +1651,81 @@ export class InvoiceService {
                 }
 
                 // Satış işlemleri
-                for (const detail of data.items) {
-                    const stockCard = await prisma.stockCard.findUnique({
-                        where: { productCode: detail.stockCardId },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { productCode: detail.stockCardId },
+                        });
 
-                    if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
-                    }
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        }
 
-                    const warehouse = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                    });
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
 
-                    if (!warehouse) {
-                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
-                    }
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
 
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-                        where: {
-                            stockCardId_warehouseId: {
-                                stockCardId: stockCard.id,
-                                warehouseId: data.warehouseId,
-                            },
-                        },
-                    });
-
-                    const productCode = stockCard.productCode;
-                    const quantity = detail.quantity;
-
-                    // Stok miktarını güncelleme
-
-                    if (stockCardWarehouse) {
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: stockCardWarehouse.quantity.minus(quantity),
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: data.warehouseId,
+                                },
                             },
                         });
-                    } else {
-                        console.error("Ürün'ün stoğu bulunamadı. Stoğu olmayan ürünün satışı yapılamaz.");
-                    }
 
-                    // Ensure warehouseCode exists before creating stockMovement
-                    const warehouseExists = await prisma.warehouse.findUnique({
-                        where: { warehouseCode: _warehouseCode.warehouseCode },
-                    });
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
 
-                    if (!warehouseExists) {
-                        throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
-                    }
+                        // Stok miktarını güncelleme
 
-                    // StockMovement oluşturma
-                    await prisma.stockMovement.create({
-                        data: {
-                            productCode: productCode,
-                            warehouseCode: warehouse.warehouseCode,
-                            branchCode: data.branchCode,
-                            currentCode: data.currentCode,
-                            documentType: "Invoice",
-                            invoiceType: "Sales",
-                            movementType: "SatisFaturasi",
-                            documentNo: data.invoiceNo,
-                            gcCode: "Cikis",
-                            description: `${data.invoiceNo} no'lu satış faturası için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit, // Birim
-                            priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.minus(quantity),
+                                },
+                            });
+                        } else {
+                            console.error("Ürün'ün stoğu bulunamadı. Stoğu olmayan ürünün satışı yapılamaz.");
+                        }
+
+                        // Ensure warehouseCode exists before creating stockMovement
+                        const warehouseExists = await prisma.warehouse.findUnique({
+                            where: { warehouseCode: _warehouseCode.warehouseCode },
+                        });
+
+                        if (!warehouseExists) {
+                            throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
+                        }
+
+                        // StockMovement oluşturma
+                        await prisma.stockMovement.create({
+                            data: {
+                                productCode: productCode,
+                                warehouseCode: warehouse.warehouseCode,
+                                branchCode: data.branchCode,
+                                currentCode: data.currentCode,
+                                documentType: "Invoice",
+                                invoiceType: "Sales",
+                                movementType: "SatisFaturasi",
+                                documentNo: data.invoiceNo,
+                                gcCode: "Cikis",
+                                description: `${data.invoiceNo} no'lu satış faturası için stok hareketi`,
+                                quantity: quantity,
+                                unitPrice: detail.unitPrice,
+                                totalPrice: detail.totalAmount,
+                                unitOfMeasure: stockCard.unit, // Birim
+                                priceListId: detail.priceListId,
+                                createdBy: username,
+                                updatedBy: username,
                             },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                        },
-                    });
+                        });
+                    }
                 }
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
@@ -1898,16 +1739,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -1929,16 +1762,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -1960,16 +1785,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -1993,23 +1810,15 @@ export class InvoiceService {
                         description: `${data.invoiceNo} no'lu satış faturası için cari hareket`,
                         debtAmount: totalAmount,
                         creditAmount: 0,
-                        movementType: "Alacak",
+                        movementType: "Borc",
                         priceListId: data.priceListId,
                         documentType: "Fatura",
                         paymentType: "CokluOdeme",
                         documentNo: data.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -2021,23 +1830,15 @@ export class InvoiceService {
                             description: `${data.invoiceNo} no'lu satış faturası için cari hareket`,
                             debtAmount: 0,
                             creditAmount: totalPaid,
-                            movementType: "Borc",
+                            movementType: "Alacak",
                             priceListId: data.priceListId,
                             documentType: "Fatura",
                             paymentType: "CokluOdeme",
                             documentNo: data.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -2102,6 +1903,9 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+                    if (!detail.productCode) {
+                        continue
+                    }
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
@@ -2166,31 +1970,29 @@ export class InvoiceService {
                         totalBalance: data.totalAmount - data.totalPaid,
                         totalDiscount: 0,
                         totalNet: data.totalAmount - data.totalVat,
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
                 // Fatura detaylarını ekleme
-                for (const detail of data.items) {
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { productCode: detail.stockCardId },
-                        select: { productCode: true },
-                    });
-                    await prisma.invoiceDetail.create({
-                        data: {
-                            invoiceId: invoiceId,
-                            productCode: _productCode?.productCode || "",
-                            quantity: detail.quantity,
-                            unitPrice: detail.unitPrice,
-                            vatRate: detail.vatRate,
-                            netPrice: detail.totalAmount - detail.vatAmount,
-                            totalPrice: detail.totalAmount,
-                            discount: 0,
-                        },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const _productCode = await prisma.stockCard.findUnique({
+                            where: { productCode: detail.stockCardId },
+                            select: { productCode: true },
+                        });
+                        await prisma.invoiceDetail.create({
+                            data: {
+                                invoiceId: invoiceId,
+                                productCode: _productCode?.productCode || "",
+                                quantity: detail.quantity,
+                                unitPrice: detail.unitPrice,
+                                vatRate: detail.vatRate,
+                                netPrice: detail.totalAmount - detail.vatAmount,
+                                totalPrice: detail.totalAmount,
+                                discount: 0,
+                            },
+                        });
+                    }
                 }
 
                 // Masrafların fatura detaylarını ekleme
@@ -2199,8 +2001,8 @@ export class InvoiceService {
                         await prisma.invoiceDetail.create({
                             data: {
                                 invoiceId: invoiceId,
-                                costCode: detail.expenseCode,
-                                costName: detail.expenseName,
+                                costCode: detail.costCode,
+                                costName: detail.costName,
                                 currency: detail.currency,
                                 quantity: 1,
                                 totalPrice: detail.price,
@@ -2211,92 +2013,86 @@ export class InvoiceService {
                 }
 
                 // Alış işlemleri
-                for (const detail of data.items) {
-                    const stockCard = await prisma.stockCard.findUnique({
-                        where: { productCode: detail.stockCardId },
-                    });
+                if (data.items) {
+                    for (const detail of data.items) {
+                        const stockCard = await prisma.stockCard.findUnique({
+                            where: { productCode: detail.stockCardId },
+                        });
 
-                    if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
-                    }
+                        if (!stockCard) {
+                            throw new Error(`StockCard with ID '${detail.stockCardId}' does not exist.`);
+                        }
 
-                    const warehouse = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                    });
+                        const warehouse = await prisma.warehouse.findUnique({
+                            where: { id: data.warehouseId },
+                        });
 
-                    if (!warehouse) {
-                        throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
-                    }
+                        if (!warehouse) {
+                            throw new Error(`Warehouse with ID '${data.warehouseId}' does not exist.`);
+                        }
 
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-                        where: {
-                            stockCardId_warehouseId: {
-                                stockCardId: stockCard.id,
-                                warehouseId: data.warehouseId,
-                            },
-                        },
-                    });
-
-                    const productCode = stockCard.productCode;
-                    const quantity = detail.quantity;
-
-                    // Stok miktarını güncelleme
-                    if (stockCardWarehouse) {
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: stockCardWarehouse.quantity.plus(quantity),
+                        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+                            where: {
+                                stockCardId_warehouseId: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: data.warehouseId,
+                                },
                             },
                         });
-                    } else {
-                        await prisma.stockCardWarehouse.create({
+
+                        const productCode = stockCard.productCode;
+                        const quantity = detail.quantity;
+
+                        // Stok miktarını güncelleme
+                        if (stockCardWarehouse) {
+                            await prisma.stockCardWarehouse.update({
+                                where: { id: stockCardWarehouse.id },
+                                data: {
+                                    quantity: stockCardWarehouse.quantity.plus(quantity),
+                                },
+                            });
+                        } else {
+                            await prisma.stockCardWarehouse.create({
+                                data: {
+                                    stockCardId: stockCard.id,
+                                    warehouseId: warehouse.id,
+                                    quantity,
+                                },
+                            });
+                        }
+
+                        // Ensure warehouseCode exists before creating stockMovement
+                        const warehouseExists = await prisma.warehouse.findUnique({
+                            where: { warehouseCode: _warehouseCode.warehouseCode },
+                        });
+
+                        if (!warehouseExists) {
+                            throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
+                        }
+
+                        // StockMovement oluşturma
+                        await prisma.stockMovement.create({
                             data: {
-                                stockCardId: stockCard.id,
-                                warehouseId: warehouse.id,
-                                quantity,
+                                productCode: productCode,
+                                warehouseCode: warehouse.warehouseCode,
+                                branchCode: data.branchCode,
+                                currentCode: data.currentCode,
+                                documentType: "Invoice",
+                                invoiceType: "Purchase",
+                                movementType: "AlisFaturasi",
+                                documentNo: data.invoiceNo,
+                                gcCode: "Giris",
+                                description: `${data.invoiceNo} no'lu alış faturası için stok hareketi`,
+                                quantity: quantity,
+                                unitPrice: detail.unitPrice,
+                                totalPrice: detail.totalAmount,
+                                unitOfMeasure: stockCard.unit,
+                                priceListId: detail.priceListId,
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                     }
-
-                    // Ensure warehouseCode exists before creating stockMovement
-                    const warehouseExists = await prisma.warehouse.findUnique({
-                        where: { warehouseCode: _warehouseCode.warehouseCode },
-                    });
-
-                    if (!warehouseExists) {
-                        throw new Error(`Warehouse with code ${_warehouseCode.warehouseCode} does not exist.`);
-                    }
-
-                    // StockMovement oluşturma
-                    await prisma.stockMovement.create({
-                        data: {
-                            productCode: productCode,
-                            warehouseCode: warehouse.warehouseCode,
-                            branchCode: data.branchCode,
-                            currentCode: data.currentCode,
-                            documentType: "Invoice",
-                            invoiceType: "Purchase",
-                            movementType: "AlisFaturasi",
-                            documentNo: data.invoiceNo,
-                            gcCode: "Giris",
-                            description: `${data.invoiceNo} no'lu alış faturası için stok hareketi`,
-                            quantity: quantity,
-                            unitPrice: detail.unitPrice,
-                            totalPrice: detail.totalAmount,
-                            unitOfMeasure: stockCard.unit,
-                            priceListId: detail.priceListId,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                        },
-                    });
                 }
                 for (const payment of data.payments) {
                     if (payment.method == "cash") {
@@ -2310,16 +2106,8 @@ export class InvoiceService {
                                 vaultDirection: "Exit",
                                 vaultType: "PurchaseInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -2341,16 +2129,8 @@ export class InvoiceService {
                                 bankDirection: "Exit",
                                 bankType: "PurchaseInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -2372,16 +2152,8 @@ export class InvoiceService {
                                 posDirection: "Exit",
                                 posType: "PurchaseInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -2412,16 +2184,8 @@ export class InvoiceService {
                         documentNo: data.invoiceNo,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -2440,16 +2204,8 @@ export class InvoiceService {
                             documentNo: data.invoiceNo,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -2513,12 +2269,16 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+
+                    if (!detail.productCode) {
+                        continue;
+                    }
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        continue;
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
@@ -2621,12 +2381,16 @@ export class InvoiceService {
                 }
                 const oldInvoiceDetails = await prisma.invoiceDetail.findMany({ where: { invoiceId: invoiceId } });
                 for (const detail of oldInvoiceDetails) {
+
+                    if (!detail.productCode) {
+                        continue;
+                    }
                     const stockCard = await prisma.stockCard.findUnique({
                         where: { productCode: detail.productCode },
                     });
 
                     if (!stockCard) {
-                        throw new Error(`StockCard with ID '${detail.productCode}' does not exist.`);
+                        continue;
                     }
 
                     const warehouse = await prisma.warehouse.findUnique({
@@ -3047,11 +2811,7 @@ export class InvoiceService {
                         totalPaid: new Prisma.Decimal(data.payments.reduce((sum, p) => sum + (p.amount || 0), 0)),
                         totalDebt: new Prisma.Decimal(data.payments.filter(p => p.method === "openAccount").reduce((sum, p) => sum + (p.amount || 0), 0)),
                         description: `${_invoiceNo} no'lu hızlı satış faturası`,
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        updatedByUser: { connect: { username: username } },
                     },
                 });
 
@@ -3142,16 +2902,8 @@ export class InvoiceService {
                             unitPrice: new Prisma.Decimal(detail.unitPrice),
                             totalPrice: new Prisma.Decimal(detail.totalAmount),
                             unitOfMeasure: stockCard.unit,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }
@@ -3168,16 +2920,8 @@ export class InvoiceService {
                                 vaultDirection: "Introduction",
                                 vaultType: "SalesInvoicePayment",
                                 vaultDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.vault.update({
@@ -3199,16 +2943,8 @@ export class InvoiceService {
                                 bankDirection: "Introduction",
                                 bankType: "SalesInvoicePayment",
                                 bankDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.bank.update({
@@ -3230,16 +2966,8 @@ export class InvoiceService {
                                 posDirection: "Introduction",
                                 posType: "SalesInvoicePayment",
                                 posDocumentType: "General",
-                                createdByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
-                                updatedByUser: {
-                                    connect: {
-                                        username: username
-                                    }
-                                },
+                                createdBy: username,
+                                updatedBy: username,
                             },
                         });
                         await prisma.pos.update({
@@ -3275,16 +3003,8 @@ export class InvoiceService {
                         documentNo: _invoiceNo ?? data.id,
                         companyCode: _companyCode?.companyCode || "",
                         branchCode: data.branchCode,
-                        createdByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
-                        updatedByUser: {
-                            connect: {
-                                username: username
-                            }
-                        },
+                        createdBy: username,
+                        updatedBy: username,
                     },
                 });
 
@@ -3302,16 +3022,8 @@ export class InvoiceService {
                             documentNo: _invoiceNo ?? data.id,
                             companyCode: _companyCode?.companyCode || "",
                             branchCode: data.branchCode,
-                            createdByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
-                            updatedByUser: {
-                                connect: {
-                                    username: username
-                                }
-                            },
+                            createdBy: username,
+                            updatedBy: username,
                         },
                     });
                 }

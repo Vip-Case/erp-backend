@@ -104,7 +104,6 @@ app.onRequest(async (ctx) => {
       permissions: decoded.permissions || [],
     };
 
-    console.log("Kullanıcı doğrulandı:", (ctx.request as any).user);
   } catch (error) {
     throw new Error("Unauthorized: Invalid or expired token.");
   }
@@ -179,7 +178,7 @@ cron.schedule('*/30 * * * *', async () => {
   }
 });
 console.log("Bildirimler kontrol ediliyor...");
-
+app.get("/health", () => ({ status: "ok" }));
 app.get("/secure/data", () => {
   return { message: "Secure data accessed." };
 })

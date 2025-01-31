@@ -25,6 +25,23 @@ interface SearchCriteria {
     priceListBarcode?: string;
 }
 
+interface BulkPriceUpdateInput {
+    priceListId: string;
+    stockCardIds: string[];
+    updateType: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'NEW_PRICE';
+    value: number;
+    roundingDecimal?: number;
+    updateVatRate?: boolean;
+    newVatRate?: number;
+}
+
+interface BulkPriceUpdateResult {
+    success: boolean;
+    updatedCount: number;
+    failedCount: number;
+    errors: Array<{ stockCardId: string; error: string }>;
+}
+
 export class StockCardService {
 
 
@@ -864,6 +881,9 @@ export class StockCardService {
     getAllStockCardsWithRelations = asyncHandler(async (): Promise<StockCard[]> => {
 
         const stockCards = await prisma.stockCard.findMany({
+            orderBy: {
+                productCode: 'asc',
+            },
             include: {
                 barcodes: true,
                 brand: true,
@@ -1004,6 +1024,9 @@ export class StockCardService {
                         stockCardCategory: true,
                     },
                 },
+            },
+            orderBy: {
+                productCode: 'asc',
             },
         });
 
@@ -1250,6 +1273,114 @@ export class StockCardService {
         } catch (error) {
             logger.error("Error fetching StockCard barcodes:", error);
             throw new Error("Barkodlar getirilirken bir hata oluştu");
+        }
+    });
+
+    bulkUpdatePrices = asyncHandler(async (
+        data: BulkPriceUpdateInput,
+        bearerToken: string
+    ): Promise<BulkPriceUpdateResult> => {
+        try {
+            const username = extractUsernameFromToken(bearerToken);
+
+            // Fiyat listesinin varlığını kontrol et
+            const priceList = await prisma.stockCardPriceList.findUnique({
+                where: { id: data.priceListId }
+            });
+
+            if (!priceList) {
+                throw new Error('Fiyat listesi bulunamadı');
+            }
+
+            // Transaction içinde güncelleme işlemini gerçekleştir
+            const result = await prisma.$transaction(async (prisma) => {
+                const errors: Array<{ stockCardId: string; error: string }> = [];
+                let updatedCount = 0;
+                let failedCount = 0;
+
+                // Mevcut fiyatları getir
+                const existingPrices = await prisma.stockCardPriceListItems.findMany({
+                    where: {
+                        priceListId: data.priceListId,
+                        stockCardId: { in: data.stockCardIds }
+                    }
+                });
+
+                // Her bir stok kartı için işlem yap
+                for (const stockCardId of data.stockCardIds) {
+                    try {
+                        const existingPrice = existingPrices.find(p => p.stockCardId === stockCardId);
+                        let newPrice = 0;
+
+                        if (existingPrice) {
+                            // Yeni fiyatı hesapla
+                            switch (data.updateType) {
+                                case 'PERCENTAGE':
+                                    newPrice = Number(existingPrice.price) * (1 + (data.value / 100));
+                                    break;
+                                case 'FIXED_AMOUNT':
+                                    newPrice = Number(existingPrice.price) + data.value;
+                                    break;
+                                case 'NEW_PRICE':
+                                    newPrice = data.value;
+                                    break;
+                            }
+
+                            // Yuvarlama işlemi
+                            if (data.roundingDecimal !== undefined) {
+                                const multiplier = Math.pow(10, data.roundingDecimal);
+                                newPrice = Math.round(newPrice * multiplier) / multiplier;
+                            }
+
+                            // Negatif fiyat kontrolü
+                            if (newPrice < 0) {
+                                throw new Error('Fiyat negatif olamaz');
+                            }
+
+                            // Fiyat güncelleme
+                            await prisma.stockCardPriceListItems.update({
+                                where: { id: existingPrice.id },
+                                data: {
+                                    price: newPrice,
+                                    vatRate: data.updateVatRate ? data.newVatRate : undefined
+                                }
+                            });
+
+                            updatedCount++;
+                        } else {
+                            // Yeni fiyat kaydı oluştur
+                            await prisma.stockCardPriceListItems.create({
+                                data: {
+                                    stockCardId,
+                                    priceListId: data.priceListId,
+                                    price: data.updateType === 'NEW_PRICE' ? data.value : 0,
+                                    vatRate: data.updateVatRate ? data.newVatRate : null
+                                }
+                            });
+                            updatedCount++;
+                        }
+                    } catch (error: any) {
+                        errors.push({
+                            stockCardId,
+                            error: error.message || 'Bilinmeyen hata'
+                        });
+                        failedCount++;
+                        logger.error(`Error updating price for stock card ${stockCardId}:`, error);
+                    }
+                }
+
+                return {
+                    success: failedCount === 0,
+                    updatedCount,
+                    failedCount,
+                    errors
+                };
+            });
+
+            return result;
+        } catch (error: any) {
+            logger.error('Error in bulk price update:', error);
+            throw new Error(`Toplu fiyat güncellemesi sırasında hata oluştu: ${error.message}`);
         }
     });
 
