@@ -287,8 +287,43 @@ const StockCardController = {
                 details: error.message
             };
         }
-    }
+    },
 
+    getStockBalanceReport: async (ctx: Context) => {
+        try {
+            const filter = ctx.body as {
+                startDate?: string;
+                endDate?: string;
+                productCode?: string;
+            };
+
+            // Validasyonlar
+            if (filter.startDate && isNaN(Date.parse(filter.startDate))) {
+                return ctx.error(400, "Geçersiz başlangıç tarihi formatı");
+            }
+
+            if (filter.endDate && isNaN(Date.parse(filter.endDate))) {
+                return ctx.error(400, "Geçersiz bitiş tarihi formatı");
+            }
+
+            // Tarih string'lerini Date objesine çevirme
+            const reportFilter = {
+                ...(filter.startDate && { startDate: new Date(filter.startDate) }),
+                ...(filter.endDate && { endDate: new Date(filter.endDate) }),
+                ...(filter.productCode && { productCode: filter.productCode })
+            };
+
+            const report = await stockCardService.getStockBalanceReport(reportFilter);
+            ctx.set.status = 200;
+            return report;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return {
+                error: "Stok bakiye raporu oluşturulurken hata oluştu",
+                details: error.message
+            };
+        }
+    }
 }
 
 export default StockCardController;

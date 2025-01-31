@@ -2,7 +2,7 @@ name: Daily Database Backup
 
 on:
   schedule:
-    - cron: "0 10 * * *" # Her gün gece 01:00'de çalışır
+    - cron: "0 17 * * *" # Türkiye saati ile 20:00'de çalışır (UTC 17:00)
   workflow_dispatch: # Manuel tetikleme için
 
 jobs:

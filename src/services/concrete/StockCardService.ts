@@ -42,6 +42,22 @@ interface BulkPriceUpdateResult {
     errors: Array<{ stockCardId: string; error: string }>;
 }
 
+interface StockBalanceReportFilter {
+    startDate?: Date;
+    endDate?: Date;
+    productCode?: string;
+}
+
+interface StockBalanceReportResult {
+    productCode: string;
+    productName: string;
+    warehouseName: string;
+    inQuantity: number;
+    outQuantity: number;
+    currentStock: number;
+    criticalStock: number | null;
+}
+
 export class StockCardService {
 
 
@@ -1381,6 +1397,85 @@ export class StockCardService {
         } catch (error: any) {
             logger.error('Error in bulk price update:', error);
             throw new Error(`Toplu fiyat güncellemesi sırasında hata oluştu: ${error.message}`);
+        }
+    });
+
+    getStockBalanceReport = asyncHandler(async (filter: StockBalanceReportFilter): Promise<StockBalanceReportResult[]> => {
+        try {
+            // Stok kartlarını getir
+            const stockCardsQuery = filter.productCode
+                ? prisma.stockCard.findMany({
+                    where: { productCode: filter.productCode },
+                    orderBy: { productCode: 'asc' },
+                    include: {
+                        stockCardWarehouse: {
+                            include: {
+                                warehouse: true
+                            }
+                        }
+                    }
+                })
+                : prisma.stockCard.findMany({
+                    orderBy: { productCode: 'asc' },
+                    include: {
+                        stockCardWarehouse: {
+                            include: {
+                                warehouse: true
+                            }
+                        }
+                    }
+                });
+
+            const stockCards = await stockCardsQuery;
+
+            // Stok hareketlerini getir
+            const movementsQuery = {
+                where: {
+                    ...(filter.productCode && { productCode: filter.productCode }),
+                    ...(filter.startDate && { createdAt: { gte: filter.startDate } }),
+                    ...(filter.endDate && { createdAt: { lte: filter.endDate } })
+                }
+            };
+
+            const movements = await prisma.stockMovement.findMany(movementsQuery);
+
+            // Sonuçları hazırla
+            const results: StockBalanceReportResult[] = [];
+
+            for (const stockCard of stockCards) {
+                // Her depo için ayrı kayıt oluştur
+                for (const stockWarehouse of stockCard.stockCardWarehouse) {
+                    // Depo bazında giriş/çıkış miktarlarını hesapla
+                    const warehouseMovements = movements.filter(m =>
+                        m.productCode === stockCard.productCode &&
+                        m.warehouseCode === stockWarehouse.warehouse.warehouseCode
+                    );
+
+                    const inQuantity = warehouseMovements
+                        .filter(m => m.gcCode === 'Giris')
+                        .reduce((sum, m) => sum + (m.quantity?.toNumber() || 0), 0);
+
+                    const outQuantity = warehouseMovements
+                        .filter(m => m.gcCode === 'Cikis')
+                        .reduce((sum, m) => sum + (m.quantity?.toNumber() || 0), 0);
+
+                    results.push({
+                        productCode: stockCard.productCode,
+                        productName: stockCard.productName,
+                        warehouseName: stockWarehouse.warehouse.warehouseName,
+                        inQuantity: inQuantity,
+                        outQuantity: outQuantity,
+                        currentStock: stockWarehouse.quantity.toNumber(),
+                        criticalStock: stockCard.riskQuantities?.toNumber() || null
+                    });
+                }
+            }
+
+            return results;
+
+        } catch (error) {
+            logger.error("Error generating stock balance report:", error);
+            throw new Error("Stok bakiye raporu oluşturulurken bir hata oluştu");
         }
     });
 

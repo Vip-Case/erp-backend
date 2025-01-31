@@ -21,6 +21,7 @@ export const StockCardRoutes = (app: Elysia) => {
       .put("/updateBarcodes", StockCardController.updateStockCardBarcodes, { tags: ["Stock Cards"] })
       .post("/searchBarcodes", StockCardController.getStockCardBarcodesBySearch, { tags: ["Stock Cards"] })
       .post("/bulkUpdatePrices", StockCardController.bulkUpdatePrices, { tags: ["Stock Cards"] })
+      .post("/balance-report", StockCardController.getStockBalanceReport, { tags: ["Stock Cards"] })
   );
   return app;
 };
