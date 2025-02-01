@@ -41,7 +41,7 @@ export const WarehouseController = {
         const { id } = ctx.params;
         const warehouseData: Partial<Warehouse> = ctx.body as Partial<Warehouse>;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -239,6 +239,59 @@ export const WarehouseController = {
             return {
                 success: false,
                 error: "Sipariş iade işlemi oluşturulurken hata oluştu",
+                details: error.message
+            };
+        }
+    },
+
+    updateOrderPrepareWarehouse: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const orderPrepareData: OrderPrepareWarehouse = ctx.body as OrderPrepareWarehouse;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
+        try {
+            const result = await warehouseService.updateOrderPrepareWarehouse(id, orderPrepareData, bearerToken);
+            if (!result) {
+                return ctx.error(400, 'Sipariş hazırlama işlemi güncellenemedi');
+            }
+            ctx.set.status = 200;
+            return {
+                success: true,
+                data: result,
+                message: 'Sipariş hazırlama işlemi başarıyla güncellendi'
+            };
+        } catch (error: any) {
+            ctx.set.status = error.status || 500;
+            return {
+                success: false,
+                error: "Sipariş hazırlama işlemi güncellenirken hata oluştu",
+                details: error.message
+            };
+        }
+    },
+
+    deleteOrderPrepareWarehouse: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const result = await warehouseService.deleteOrderPrepareWarehouse(id);
+            if (!result) {
+                return ctx.error(400, 'Sipariş hazırlama işlemi silinemedi');
+            }
+            ctx.set.status = 200;
+            return {
+                success: true,
+                data: result,
+                message: 'Sipariş hazırlama işlemi başarıyla silindi'
+            };
+        } catch (error: any) {
+            ctx.set.status = error.status || 500;
+            return {
+                success: false,
+                error: "Sipariş hazırlama işlemi silinirken hata oluştu",
                 details: error.message
             };
         }
