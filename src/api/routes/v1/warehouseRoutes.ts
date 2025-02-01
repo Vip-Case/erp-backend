@@ -15,7 +15,7 @@ export const WarehouseRoutes = (app: Elysia) => {
       .get("/stocktake/:id", WarehouseController.getStocktakeWarehouseById, { tags: ["Warehouses"] })
       .delete("/stocktake/:id", WarehouseController.deleteStocktakeWarehouse, { tags: ["Warehouses"] })
       .post("/order-prepare", WarehouseController.createOrderPrepareWarehouse, { tags: ["Warehouses"] })
-      .delete("/order-prepare/:id", WarehouseController.deleteOrderPrepareWarehouse, { tags: ["Warehouses"] })
+      .delete("/receipts/:id", WarehouseController.deleteOrderPrepareWarehouse, { tags: ["Warehouses"] })
       .post("/order-return", WarehouseController.createOrderReturnWarehouse, { tags: ["Warehouses"] })
       .get("/receipts", WarehouseController.getAllReceipts, { tags: ["Warehouses"] })
       .get("/receipts/:id", WarehouseController.getReceiptById, { tags: ["Warehouses"] })

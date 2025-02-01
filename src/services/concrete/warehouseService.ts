@@ -1116,6 +1116,130 @@ export class WarehouseService {
         }
     }
 
+    async deleteOrderPrepareWarehouseByReceiptId(receiptId: string): Promise<any> {
+        try {
+            const result = await prisma.$transaction(async (prisma) => {
+                // Önce fiş kaydını bul
+                const receipt = await prisma.receipt.findUnique({
+                    where: { id: receiptId },
+                    include: {
+                        currentMovement: true
+                    }
+                });
+
+                if (!receipt) {
+                    throw new Error("Fiş kaydı bulunamadı");
+                }
+
+                // Fiş üzerinden currentMovementId'yi al
+                const currentMovementId = receipt.currentMovementId;
+
+                if (!currentMovementId) {
+                    throw new Error("Cari hareket kaydı bulunamadı");
+                }
+
+                // CurrentMovement ile ilişkili OrderPrepareWarehouse kaydını bul
+                const orderPrepare = await prisma.orderPrepareWarehouse.findFirst({
+                    where: { currentMovementId },
+                    include: {
+                        currentMovement: {
+                            include: {
+                                VaultMovement: true,
+                                BankMovement: true,
+                                PosMovement: true
+                            }
+                        }
+                    }
+                });
+
+                if (!orderPrepare) {
+                    throw new Error("Sipariş hazırlama kaydı bulunamadı");
+                }
+
+                // Kasa hareketlerini sil
+                await prisma.vaultMovement.deleteMany({
+                    where: { currentMovementId }
+                });
+
+                // Banka hareketlerini sil
+                await prisma.bankMovement.deleteMany({
+                    where: { currentMovementId }
+                });
+
+                // POS hareketlerini sil
+                await prisma.posMovement.deleteMany({
+                    where: { currentMovementId }
+                });
+
+                // Stok hareketlerini bul
+                const stockMovements = await prisma.stockMovement.findMany({
+                    where: { documentNo: receipt.documentNo }
+                });
+
+                // Her bir stok hareketi için stok miktarlarını geri al
+                for (const movement of stockMovements) {
+                    if (movement.gcCode === "Cikis") {
+                        // Çıkış yapılan ürünleri geri ekle
+                        await prisma.stockCardWarehouse.updateMany({
+                            where: {
+                                stockCardId: movement.productCode,
+                                warehouseId: movement.warehouseCode
+                            },
+                            data: {
+                                quantity: {
+                                    increment: movement.quantity || 0
+                                }
+                            }
+                        });
+                    } else if (movement.gcCode === "Giris") {
+                        // Giriş yapılan ürünleri çıkar
+                        await prisma.stockCardWarehouse.updateMany({
+                            where: {
+                                stockCardId: movement.productCode,
+                                warehouseId: movement.warehouseCode
+                            },
+                            data: {
+                                quantity: {
+                                    decrement: movement.quantity || 0
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Stok hareketlerini sil
+                await prisma.stockMovement.deleteMany({
+                    where: { documentNo: receipt.documentNo }
+                });
+
+                // Fiş detaylarını sil
+                await prisma.receiptDetail.deleteMany({
+                    where: { receiptId }
+                });
+
+                // Fişi sil
+                await prisma.receipt.delete({
+                    where: { id: receiptId }
+                });
+
+                // Cari hareketi sil
+                await prisma.currentMovement.delete({
+                    where: { id: currentMovementId }
+                });
+
+                // Son olarak sipariş hazırlama kaydını sil
+                return await prisma.orderPrepareWarehouse.delete({
+                    where: { id: orderPrepare.id }
+                });
+            });
+
+            return result;
+        } catch (error) {
+            logger.error("Error deleting order prepare warehouse by receipt id", error);
+            throw error;
+        }
+    }
+
 }
 
 export default WarehouseService;

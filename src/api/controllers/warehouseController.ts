@@ -273,7 +273,7 @@ export const WarehouseController = {
     deleteOrderPrepareWarehouse: async (ctx: Context) => {
         const { id } = ctx.params;
         try {
-            const result = await warehouseService.deleteOrderPrepareWarehouse(id);
+            const result = await warehouseService.deleteOrderPrepareWarehouseByReceiptId(id);
             if (!result) {
                 return ctx.error(404, 'Sipariş hazırlama kaydı bulunamadı');
             }
@@ -284,7 +284,7 @@ export const WarehouseController = {
                 data: result
             };
         } catch (error: any) {
-            ctx.set.status = 500;
+            ctx.set.status = error.message.includes("bulunamadı") ? 404 : 500;
             return {
                 success: false,
                 error: "Sipariş hazırlama kaydı silinirken hata oluştu",
