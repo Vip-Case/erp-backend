@@ -996,6 +996,348 @@ export class WarehouseService {
         }
     }
 
+    async deleteOrderPrepareWarehouseByReceiptId(receiptId: string): Promise<any> {
+        try {
+            const result = await prisma.$transaction(async (prisma) => {
+                // Önce fiş kaydını bul
+                const receipt = await prisma.receipt.findUnique({
+                    where: { id: receiptId },
+                    include: {
+                        currentMovement: true
+                    }
+                });
+
+                if (!receipt) {
+                    throw new Error("Fiş kaydı bulunamadı");
+                }
+
+                // Fiş üzerinden currentMovementId'yi al
+                const currentMovementId = receipt.currentMovementId;
+
+                if (!currentMovementId) {
+                    throw new Error("Cari hareket kaydı bulunamadı");
+                }
+
+                // CurrentMovement ile ilişkili OrderPrepareWarehouse kaydını bul
+                const orderPrepare = await prisma.orderPrepareWarehouse.findFirst({
+                    where: { currentMovementId },
+                    include: {
+                        currentMovement: {
+                            include: {
+                                VaultMovement: true,
+                                BankMovement: true,
+                                PosMovement: true
+                            }
+                        }
+                    }
+                });
+
+                if (!orderPrepare) {
+                    throw new Error("Sipariş hazırlama kaydı bulunamadı");
+                }
+
+                // Kasa hareketlerini sil
+                await prisma.vaultMovement.deleteMany({
+                    where: { currentMovementId }
+                });
+
+                // Banka hareketlerini sil
+                await prisma.bankMovement.deleteMany({
+                    where: { currentMovementId }
+                });
+
+                // POS hareketlerini sil
+                await prisma.posMovement.deleteMany({
+                    where: { currentMovementId }
+                });
+
+                // Stok hareketlerini bul
+                const stockMovements = await prisma.stockMovement.findMany({
+                    where: { documentNo: receipt.documentNo }
+                });
+
+                // Her bir stok hareketi için stok miktarlarını geri al
+                for (const movement of stockMovements) {
+                    if (movement.gcCode === "Cikis") {
+                        // Çıkış yapılan ürünleri geri ekle
+                        await prisma.stockCardWarehouse.updateMany({
+                            where: {
+                                stockCardId: movement.productCode,
+                                warehouseId: movement.warehouseCode
+                            },
+                            data: {
+                                quantity: {
+                                    increment: movement.quantity || 0
+                                }
+                            }
+                        });
+                    } else if (movement.gcCode === "Giris") {
+                        // Giriş yapılan ürünleri çıkar
+                        await prisma.stockCardWarehouse.updateMany({
+                            where: {
+                                stockCardId: movement.productCode,
+                                warehouseId: movement.warehouseCode
+                            },
+                            data: {
+                                quantity: {
+                                    decrement: movement.quantity || 0
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Stok hareketlerini sil
+                await prisma.stockMovement.deleteMany({
+                    where: { documentNo: receipt.documentNo }
+                });
+
+                // Fiş detaylarını sil
+                await prisma.receiptDetail.deleteMany({
+                    where: { receiptId }
+                });
+
+                // Fişi sil
+                await prisma.receipt.delete({
+                    where: { id: receiptId }
+                });
+
+                // Cari hareketi sil
+                await prisma.currentMovement.delete({
+                    where: { id: currentMovementId }
+                });
+
+                // Son olarak sipariş hazırlama kaydını sil
+                return await prisma.orderPrepareWarehouse.delete({
+                    where: { id: orderPrepare.id }
+                });
+            });
+
+            return result;
+        } catch (error) {
+            logger.error("Error deleting order prepare warehouse by receipt id", error);
+            throw error;
+        }
+    }
+
+    async updateOrderPrepareWarehouseByReceiptId(receiptId: string, updateData: OrderPrepareWarehouse, bearerToken: string): Promise<any> {
+        try {
+            const username = extractUsernameFromToken(bearerToken);
+            const result = await prisma.$transaction(async (prisma) => {
+                // Önce fiş kaydını bul
+                const receipt = await prisma.receipt.findUnique({
+                    where: { id: receiptId },
+                    include: {
+                        currentMovement: true,
+                        receiptDetail: true
+                    }
+                });
+
+                if (!receipt) {
+                    throw new Error("Fiş kaydı bulunamadı");
+                }
+
+                // Fiş üzerinden currentMovementId'yi al
+                const currentMovementId = receipt.currentMovementId;
+
+                if (!currentMovementId) {
+                    throw new Error("Cari hareket kaydı bulunamadı");
+                }
+
+                // CurrentMovement ile ilişkili OrderPrepareWarehouse kaydını bul
+                const orderPrepare = await prisma.orderPrepareWarehouse.findFirst({
+                    where: { currentMovementId }
+                });
+
+                if (!orderPrepare) {
+                    throw new Error("Sipariş hazırlama kaydı bulunamadı");
+                }
+
+                // Cariye ait aktif fiyat listesini al
+                const currentPriceList = await prisma.current.findFirst({
+                    where: {
+                        id: updateData.currentId
+                    },
+                    include: {
+                        priceList: true
+                    }
+                });
+
+                if (!currentPriceList) {
+                    throw new Error("Cariye tanımlı aktif fiyat listesi bulunamadı");
+                }
+
+                let totalAmount = 0;
+                let receiptDetails = [];
+
+                // Eski stok hareketlerini bul ve stok miktarlarını geri al
+                const oldStockMovements = await prisma.stockMovement.findMany({
+                    where: { documentNo: receipt.documentNo }
+                });
+
+                for (const movement of oldStockMovements) {
+                    if (movement.gcCode === "Cikis") {
+                        // Eski çıkışları geri ekle
+                        await prisma.stockCardWarehouse.updateMany({
+                            where: {
+                                stockCardId: movement.productCode,
+                                warehouseId: movement.warehouseCode
+                            },
+                            data: {
+                                quantity: {
+                                    increment: movement.quantity || 0
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Eski stok hareketlerini sil
+                await prisma.stockMovement.deleteMany({
+                    where: { documentNo: receipt.documentNo }
+                });
+
+                // Yeni ürünler için işlemler
+                for (const product of updateData.products) {
+                    // Stok kartının fiyat listesindeki fiyatını al
+                    const stockCardPrice = await prisma.stockCardPriceListItems.findFirst({
+                        where: {
+                            stockCardId: product.stockCardId,
+                            priceListId: currentPriceList.priceListId
+                        }
+                    });
+
+                    if (!stockCardPrice) {
+                        throw new Error(`${product.stockCardId} ID'li stok kartı için fiyat listesinde fiyat bulunamadı`);
+                    }
+
+                    const productUnitPrice = stockCardPrice.price.toNumber();
+                    const subtotal = productUnitPrice * product.quantity;
+                    const vatRate = stockCardPrice.vatRate || 0;
+                    const vatAmount = (subtotal * Number(vatRate)) / 100;
+                    const total = subtotal + vatAmount;
+
+                    totalAmount += total;
+
+                    receiptDetails.push({
+                        stockCardId: product.stockCardId,
+                        quantity: product.quantity,
+                        unitPrice: productUnitPrice,
+                        subtotal: subtotal,
+                        vatRate: vatRate,
+                        vatAmount: vatAmount,
+                        total: total,
+                        discount: 0,
+                        netPrice: productUnitPrice
+                    });
+
+                    // Stok kontrolü ve güncelleme
+                    const existingStockCardWarehouse = await prisma.stockCardWarehouse.findFirst({
+                        where: {
+                            stockCardId: product.stockCardId,
+                            warehouseId: updateData.warehouseId
+                        }
+                    });
+
+                    if (!existingStockCardWarehouse) {
+                        throw new Error(`Stok kartı bulunamadı: ${product.stockCardId}`);
+                    }
+
+                    const newQuantity = existingStockCardWarehouse.quantity.toNumber() - product.quantity;
+
+                    if (newQuantity < 0) {
+                        throw new Error(`Yetersiz stok. Stok kartı: ${product.stockCardId}, Mevcut: ${existingStockCardWarehouse.quantity}, İstenen: ${product.quantity}`);
+                    }
+
+                    await prisma.stockCardWarehouse.update({
+                        where: {
+                            id: existingStockCardWarehouse.id
+                        },
+                        data: {
+                            quantity: newQuantity
+                        }
+                    });
+
+                    const _productCode = await prisma.stockCard.findUnique({
+                        where: { id: product.stockCardId },
+                        select: { productCode: true },
+                    });
+
+                    const _warehouseCode = await prisma.warehouse.findUnique({
+                        where: { id: updateData.warehouseId },
+                        select: { warehouseCode: true },
+                    });
+
+                    // Yeni stok hareketi oluştur
+                    await prisma.stockMovement.create({
+                        data: {
+                            documentType: "Order",
+                            invoiceType: "Other",
+                            movementType: "Devir",
+                            gcCode: "Cikis",
+                            type: "Siparis Hazirlama",
+                            description: "Siparis Hazirlama Cikisi",
+                            quantity: product.quantity,
+                            stockCard: {
+                                connect: { productCode: _productCode?.productCode },
+                            },
+                            warehouse: {
+                                connect: { warehouseCode: _warehouseCode?.warehouseCode },
+                            },
+                            branch: {
+                                connect: { branchCode: updateData.branchCode },
+                            },
+                        },
+                    });
+                }
+
+                // Cari hareketi güncelle
+                await prisma.currentMovement.update({
+                    where: { id: currentMovementId },
+                    data: {
+                        debtAmount: totalAmount,
+                        updatedBy: username
+                    }
+                });
+
+                // Fiş detaylarını güncelle
+                await prisma.receiptDetail.deleteMany({
+                    where: { receiptId }
+                });
+
+                for (const detail of receiptDetails) {
+                    await prisma.receiptDetail.create({
+                        data: {
+                            receiptId,
+                            stockCardId: detail.stockCardId,
+                            quantity: new Prisma.Decimal(String(detail.quantity)),
+                            unitPrice: new Prisma.Decimal(String(detail.unitPrice)),
+                            totalPrice: new Prisma.Decimal(String(detail.total)),
+                            vatRate: new Prisma.Decimal(String(detail.vatRate)),
+                            discount: new Prisma.Decimal(String(detail.discount)),
+                            netPrice: new Prisma.Decimal(String(detail.netPrice)),
+                        }
+                    });
+                }
+
+                // OrderPrepareWarehouse kaydını güncelle
+                return await prisma.orderPrepareWarehouse.update({
+                    where: { id: orderPrepare.id },
+                    data: {
+                        warehouseId: updateData.warehouseId,
+                        currentId: updateData.currentId,
+                        updatedBy: username
+                    }
+                });
+            });
+
+            return result;
+        } catch (error) {
+            logger.error("Error updating order prepare warehouse", error);
+            throw error;
+        }
+    }
+
 }
 
 export default WarehouseService;

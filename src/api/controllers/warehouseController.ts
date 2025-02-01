@@ -41,7 +41,7 @@ export const WarehouseController = {
         const { id } = ctx.params;
         const warehouseData: Partial<Warehouse> = ctx.body as Partial<Warehouse>;
         const bearerToken = ctx.request.headers.get("Authorization");
-        
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
@@ -267,6 +267,59 @@ export const WarehouseController = {
         } catch (error: any) {
             ctx.set.status = 500;
             return { error: "Fiş getirilirken hata oluştu", details: error.message };
+        }
+    },
+
+    deleteOrderPrepareWarehouse: async (ctx: Context) => {
+        const { id } = ctx.params;
+        try {
+            const result = await warehouseService.deleteOrderPrepareWarehouseByReceiptId(id);
+            if (!result) {
+                return ctx.error(404, 'Sipariş hazırlama kaydı bulunamadı');
+            }
+            ctx.set.status = 200;
+            return {
+                success: true,
+                message: 'Sipariş hazırlama kaydı başarıyla silindi',
+                data: result
+            };
+        } catch (error: any) {
+            ctx.set.status = error.message.includes("bulunamadı") ? 404 : 500;
+            return {
+                success: false,
+                error: "Sipariş hazırlama kaydı silinirken hata oluştu",
+                details: error.message
+            };
+        }
+    },
+
+    updateOrderPrepareWarehouse: async (ctx: Context) => {
+        const { id } = ctx.params;
+        const updateData: OrderPrepareWarehouse = ctx.body as OrderPrepareWarehouse;
+        const bearerToken = ctx.request.headers.get("Authorization");
+
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
+
+        try {
+            const result = await warehouseService.updateOrderPrepareWarehouseByReceiptId(id, updateData, bearerToken);
+            if (!result) {
+                return ctx.error(404, 'Sipariş hazırlama kaydı bulunamadı');
+            }
+            ctx.set.status = 200;
+            return {
+                success: true,
+                message: 'Sipariş hazırlama kaydı başarıyla güncellendi',
+                data: result
+            };
+        } catch (error: any) {
+            ctx.set.status = error.message.includes("bulunamadı") ? 404 : 500;
+            return {
+                success: false,
+                error: "Sipariş hazırlama kaydı güncellenirken hata oluştu",
+                details: error.message
+            };
         }
     }
 }
