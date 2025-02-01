@@ -996,374 +996,117 @@ export class WarehouseService {
         }
     }
 
-    async updateOrderPrepareWarehouse(id: string, data: OrderPrepareWarehouse, bearerToken: string): Promise<any> {
-        try {
-            const username = extractUsernameFromToken(bearerToken);
-            const result = await prisma.$transaction(async (prisma) => {
-                // Mevcut siparişi kontrol et
-                const existingOrder = await prisma.orderPrepareWarehouse.findUnique({
-                    where: { id },
-                    include: {
-                        warehouse: true,
-                        current: true,
-                        currentMovement: true
-                    }
-                });
-
-                if (!existingOrder) {
-                    throw new Error("Sipariş hazırlama kaydı bulunamadı");
-                }
-
-                // Branch'e ait company code'u al
-                const branch = await prisma.branch.findUnique({
-                    where: { branchCode: data.branchCode },
-                    select: { companyCode: true }
-                });
-
-                if (!branch) {
-                    throw new Error("Şube bulunamadı");
-                }
-
-                let totalAmount = 0;
-                let receiptDetails = [];
-
-                // Cariye ait aktif fiyat listesini al
-                const currentPriceList = await prisma.current.findFirst({
-                    where: {
-                        id: data.currentId
-                    },
-                    include: {
-                        priceList: true
-                    }
-                });
-
-                if (!currentPriceList) {
-                    throw new Error("Cariye tanımlı aktif fiyat listesi bulunamadı");
-                }
-
-                // Mevcut stok hareketlerini geri al
-                const existingStockMovements = await prisma.stockMovement.findMany({
-                    where: {
-                        documentNo: existingOrder.id,
-                        documentType: "Order",
-                        type: "Siparis Hazirlama"
-                    }
-                });
-
-                // Her bir stok hareketi için tersine işlem yap
-                for (const movement of existingStockMovements) {
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findFirst({
-                        where: {
-                            stockCard: {
-                                productCode: movement.productCode
-                            },
-                            warehouse: {
-                                warehouseCode: movement.warehouseCode
-                            }
-                        }
-                    });
-
-                    if (stockCardWarehouse) {
-                        // Stok miktarını geri al
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: {
-                                    increment: movement.quantity || 0
-                                }
-                            }
-                        });
-                    }
-                }
-
-                // Yeni stok hareketlerini oluştur
-                for (const product of data.products) {
-                    // Stok kartının fiyat listesindeki fiyatını al
-                    const stockCardPrice = await prisma.stockCardPriceListItems.findFirst({
-                        where: {
-                            stockCardId: product.stockCardId,
-                            priceListId: currentPriceList.priceListId
-                        }
-                    });
-
-                    if (!stockCardPrice) {
-                        throw new Error(`${product.stockCardId} ID'li stok kartı için fiyat listesinde fiyat bulunamadı`);
-                    }
-
-                    const productUnitPrice = stockCardPrice.price.toNumber();
-                    const subtotal = productUnitPrice * product.quantity;
-                    const vatRate = stockCardPrice.vatRate || 0;
-                    const vatAmount = (subtotal * Number(vatRate)) / 100;
-                    const total = subtotal + vatAmount;
-
-                    totalAmount += total;
-
-                    receiptDetails.push({
-                        stockCardId: product.stockCardId,
-                        quantity: product.quantity,
-                        unitPrice: productUnitPrice,
-                        subtotal: subtotal,
-                        vatRate: vatRate,
-                        vatAmount: vatAmount,
-                        total: total,
-                        warehouseId: data.warehouseId,
-                        discount: 0,
-                        netPrice: productUnitPrice
-                    });
-
-                    // Stok kontrolü ve güncelleme
-                    const existingStockCardWarehouse = await prisma.stockCardWarehouse.findFirst({
-                        where: {
-                            stockCardId: product.stockCardId,
-                            warehouseId: data.warehouseId
-                        },
-                        include: {
-                            stockCard: true
-                        }
-                    });
-
-                    if (!existingStockCardWarehouse) {
-                        throw new Error(`Stok kartı bulunamadı: ${product.stockCardId}`);
-                    }
-
-                    // Yeni miktar = Mevcut miktar - Çıkılacak miktar
-                    const newQuantity = existingStockCardWarehouse.quantity.toNumber() - product.quantity;
-
-                    if (newQuantity < 0) {
-                        throw new Error(`Yetersiz stok. Stok kartı: ${product.stockCardId}, Mevcut: ${existingStockCardWarehouse.quantity}, İstenen: ${product.quantity}`);
-                    }
-
-                    await prisma.stockCardWarehouse.update({
-                        where: {
-                            id: existingStockCardWarehouse.id
-                        },
-                        data: {
-                            quantity: newQuantity
-                        }
-                    });
-
-                    const _productCode = await prisma.stockCard.findUnique({
-                        where: { id: product.stockCardId },
-                        select: { productCode: true },
-                    });
-
-                    const _warehouseCode = await prisma.warehouse.findUnique({
-                        where: { id: data.warehouseId },
-                        select: { warehouseCode: true },
-                    });
-
-                    // Yeni stok hareketi oluştur
-                    await prisma.stockMovement.create({
-                        data: {
-                            documentType: "Order",
-                            invoiceType: "Other",
-                            movementType: "Devir",
-                            gcCode: "Cikis",
-                            type: "Siparis Hazirlama",
-                            description: "Siparis Hazirlama Cikisi",
-                            quantity: product.quantity,
-                            stockCard: {
-                                connect: { productCode: _productCode?.productCode },
-                            },
-                            warehouse: {
-                                connect: { warehouseCode: _warehouseCode?.warehouseCode },
-                            },
-                            branch: {
-                                connect: { branchCode: data.branchCode },
-                            },
-                        },
-                    });
-                }
-
-                // Cari hareketi güncelle
-                const _current = await prisma.current.findUnique({
-                    where: { id: data.currentId },
-                    select: { currentName: true },
-                });
-
-                const updatedCurrentMovement = await prisma.currentMovement.update({
-                    where: { id: existingOrder.currentMovementId || '' },
-                    data: {
-                        debtAmount: totalAmount,
-                        creditAmount: 0,
-                        description: `Sipariş Hazırlama Güncelleme - ${_current?.currentName}`,
-                        updatedBy: username
-                    }
-                });
-
-                // Siparişi güncelle
-                const updatedOrder = await prisma.orderPrepareWarehouse.update({
-                    where: { id },
-                    data: {
-                        warehouse: {
-                            connect: { id: data.warehouseId },
-                        },
-                        current: {
-                            connect: { id: data.currentId },
-                        },
-                        currentMovement: {
-                            connect: { id: updatedCurrentMovement.id },
-                        },
-                        updatedByUser: {
-                            connect: { username: username }
-                        }
-                    },
-                    include: {
-                        warehouse: true,
-                        current: true
-                    }
-                });
-
-                // Mevcut fişi bul ve sil
-                const existingReceipt = await prisma.receipt.findFirst({
-                    where: {
-                        currentMovementId: existingOrder.currentMovementId || '',
-                        receiptType: "Cikis"
-                    }
-                });
-
-                if (existingReceipt) {
-                    // Önce fiş detaylarını sil
-                    await prisma.receiptDetail.deleteMany({
-                        where: { receiptId: existingReceipt.id }
-                    });
-
-                    // Sonra fişi sil
-                    await prisma.receipt.delete({
-                        where: { id: existingReceipt.id }
-                    });
-                }
-
-                // Yeni fiş oluştur
-                const newReceipt = await prisma.receipt.create({
-                    data: {
-                        receiptType: "Cikis",
-                        documentNo: await generateDocumentNumber(prisma, "SH"),
-                        description: "Sipariş Hazırlama",
-                        branchCode: data.branchCode,
-                        createdBy: username,
-                        currentId: data.currentId,
-                        currentMovementId: updatedCurrentMovement.id,
-                    }
-                });
-
-                // Yeni fiş detaylarını oluştur
-                for (const detail of receiptDetails) {
-                    await prisma.receiptDetail.create({
-                        data: {
-                            receiptId: newReceipt.id,
-                            stockCardId: detail.stockCardId,
-                            quantity: new Prisma.Decimal(String(detail.quantity)),
-                            unitPrice: new Prisma.Decimal(String(detail.unitPrice)),
-                            totalPrice: new Prisma.Decimal(String(detail.total)),
-                            vatRate: new Prisma.Decimal(String(detail.vatRate)),
-                            discount: new Prisma.Decimal(String(detail.discount)),
-                            netPrice: new Prisma.Decimal(String(detail.netPrice)),
-                        }
-                    });
-                }
-
-                return updatedOrder;
-            });
-            return result;
-        } catch (error) {
-            logger.error("Error updating order prepare warehouse", error);
-            throw error;
-        }
-    }
-
     async deleteOrderPrepareWarehouse(id: string): Promise<any> {
         try {
             const result = await prisma.$transaction(async (prisma) => {
-                // Mevcut siparişi kontrol et
-                const existingOrder = await prisma.orderPrepareWarehouse.findUnique({
+                // Önce sipariş hazırlama kaydını bul
+                const orderPrepare = await prisma.orderPrepareWarehouse.findUnique({
                     where: { id },
                     include: {
-                        warehouse: true,
-                        current: true,
-                        currentMovement: true
+                        currentMovement: {
+                            include: {
+                                VaultMovement: true,
+                                BankMovement: true,
+                                PosMovement: true
+                            }
+                        }
                     }
                 });
 
-                if (!existingOrder) {
+                if (!orderPrepare) {
                     throw new Error("Sipariş hazırlama kaydı bulunamadı");
                 }
 
-                // Stok hareketlerini bul ve stokları geri al
-                const stockMovements = await prisma.stockMovement.findMany({
-                    where: {
-                        documentNo: id,
-                        documentType: "Order",
-                        type: "Siparis Hazirlama"
+                // İlgili cari hareket ID'sini al
+                const currentMovementId = orderPrepare.currentMovementId;
+
+                if (currentMovementId) {
+                    // Kasa hareketlerini sil
+                    await prisma.vaultMovement.deleteMany({
+                        where: { currentMovementId }
+                    });
+
+                    // Banka hareketlerini sil
+                    await prisma.bankMovement.deleteMany({
+                        where: { currentMovementId }
+                    });
+
+                    // POS hareketlerini sil
+                    await prisma.posMovement.deleteMany({
+                        where: { currentMovementId }
+                    });
+
+                    // Cari hareketi sil
+                    await prisma.currentMovement.delete({
+                        where: { id: currentMovementId }
+                    });
+                }
+
+                // Fişleri bul ve sil
+                const receipts = await prisma.receipt.findMany({
+                    where: { currentMovementId },
+                    include: {
+                        receiptDetail: true
                     }
                 });
 
-                // Her bir stok hareketi için tersine işlem yap
-                for (const movement of stockMovements) {
-                    const stockCardWarehouse = await prisma.stockCardWarehouse.findFirst({
-                        where: {
-                            stockCard: {
-                                productCode: movement.productCode
-                            },
-                            warehouse: {
-                                warehouseCode: movement.warehouseCode
-                            }
-                        }
+                for (const receipt of receipts) {
+                    // Fiş detaylarını sil
+                    await prisma.receiptDetail.deleteMany({
+                        where: { receiptId: receipt.id }
                     });
 
-                    if (stockCardWarehouse) {
-                        // Stok miktarını geri al
-                        await prisma.stockCardWarehouse.update({
-                            where: { id: stockCardWarehouse.id },
-                            data: {
-                                quantity: {
-                                    increment: movement.quantity || 0
+                    // Fişi sil
+                    await prisma.receipt.delete({
+                        where: { id: receipt.id }
+                    });
+
+                    // Stok hareketlerini bul
+                    const stockMovements = await prisma.stockMovement.findMany({
+                        where: { documentNo: receipt.documentNo }
+                    });
+
+                    // Her bir stok hareketi için stok miktarlarını geri al
+                    for (const movement of stockMovements) {
+                        if (movement.gcCode === "Cikis") {
+                            // Çıkış yapılan ürünleri geri ekle
+                            await prisma.stockCardWarehouse.updateMany({
+                                where: {
+                                    stockCardId: movement.productCode,
+                                    warehouseId: movement.warehouseCode
+                                },
+                                data: {
+                                    quantity: {
+                                        increment: movement.quantity || 0
+                                    }
                                 }
-                            }
-                        });
-                    }
-
-                    // Stok hareketini sil
-                    await prisma.stockMovement.delete({
-                        where: { id: movement.id }
-                    });
-                }
-
-                // Fişi ve fiş detaylarını sil
-                if (existingOrder.currentMovementId) {
-                    const receipt = await prisma.receipt.findFirst({
-                        where: {
-                            currentMovementId: existingOrder.currentMovementId,
-                            receiptType: "Cikis"
+                            });
+                        } else if (movement.gcCode === "Giris") {
+                            // Giriş yapılan ürünleri çıkar
+                            await prisma.stockCardWarehouse.updateMany({
+                                where: {
+                                    stockCardId: movement.productCode,
+                                    warehouseId: movement.warehouseCode
+                                },
+                                data: {
+                                    quantity: {
+                                        decrement: movement.quantity || 0
+                                    }
+                                }
+                            });
                         }
-                    });
-
-                    if (receipt) {
-                        // Önce fiş detaylarını sil
-                        await prisma.receiptDetail.deleteMany({
-                            where: { receiptId: receipt.id }
-                        });
-
-                        // Sonra fişi sil
-                        await prisma.receipt.delete({
-                            where: { id: receipt.id }
-                        });
                     }
-                }
 
-                // Cari hareketi sil
-                if (existingOrder.currentMovementId) {
-                    await prisma.currentMovement.delete({
-                        where: { id: existingOrder.currentMovementId }
+                    // Stok hareketlerini sil
+                    await prisma.stockMovement.deleteMany({
+                        where: { documentNo: receipt.documentNo }
                     });
                 }
 
                 // Son olarak sipariş hazırlama kaydını sil
-                const deletedOrder = await prisma.orderPrepareWarehouse.delete({
+                return await prisma.orderPrepareWarehouse.delete({
                     where: { id }
                 });
-
-                return deletedOrder;
             });
 
             return result;
