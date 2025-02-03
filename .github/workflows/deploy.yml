@@ -3,7 +3,7 @@ name: Deploy Backend
 on:
   push:
     branches:
-      - production
+      - master
   workflow_dispatch:
 
 env:
