@@ -1,75 +1,178 @@
-name: Daily Database Backup
+name: Database Backup Workflow
 
 on:
   schedule:
-    - cron: "0 17 * * *" # Türkiye saati ile 20:00'de çalışır (UTC 17:00)
-  workflow_dispatch: # Manuel tetikleme için
+    - cron: "0 5 * * *" # TSİ 08:00 (UTC 05:00)
+    - cron: "0 17 * * *" # TSİ 20:00 (UTC 17:00)
+  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-22.04
+    outputs:
+      backup_file: ${{ steps.set_backup.outputs.backup_file }}
+      timestamp: ${{ steps.get_timestamp.outputs.timestamp }}
     steps:
-      - name: Configure AWS credentials
+      - name: Set Timestamp
+        id: get_timestamp
+        run: |
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+      - name: Create Local Backups Directory
+        run: mkdir -p backups
+      - name: Create & Encrypt Backup on Remote Server
+        id: create_backup
+        uses: appleboy/ssh-action@v0.1.4
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          TIMESTAMP: ${{ env.TIMESTAMP }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - [START] Database backup işlemi başlatılıyor."
+            BACKUP_FILE="erp_db_backup_${TIMESTAMP}.sql"
+            ENCRYPTED_FILE="${BACKUP_FILE}.gz.gpg"
+            BACKUP_PATH="/tmp/backups"
+            mkdir -p "${BACKUP_PATH}"
+            cd "${BACKUP_PATH}"
+            # Retry fonksiyonu: Komut başarısız olursa 3 deneme yapar.
+            retry() {
+              local -r -i max_attempts=3
+              local -i attempt_num=1
+              until "$@"; do
+                if (( attempt_num == max_attempts )); then
+                  echo "$(date '+%Y-%m-%d %H:%M:%S') - $* komutu ${attempt_num} denemeden sonra hala başarısız. İşlem sonlandırılıyor."
+                  exit 1
+                else
+                  echo "$(date '+%Y-%m-%d %H:%M:%S') - $* komutu, ${attempt_num}. denemede başarısız. 10 saniye sonra tekrar deneniyor..."
+                  sleep 10
+                  ((attempt_num++))
+                fi
+              done
+            }
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - PostgreSQL veritabanı yedeği alınıyor..."
+            retry docker-compose -f /var/www/erp-backend/docker-compose.yml exec -T postgres pg_dump -U postgres erp_db > "${BACKUP_FILE}"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Yedek dosyası sıkıştırılıyor..."
+            retry gzip "${BACKUP_FILE}"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Sıkıştırılmış dosya şifreleniyor..."
+            retry gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --symmetric --cipher-algo AES256 "${BACKUP_FILE}.gz"
+            rm -f "${BACKUP_FILE}.gz"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Backup işlemi başarıyla tamamlandı. Oluşan dosya: ${ENCRYPTED_FILE}"
+            echo "BACKUP_FILE=${ENCRYPTED_FILE}"
+      - name: Download Backup File from Remote Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "/tmp/backups/erp_db_backup_${{ env.TIMESTAMP }}.sql.gz.gpg"
+          target: "./backups/"
+      - name: Remove Remote Backup File
+        if: always()
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            rm -f /tmp/backups/erp_db_backup_${TIMESTAMP}.sql.gz.gpg
+      - name: Set Backup File Output
+        id: set_backup
+        run: |
+          echo "backup_file=erp_db_backup_${TIMESTAMP}.sql.gz.gpg" >> $GITHUB_OUTPUT
+
+  upload:
+    needs: backup
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
-
-      - name: Backup to S3
-        uses: appleboy/ssh-action@v0.1.4
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            # Yedek dizini oluştur
-            mkdir -p /tmp/backups
-
-            # Tarih formatını ayarla
-            BACKUP_DATE=$(date +%Y-%m-%d_%H-%M-%S)
-            BACKUP_FILE="erp_db_backup_${BACKUP_DATE}.sql"
-
-            echo "PostgreSQL yedeği alınıyor..."
-            docker-compose -f /var/www/erp-backend/docker-compose.yml exec -T postgres pg_dump -U postgres erp_db > "/tmp/backups/${BACKUP_FILE}"
-
-            # Yedeği sıkıştır
-            gzip "/tmp/backups/${BACKUP_FILE}"
-
-            # Yedeği AWS S3'e yükle
-            aws s3 cp "/tmp/backups/${BACKUP_FILE}.gz" "s3://${{ secrets.AWS_BACKUP_BUCKET }}/daily-backups/${BACKUP_FILE}.gz"
-
-            # 7 günden eski yedekleri S3'den temizle
-            aws s3 ls "s3://${{ secrets.AWS_BACKUP_BUCKET }}/daily-backups/" | while read -r line;
-            do
-              createDate=`echo $line|awk {'print $1" "$2'}`
-              createDate=`date -d"$createDate" +%s`
-              olderThan=`date -d"-7 days" +%s`
-              if [[ $createDate -lt $olderThan ]]
-              then
-                fileName=`echo $line|awk {'print $4'}`
-                if [[ $fileName != "" ]]
-                then
-                  aws s3 rm "s3://${{ secrets.AWS_BACKUP_BUCKET }}/daily-backups/$fileName"
-                fi
+      - name: Upload Backup to S3 with Retry
+        run: |
+          set -euo pipefail
+          BACKUP_FILE="./backups/${{ needs.backup.outputs.backup_file }}"
+          echo "$(date '+%Y-%m-%d %H:%M:%S') - Backup dosyası ${BACKUP_FILE} S3'e yükleniyor..."
+          retry() {
+            local -r -i max_attempts=3
+            local -i attempt_num=1
+            until "$@"; do
+              if (( attempt_num == max_attempts )); then
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - $* komutu ${attempt_num} denemeden sonra başarısız oldu."
+                exit 1
+              else
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - $* komutu, ${attempt_num}. denemede başarısız oldu. 10 saniye sonra tekrar deneniyor..."
+                sleep 10
+                ((attempt_num++))
               fi
             done
+          }
+          retry aws s3 cp "${BACKUP_FILE}" "s3://${{ secrets.AWS_BACKUP_BUCKET }}/daily-backups/${{ needs.backup.outputs.backup_file }}"
+          echo "$(date '+%Y-%m-%d %H:%M:%S') - Backup dosyası S3'e başarıyla yüklendi."
 
-            # Geçici dosyaları temizle
-            rm -rf /tmp/backups
-
-      - name: Notify on Success
-        if: success()
+  notify:
+    needs: [upload]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Send Slack Notification on Success
+        if: ${{ success() }}
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "✅ Günlük veritabanı yedeği başarıyla alındı!"
+          SLACK_MESSAGE: |
+            :white_check_mark: *Database Backup Successful*
+            *Timestamp:* ${{ needs.backup.outputs.timestamp }}
+            *Backup File:* ${{ needs.backup.outputs.backup_file }}
+            The backup has been created, encrypted, and uploaded to S3 successfully.
+            Please review the logs for further details.
           SLACK_COLOR: good
-
-      - name: Notify on Failure
-        if: failure()
+      - name: Send Email Notification on Success
+        if: ${{ success() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER_ADDRESS }}
+          server_port: ${{ secrets.SMTP_SERVER_PORT }}
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Database Backup Success - ${{ needs.backup.outputs.timestamp }}"
+          body: |
+            The database backup completed successfully.
+            Timestamp: ${{ needs.backup.outputs.timestamp }}
+            Backup File: ${{ needs.backup.outputs.backup_file }}
+            The backup has been uploaded to S3.
+            Please check the workflow logs for more details.
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_FROM }}
+      - name: Send Slack Notification on Failure
+        if: ${{ failure() }}
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "❌ Günlük veritabanı yedeği alınamadı!"
+          SLACK_MESSAGE: |
+            :x: *Database Backup Failed*
+            *Timestamp:* ${{ needs.backup.outputs.timestamp }}
+            An error occurred during the backup or upload process.
+            Please check the workflow logs for detailed error messages.
           SLACK_COLOR: danger
+      - name: Send Email Notification on Failure
+        if: ${{ failure() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER_ADDRESS }}
+          server_port: ${{ secrets.SMTP_SERVER_PORT }}
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Database Backup Failure - ${{ needs.backup.outputs.timestamp }}"
+          body: |
+            The database backup process has failed.
+            Timestamp: ${{ needs.backup.outputs.timestamp }}
+            Please check the workflow logs for error details.
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_FROM }}
