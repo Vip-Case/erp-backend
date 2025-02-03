@@ -31,6 +31,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          envs: GPG_PASSPHRASE,TIMESTAMP
           script: |
             set -euo pipefail
             echo "$(date '+%Y-%m-%d %H:%M:%S') - [START] Database backup işlemi başlatılıyor."
