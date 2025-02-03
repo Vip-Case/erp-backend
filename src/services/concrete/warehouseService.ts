@@ -49,6 +49,105 @@ export interface OrderReturnWarehouse {
   }>;
 }
 
+export interface ReceiptFilters {
+  startDate?: Date;
+  endDate?: Date;
+  receiptType?: ReceiptType;
+  documentNo?: string;
+  currentId?: string;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface ReceiptResponse {
+  data: Array<{
+    id: string;
+    documentNo: string;
+    receiptType: ReceiptType;
+    description: string | null;
+    branchCode: string;
+    createdAt: Date;
+    current: {
+      id: string;
+      currentCode: string;
+      currentName: string;
+    } | null;
+    receiptDetail?: Array<{
+      id: string;
+      quantity: Prisma.Decimal;
+      unitPrice: Prisma.Decimal;
+      totalPrice: Prisma.Decimal;
+      stockCard: {
+        id: string;
+        productName: string;
+        productCode: string;
+      };
+    }>;
+    createdByUser: {
+      id: string;
+      username: string;
+      firstName: string | null;
+      lastName: string | null;
+    } | null;
+  }>;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface DetailedReceiptResponse {
+  id: string;
+  documentNo: string;
+  receiptType: ReceiptType;
+  description: string | null;
+  branchCode: string;
+  createdAt: Date;
+  current: {
+    id: string;
+    currentCode: string;
+    currentName: string;
+    priceList: {
+      id: string;
+      priceListName: string;
+      currency: string;
+      isVatIncluded: boolean;
+    };
+  } | null;
+  receiptDetail: Array<{
+    id: string;
+    quantity: Prisma.Decimal;
+    unitPrice: Prisma.Decimal;
+    totalPrice: Prisma.Decimal;
+    vatRate: Prisma.Decimal;
+    discount: Prisma.Decimal;
+    netPrice: Prisma.Decimal;
+    stockCard: {
+      id: string;
+      productName: string;
+      productCode: string;
+      unit: string;
+    };
+  }>;
+  currentMovement: {
+    id: string;
+    documentType: string | null;
+    movementType: string;
+    debtAmount: Prisma.Decimal | null;
+    creditAmount: Prisma.Decimal | null;
+    description: string | null;
+  } | null;
+  createdByUser: {
+    id: string;
+    username: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+}
+
 async function generateDocumentNumber(
   prisma: any,
   prefix: string
@@ -1005,41 +1104,172 @@ export class WarehouseService {
     }
   }
 
-  async getAllReceipts(): Promise<any> {
+  async getAllReceipts(
+    filters?: ReceiptFilters,
+    pagination?: PaginationParams
+  ): Promise<ReceiptResponse> {
     try {
+      const page = pagination?.page || 1;
+      const limit = pagination?.limit || 10;
+      const skip = (page - 1) * limit;
+
+      const where: Prisma.ReceiptWhereInput = {};
+
+      if (filters?.startDate && filters?.endDate) {
+        where.createdAt = {
+          gte: filters.startDate,
+          lte: filters.endDate,
+        };
+      }
+
+      if (filters?.receiptType) {
+        where.receiptType = filters.receiptType;
+      }
+
+      if (filters?.documentNo) {
+        where.documentNo = {
+          contains: filters.documentNo,
+        };
+      }
+
+      if (filters?.currentId) {
+        where.currentId = filters.currentId;
+      }
+
+      const total = await prisma.receipt.count({ where });
+
       const receipts = await prisma.receipt.findMany({
+        where,
         include: {
-          current: true,
+          current: {
+            select: {
+              id: true,
+              currentCode: true,
+              currentName: true,
+            },
+          },
+          receiptDetail: {
+            include: {
+              stockCard: {
+                select: {
+                  id: true,
+                  productName: true,
+                  productCode: true,
+                },
+              },
+            },
+          },
+          createdByUser: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
         },
+        skip,
+        take: limit,
       });
 
-      return receipts;
+      const formattedReceipts = receipts.map((receipt) => ({
+        id: receipt.id,
+        documentNo: receipt.documentNo,
+        receiptType: receipt.receiptType,
+        description: receipt.description,
+        branchCode: receipt.branchCode,
+        createdAt: receipt.createdAt,
+        current: receipt.current
+          ? {
+              id: receipt.current.id,
+              currentCode: receipt.current.currentCode,
+              currentName: receipt.current.currentName,
+            }
+          : null,
+        receiptDetail: receipt.receiptDetail?.map((detail) => ({
+          id: detail.id,
+          quantity: detail.quantity,
+          unitPrice: detail.unitPrice,
+          totalPrice: detail.totalPrice,
+          stockCard: {
+            id: detail.stockCard.id,
+            productName: detail.stockCard.productName,
+            productCode: detail.stockCard.productCode,
+          },
+        })),
+        createdByUser: receipt.createdByUser
+          ? {
+              id: receipt.createdByUser.id,
+              username: receipt.createdByUser.username,
+              firstName: receipt.createdByUser.firstName,
+              lastName: receipt.createdByUser.lastName,
+            }
+          : null,
+      }));
+
+      return {
+        data: formattedReceipts,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
     } catch (error) {
       logger.error("Error fetching all receipts", error);
       throw error;
     }
   }
 
-  async getReceiptById(id: string): Promise<any> {
+  async getReceiptById(id: string): Promise<DetailedReceiptResponse> {
     try {
       const receipt = await prisma.receipt.findUnique({
         where: { id },
         include: {
           receiptDetail: {
             include: {
-              stockCard: true,
+              stockCard: {
+                select: {
+                  id: true,
+                  productName: true,
+                  productCode: true,
+                  unit: true,
+                },
+              },
             },
           },
           current: {
             include: {
-              priceList: true,
+              priceList: {
+                select: {
+                  id: true,
+                  priceListName: true,
+                  currency: true,
+                  isVatIncluded: true,
+                },
+              },
             },
           },
-          currentMovement: true,
-          createdByUser: true,
+          currentMovement: {
+            select: {
+              id: true,
+              documentType: true,
+              movementType: true,
+              debtAmount: true,
+              creditAmount: true,
+              description: true,
+            },
+          },
+          createdByUser: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
       });
 
@@ -1047,7 +1277,41 @@ export class WarehouseService {
         throw new Error("Fiş bulunamadı");
       }
 
-      return receipt;
+      const formattedReceipt: DetailedReceiptResponse = {
+        id: receipt.id,
+        documentNo: receipt.documentNo,
+        receiptType: receipt.receiptType,
+        description: receipt.description,
+        branchCode: receipt.branchCode,
+        createdAt: receipt.createdAt,
+        current: receipt.current
+          ? {
+              id: receipt.current.id,
+              currentCode: receipt.current.currentCode,
+              currentName: receipt.current.currentName,
+              priceList: receipt.current.priceList,
+            }
+          : null,
+        receiptDetail: receipt.receiptDetail.map((detail) => ({
+          id: detail.id,
+          quantity: detail.quantity,
+          unitPrice: detail.unitPrice,
+          totalPrice: detail.totalPrice,
+          vatRate: detail.vatRate,
+          discount: detail.discount,
+          netPrice: detail.netPrice,
+          stockCard: {
+            id: detail.stockCard.id,
+            productName: detail.stockCard.productName,
+            productCode: detail.stockCard.productCode,
+            unit: detail.stockCard.unit,
+          },
+        })),
+        currentMovement: receipt.currentMovement,
+        createdByUser: receipt.createdByUser,
+      };
+
+      return formattedReceipt;
     } catch (error) {
       logger.error(`Error fetching receipt with id ${id}`, error);
       throw error;
