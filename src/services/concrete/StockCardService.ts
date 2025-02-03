@@ -1561,30 +1561,17 @@ export class StockCardService {
     ): Promise<StockBalanceReportResult[]> => {
       try {
         // Stok kartlarını getir
-        const stockCardsQuery = filter.productCode
-          ? prisma.stockCard.findMany({
-              where: { productCode: filter.productCode },
-              orderBy: { productCode: "asc" },
+        const stockCards = await prisma.stockCard.findMany({
+          where: filter.productCode ? { productCode: filter.productCode } : {},
+          orderBy: { productCode: "asc" },
+          include: {
+            stockCardWarehouse: {
               include: {
-                stockCardWarehouse: {
-                  include: {
-                    warehouse: true,
-                  },
-                },
+                warehouse: true,
               },
-            })
-          : prisma.stockCard.findMany({
-              orderBy: { productCode: "asc" },
-              include: {
-                stockCardWarehouse: {
-                  include: {
-                    warehouse: true,
-                  },
-                },
-              },
-            });
-
-        const stockCards = await stockCardsQuery;
+            },
+          },
+        });
 
         // Stok hareketlerini database'de grupla
         const movements = await prisma.stockMovement.groupBy({
