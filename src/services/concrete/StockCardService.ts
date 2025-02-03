@@ -54,14 +54,10 @@ interface StockBalanceReportResult {
   productCode: string;
   productName: string;
   warehouseName: string;
-  openingBalance: number;
   inQuantity: number;
   outQuantity: number;
   currentStock: number;
-  calculatedStock: number;
   criticalStock: number | null;
-  startDate: Date;
-  endDate: Date;
 }
 
 interface MobileStockCardInput {
@@ -1561,92 +1557,71 @@ export class StockCardService {
     ): Promise<StockBalanceReportResult[]> => {
       try {
         // Stok kartlarını getir
-        const stockCards = await prisma.stockCard.findMany({
-          where: filter.productCode ? { productCode: filter.productCode } : {},
-          orderBy: { productCode: "asc" },
-          include: {
-            stockCardWarehouse: {
+        const stockCardsQuery = filter.productCode
+          ? prisma.stockCard.findMany({
+              where: { productCode: filter.productCode },
+              orderBy: { productCode: "asc" },
               include: {
-                warehouse: true,
+                stockCardWarehouse: {
+                  include: {
+                    warehouse: true,
+                  },
+                },
               },
-            },
-          },
-        });
+            })
+          : prisma.stockCard.findMany({
+              orderBy: { productCode: "asc" },
+              include: {
+                stockCardWarehouse: {
+                  include: {
+                    warehouse: true,
+                  },
+                },
+              },
+            });
 
-        // Stok hareketlerini database'de grupla
-        const movements = await prisma.stockMovement.groupBy({
-          by: ["productCode", "warehouseCode", "gcCode"],
+        const stockCards = await stockCardsQuery;
+
+        // Stok hareketlerini getir
+        const movementsQuery = {
           where: {
             ...(filter.productCode && { productCode: filter.productCode }),
             ...(filter.startDate && { createdAt: { gte: filter.startDate } }),
             ...(filter.endDate && { createdAt: { lte: filter.endDate } }),
           },
-          _sum: {
-            quantity: true,
-          },
-        });
+        };
 
-        // Başlangıç bakiyelerini getir (sadece tarih filtresi varsa)
-        const openingBalances = filter.startDate
-          ? await prisma.stockMovement.groupBy({
-              by: ["productCode", "warehouseCode"],
-              where: {
-                ...(filter.productCode && { productCode: filter.productCode }),
-                createdAt: {
-                  lt: filter.startDate,
-                },
-              },
-              _sum: {
-                quantity: true,
-              },
-            })
-          : [];
+        const movements = await prisma.stockMovement.findMany(movementsQuery);
 
+        // Sonuçları hazırla
         const results: StockBalanceReportResult[] = [];
 
         for (const stockCard of stockCards) {
+          // Her depo için ayrı kayıt oluştur
           for (const stockWarehouse of stockCard.stockCardWarehouse) {
-            // Başlangıç bakiyesini bul (sadece tarih filtresi varsa)
-            const openingBalance = filter.startDate
-              ? openingBalances.find(
-                  (ob) =>
-                    ob.productCode === stockCard.productCode &&
-                    ob.warehouseCode === stockWarehouse.warehouse.warehouseCode
-                )
-              : null;
-
-            // Dönem içi hareketleri bul
-            const periodMovements = movements.filter(
+            // Depo bazında giriş/çıkış miktarlarını hesapla
+            const warehouseMovements = movements.filter(
               (m) =>
                 m.productCode === stockCard.productCode &&
                 m.warehouseCode === stockWarehouse.warehouse.warehouseCode
             );
 
-            const inQuantity =
-              periodMovements
-                .find((m) => m.gcCode === "Giris")
-                ?._sum.quantity?.toNumber() || 0;
+            const inQuantity = warehouseMovements
+              .filter((m) => m.gcCode === "Giris")
+              .reduce((sum, m) => sum + (m.quantity?.toNumber() || 0), 0);
 
-            const outQuantity =
-              periodMovements
-                .find((m) => m.gcCode === "Cikis")
-                ?._sum.quantity?.toNumber() || 0;
-
-            const openingQuantity =
-              openingBalance?._sum.quantity?.toNumber() || 0;
+            const outQuantity = warehouseMovements
+              .filter((m) => m.gcCode === "Cikis")
+              .reduce((sum, m) => sum + (m.quantity?.toNumber() || 0), 0);
 
             results.push({
               productCode: stockCard.productCode,
               productName: stockCard.productName,
               warehouseName: stockWarehouse.warehouse.warehouseName,
-              openingBalance: openingQuantity,
               inQuantity: inQuantity,
               outQuantity: outQuantity,
               currentStock: stockWarehouse.quantity.toNumber(),
-              calculatedStock: openingQuantity + inQuantity - outQuantity,
               criticalStock: stockCard.riskQuantities?.toNumber() || null,
-              startDate: filter.startDate || new Date(0), // 1970-01-01
-              endDate: filter.endDate || new Date(),
             });
           }
         }
