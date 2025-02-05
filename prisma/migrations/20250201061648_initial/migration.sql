@@ -8,7 +8,7 @@ CREATE TYPE "InvoiceType" AS ENUM ('Purchase', 'Sales', 'Return', 'Cancel', 'Oth
 CREATE TYPE "DocumentType" AS ENUM ('Invoice', 'Order', 'Waybill', 'Other');
 
 -- CreateEnum
-CREATE TYPE "StokManagementType" AS ENUM ('Devir', 'DepolarArasiTransfer', 'Uretim', 'Muhtelif', 'Maliyet', 'Konsinye', 'Teshir', 'AlisFaturasi', 'SatisFaturasi', 'HizliSatis');
+CREATE TYPE "StokManagementType" AS ENUM ('Sayim', 'Devir', 'DepolarArasiTransfer', 'Uretim', 'Muhtelif', 'Maliyet', 'Konsinye', 'Teshir', 'AlisFaturasi', 'SatisFaturasi', 'HizliSatis');
 
 -- CreateEnum
 CREATE TYPE "GCCode" AS ENUM ('Giris', 'Cikis');
@@ -45,6 +45,12 @@ CREATE TYPE "VaultType" AS ENUM ('DebtTransfer', 'ServiceChargeCollection', 'Com
 
 -- CreateEnum
 CREATE TYPE "VaultDocumentType" AS ENUM ('General', 'Accounting', 'Official');
+
+-- CreateEnum
+CREATE TYPE "StockTakeStatus" AS ENUM ('Draft', 'InProgress', 'Completed', 'Cancelled');
+
+-- CreateEnum
+CREATE TYPE "StockTakeType" AS ENUM ('Full', 'Partial', 'Spot', 'Periodic');
 
 -- CreateTable
 CREATE TABLE "Role" (
@@ -93,6 +99,7 @@ CREATE TABLE "StockCard" (
     "description" TEXT,
     "companyCode" VARCHAR(50),
     "branchCode" VARCHAR(50),
+    "modelCode" VARCHAR(50),
     "brandId" VARCHAR(100),
     "productType" "ProductType" NOT NULL DEFAULT 'BasitUrun',
     "gtip" VARCHAR(50),
@@ -372,10 +379,33 @@ CREATE TABLE "StockCardWarehouse" (
 -- CreateTable
 CREATE TABLE "StockTake" (
     "id" TEXT NOT NULL,
-    "stockCardIds" TEXT[],
+    "documentNo" VARCHAR(50) NOT NULL,
     "warehouseId" TEXT NOT NULL,
+    "branchCode" TEXT NOT NULL,
+    "stockTakeType" "StockTakeType" NOT NULL DEFAULT 'Full',
+    "status" "StockTakeStatus" NOT NULL DEFAULT 'Draft',
+    "description" TEXT,
+    "reference" VARCHAR(100),
+    "startedAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdBy" TEXT,
+    "updatedBy" TEXT,
 
     CONSTRAINT "StockTake_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StockTakeDetail" (
+    "id" TEXT NOT NULL,
+    "stockTakeId" TEXT NOT NULL,
+    "stockCardId" TEXT NOT NULL,
+    "quantity" DECIMAL(15,4) NOT NULL,
+    "difference" DECIMAL(15,4) NOT NULL,
+    "note" TEXT,
+
+    CONSTRAINT "StockTakeDetail_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -391,6 +421,9 @@ CREATE TABLE "Receipt" (
     "description" TEXT,
     "createdBy" TEXT,
     "updatedBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "currentId" TEXT,
+    "currentMovementId" TEXT,
 
     CONSTRAINT "Receipt_pkey" PRIMARY KEY ("id")
 );
@@ -408,8 +441,6 @@ CREATE TABLE "ReceiptDetail" (
     "netPrice" DECIMAL(15,4) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "ReceiptDetail_pkey" PRIMARY KEY ("id")
 );
@@ -636,8 +667,6 @@ CREATE TABLE "InvoiceDetail" (
     "netPrice" DECIMAL(15,4) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "InvoiceDetail_pkey" PRIMARY KEY ("id")
 );
@@ -895,8 +924,6 @@ CREATE TABLE "MarketPlaceProducts" (
     "productId" TEXT,
     "parentProductId" TEXT,
     "productType" TEXT,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "MarketPlaceProducts_pkey" PRIMARY KEY ("id")
 );
@@ -909,8 +936,6 @@ CREATE TABLE "MarketPlaceProductMatch" (
     "platformProductId" TEXT,
     "platformVariationId" TEXT,
     "marketPlaceSKU" TEXT,
-    "createdBy" TEXT,
-    "updatedBy" TEXT,
 
     CONSTRAINT "MarketPlaceProductMatch_pkey" PRIMARY KEY ("id")
 );
@@ -929,6 +954,50 @@ CREATE TABLE "Notification" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProductMatch" (
+    "id" TEXT NOT NULL,
+    "productCode" TEXT,
+    "barcode" TEXT,
+
+    CONSTRAINT "ProductMatch_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SentRequests" (
+    "id" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "storeId" TEXT,
+    "body" TEXT NOT NULL,
+    "batchRequestId" TEXT,
+
+    CONSTRAINT "SentRequests_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RequestResponses" (
+    "id" TEXT NOT NULL,
+    "sentRequestId" TEXT,
+    "batchRequestResult" TEXT NOT NULL,
+
+    CONSTRAINT "RequestResponses_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OrderPrepareWarehouse" (
+    "id" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'Completed',
+    "warehouseId" TEXT NOT NULL,
+    "currentId" TEXT,
+    "currentMovementId" TEXT,
+    "createdBy" TEXT,
+    "updatedBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "OrderPrepareWarehouse_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1073,6 +1142,9 @@ CREATE UNIQUE INDEX "BranchWarehouse_branchId_warehouseId_key" ON "BranchWarehou
 CREATE UNIQUE INDEX "StockCardWarehouse_stockCardId_warehouseId_key" ON "StockCardWarehouse"("stockCardId", "warehouseId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "StockTake_documentNo_key" ON "StockTake"("documentNo");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Current_currentCode_key" ON "Current"("currentCode");
 
 -- CreateIndex
@@ -1089,6 +1161,12 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Invoice_invoiceNo_key" ON "Invoice"("invoiceNo");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MarketPlaceProducts_barcode_key" ON "MarketPlaceProducts"("barcode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductMatch_barcode_key" ON "ProductMatch"("barcode");
 
 -- CreateIndex
 CREATE INDEX "_RoleToUser_B_index" ON "_RoleToUser"("B");
@@ -1250,6 +1328,27 @@ ALTER TABLE "StockCardWarehouse" ADD CONSTRAINT "StockCardWarehouse_warehouseId_
 ALTER TABLE "StockTake" ADD CONSTRAINT "StockTake_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "StockTake" ADD CONSTRAINT "StockTake_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StockTake" ADD CONSTRAINT "StockTake_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StockTake" ADD CONSTRAINT "StockTake_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StockTakeDetail" ADD CONSTRAINT "StockTakeDetail_stockTakeId_fkey" FOREIGN KEY ("stockTakeId") REFERENCES "StockTake"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StockTakeDetail" ADD CONSTRAINT "StockTakeDetail_stockCardId_fkey" FOREIGN KEY ("stockCardId") REFERENCES "StockCard"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_currentId_fkey" FOREIGN KEY ("currentId") REFERENCES "Current"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_currentMovementId_fkey" FOREIGN KEY ("currentMovementId") REFERENCES "CurrentMovement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1265,16 +1364,10 @@ ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_outWarehouse_fkey" FOREIGN KEY ("o
 ALTER TABLE "Receipt" ADD CONSTRAINT "Receipt_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ReceiptDetail" ADD CONSTRAINT "ReceiptDetail_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "ReceiptDetail" ADD CONSTRAINT "ReceiptDetail_receiptId_fkey" FOREIGN KEY ("receiptId") REFERENCES "Receipt"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ReceiptDetail" ADD CONSTRAINT "ReceiptDetail_stockCardId_fkey" FOREIGN KEY ("stockCardId") REFERENCES "StockCard"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ReceiptDetail" ADD CONSTRAINT "ReceiptDetail_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Current" ADD CONSTRAINT "Current_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1361,16 +1454,10 @@ ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_updatedBy_fkey" FOREIGN KEY ("upda
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_warehouseCode_fkey" FOREIGN KEY ("warehouseCode") REFERENCES "Warehouse"("warehouseCode") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "InvoiceDetail" ADD CONSTRAINT "InvoiceDetail_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "InvoiceDetail" ADD CONSTRAINT "InvoiceDetail_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "InvoiceDetail" ADD CONSTRAINT "InvoiceDetail_productCode_fkey" FOREIGN KEY ("productCode") REFERENCES "StockCard"("productCode") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "InvoiceDetail" ADD CONSTRAINT "InvoiceDetail_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Vault" ADD CONSTRAINT "Vault_branchCode_fkey" FOREIGN KEY ("branchCode") REFERENCES "Branch"("branchCode") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1499,9 +1586,6 @@ ALTER TABLE "MarketPlaceAttributes" ADD CONSTRAINT "MarketPlaceAttributes_market
 ALTER TABLE "MarketPlaceProductImages" ADD CONSTRAINT "MarketPlaceProductImages_marketPlaceProductId_fkey" FOREIGN KEY ("marketPlaceProductId") REFERENCES "MarketPlaceProducts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MarketPlaceProducts" ADD CONSTRAINT "MarketPlaceProducts_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "MarketPlaceProducts" ADD CONSTRAINT "MarketPlaceProducts_marketPlaceBrandsId_fkey" FOREIGN KEY ("marketPlaceBrandsId") REFERENCES "MarketPlaceBrands"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1511,9 +1595,6 @@ ALTER TABLE "MarketPlaceProducts" ADD CONSTRAINT "MarketPlaceProducts_parentProd
 ALTER TABLE "MarketPlaceProducts" ADD CONSTRAINT "MarketPlaceProducts_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MarketPlaceProducts" ADD CONSTRAINT "MarketPlaceProducts_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "MarketPlaceProductMatch" ADD CONSTRAINT "MarketPlaceProductMatch_marketPlaceProductId_fkey" FOREIGN KEY ("marketPlaceProductId") REFERENCES "MarketPlaceProducts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1521,6 +1602,27 @@ ALTER TABLE "MarketPlaceProductMatch" ADD CONSTRAINT "MarketPlaceProductMatch_st
 
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_readBy_fkey" FOREIGN KEY ("readBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProductMatch" ADD CONSTRAINT "ProductMatch_productCode_fkey" FOREIGN KEY ("productCode") REFERENCES "StockCard"("productCode") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RequestResponses" ADD CONSTRAINT "RequestResponses_sentRequestId_fkey" FOREIGN KEY ("sentRequestId") REFERENCES "SentRequests"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderPrepareWarehouse" ADD CONSTRAINT "OrderPrepareWarehouse_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderPrepareWarehouse" ADD CONSTRAINT "OrderPrepareWarehouse_currentId_fkey" FOREIGN KEY ("currentId") REFERENCES "Current"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderPrepareWarehouse" ADD CONSTRAINT "OrderPrepareWarehouse_currentMovementId_fkey" FOREIGN KEY ("currentMovementId") REFERENCES "CurrentMovement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderPrepareWarehouse" ADD CONSTRAINT "OrderPrepareWarehouse_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrderPrepareWarehouse" ADD CONSTRAINT "OrderPrepareWarehouse_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("username") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;

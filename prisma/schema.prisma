@@ -530,6 +530,8 @@ model Warehouse {
   company               Company                 @relation(fields: [companyCode], references: [companyCode])
   createdByUser         User?                   @relation("WarehouseCreatedBy", fields: [createdBy], references: [username])
   updatedByUser         User?                   @relation("WarehouseUpdatedBy", fields: [updatedBy], references: [username])
+
+  Store Store[]
 }
 
 model BranchWarehouse {
@@ -1120,6 +1122,7 @@ model MarketPlace {
 model Store {
   id                      String                    @id @default(cuid())
   name                    String
+  warehouseCode           String?
   marketPlaceId           String
   apiCredentials          String
   autoInvoiceCreation     Boolean                   @default(false)
@@ -1133,6 +1136,7 @@ model Store {
   marketPlace             MarketPlace               @relation(fields: [marketPlaceId], references: [id])
   updatedByUser           User?                     @relation("StoreUpdatedBy", fields: [updatedBy], references: [username])
   stockcard               StockCard[]               @relation("StockCardToStore")
+  warehouse               Warehouse?                @relation(fields: [warehouseCode], references: [warehouseCode])
 }
 
 model MarketPlaceCategories {
@@ -1230,6 +1234,8 @@ model ProductMatch {
   id          String  @id @default(cuid())
   productCode String?
   barcode     String? @unique
+  tempQuantity            Int?                      
+  isTempQuantity          Boolean?                   @default(false)
 
   product StockCard? @relation(fields: [productCode], references: [productCode])
 }

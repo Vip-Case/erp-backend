@@ -323,6 +323,240 @@ export class TrendyolController {
       };
     }
   }
+  
+  static async addToStockCardWarehouse(ctx: Context) {
+    try {
+      const { storeId, marketPlaceProductId } = ctx.body as { 
+        storeId: string; 
+        marketPlaceProductId: string;
+      };
+  
+      if (!storeId || !marketPlaceProductId) {
+        return {
+          status: 400,
+          body: { 
+            success: false,
+            error: "storeId ve marketPlaceProductId zorunludur" 
+          }
+        };
+      }
+  
+      const trendyolService = new TrendyolService(storeId);
+      await trendyolService.initialize();
+  
+      // MarketPlace ürününü bul
+      const marketPlaceProduct = await prisma.marketPlaceProducts.findUnique({
+        where: { id: marketPlaceProductId },
+        include: { 
+          marketPlaceAttributes: true,
+          MarketPlaceCategories: true,
+          marketPlaceBrands: true
+        }
+      });
+  
+      if (!marketPlaceProduct) {
+        return {
+          status: 404,
+          body: {
+            success: false,
+            error: "Ürün bulunamadı"
+          }
+        };
+      }
+  
+      // StockCard'ı bul
+      const stockCard = await prisma.stockCard.findFirst({
+        where: {
+          barcodes: {
+            some: {
+              barcode: marketPlaceProduct.barcode || undefined
+            }
+          }
+        }
+      });
+  
+      if (!stockCard) {
+        return {
+          status: 404,
+          body: {
+            success: false,
+            error: "StockCard bulunamadı"
+          }
+        };
+      }
+  
+      // StockCardWarehouse'a ekle
+      if (marketPlaceProduct.barcode) {
+        await trendyolService.addToStockCardWarehouse(stockCard, marketPlaceProduct.barcode);
+      } else {
+        throw new Error("Barcode is null or undefined");
+      }
+  
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: "Ürün başarıyla StockCardWarehouse'a eklendi",
+          storeId,
+          marketPlaceProductId
+        }
+      };
+    } catch (error: any) {
+      console.error("StockCardWarehouse ekleme hatası:", error);
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: error.message || 'StockCardWarehouse ekleme işlemi başarısız'
+        }
+      };
+    }
+  }
+  
+  // Toplu ekleme için yeni metod
+  static async addAllToStockCardWarehouse(ctx: Context) {
+    try {
+      const { storeId } = ctx.body as { storeId: string };
+  
+      if (!storeId) {
+        return {
+          status: 400,
+          body: { 
+            success: false,
+            error: "storeId zorunludur" 
+          }
+        };
+      }
+  
+      const trendyolService = new TrendyolService(storeId);
+      await trendyolService.initialize();
+  
+      // Tüm StockCard'ları bul
+      const stockCards = await prisma.stockCard.findMany({
+        include: {
+          barcodes: true
+        }
+      });
+  
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[]
+      };
+  
+      for (const stockCard of stockCards) {
+        try {
+          const barcode = stockCard.barcodes[0]?.barcode;
+          if (barcode) {
+            await trendyolService.addToStockCardWarehouse(stockCard, barcode);
+            results.success++;
+          }
+        } catch (error: any) {
+          results.failed++;
+          results.errors.push(`${stockCard.productCode}: ${error.message}`);
+        }
+      }
+  
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: "Tüm ürünler StockCardWarehouse'a eklendi",
+          results,
+          storeId
+        }
+      };
+    } catch (error: any) {
+      console.error("Toplu StockCardWarehouse ekleme hatası:", error);
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: error.message || 'Toplu ekleme işlemi başarısız'
+        }
+      };
+    }
+  }
+
+  static async updateStockInTrendyol(ctx: Context) {
+    try {
+      const { stockCardWarehouseId, storeId } = ctx.body as {
+        stockCardWarehouseId: string;
+        storeId: string;
+      };
+  
+      if (!stockCardWarehouseId) {
+        return {
+          status: 400,
+          body: {
+            success: false,
+            error: "stockCardWarehouseId zorunludur"
+          }
+        };
+      }
+  
+      const trendyolService = new TrendyolService(storeId);
+      await trendyolService.initialize();
+      await trendyolService.updateTrendyolStock(stockCardWarehouseId);
+  
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: "Trendyol stok güncellendi"
+        }
+      };
+    } catch (error: any) {
+      console.error("Stok güncelleme hatası:", error);
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: error.message || 'Stok güncelleme başarısız'
+        }
+      };
+    }
+  }
+
+  static async updateAllStockInTrendyol(ctx: Context) {
+    try {
+      const { storeId, warehouseId } = ctx.body as {
+        storeId: string;
+        warehouseId?: string;
+      };
+  
+      if (!storeId) {
+        return {
+          status: 400,
+          body: {
+            success: false,
+            error: "storeId zorunludur"
+          }
+        };
+      }
+  
+      const trendyolService = new TrendyolService(storeId);
+      const results = await trendyolService.updateAllTrendyolStock(warehouseId);
+  
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: "Toplu stok güncelleme tamamlandı",
+          results
+        }
+      };
+    } catch (error: any) {
+      console.error("Toplu stok güncelleme hatası:", error);
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: error.message || 'Toplu stok güncelleme başarısız'
+        }
+      };
+    }
+  }
 
   static async checkMatchStatus(ctx: Context) {
     try {

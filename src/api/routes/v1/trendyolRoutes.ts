@@ -33,6 +33,22 @@ const TrendyolRoutes = (app: Elysia) => {
     return await TrendyolController.syncAndMatchAll(ctx);
   });
 
+  app.post("/api/trendyol/add-to-warehouse", async (ctx) => {
+    return await TrendyolController.addToStockCardWarehouse(ctx);
+  });
+  
+  app.post("/api/trendyol/add-all-to-warehouse", async (ctx) => {
+    return await TrendyolController.addAllToStockCardWarehouse(ctx);
+  });
+
+  app.post("/api/trendyol/update-stock", async (ctx) => {
+    return await TrendyolController.updateStockInTrendyol(ctx);
+  });
+
+  app.post("/api/trendyol/update-all-stock", async (ctx) => {
+    return await TrendyolController.updateAllStockInTrendyol(ctx);
+  });
+
   // Durum kontrolü route'u
   app.get("/api/trendyol/match-status", async (ctx) => {
     return await TrendyolController.checkMatchStatus(ctx);

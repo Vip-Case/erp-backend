@@ -1,5 +1,4 @@
-// adapters/trendyolAdapter.ts
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import { Buffer } from 'buffer';
 
 interface TrendyolCredentials {
   supplierId: string;
@@ -20,14 +19,6 @@ interface TrendyolCategory {
   name: string;
   parentId: number | null;
   subCategories: TrendyolCategory[];
-}
-
-interface TrendyolProductResponse {
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-  content: TrendyolProduct[];
 }
 
 interface TrendyolProduct {
@@ -51,73 +42,97 @@ interface TrendyolProduct {
   parentProductId?: string;
 }
 
-// trendyolAdapter.ts
+interface StockUpdateItem {
+  barcode: string;
+  quantity: number;
+}
+
+interface TrendyolProductResponse {
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  content: TrendyolProduct[];
+}
+
 export class TrendyolAdapter {
-  private readonly client: AxiosInstance;
-  private readonly rateLimitDelay: number = 1000; // Define the rate limit delay in milliseconds
-  private readonly brandCache: Map<string, TrendyolBrand> = new Map(); // Add brandCache property
-  private readonly variationsCache: Map<string, TrendyolProduct[]> = new Map(); // Add variationsCache property
+  private readonly baseURL: string;
+  private readonly headers: Headers;
+  private readonly timeout: number = 30000;
+  private readonly rateLimitDelay: number = 1000;
+  private readonly brandCache: Map<string, TrendyolBrand> = new Map();
+  private readonly variationsCache: Map<string, TrendyolProduct[]> = new Map();
 
   constructor(private readonly credentials: TrendyolCredentials) {
+    this.baseURL = credentials.baseUrl;
     const token = Buffer.from(`${credentials.apiKey}:${credentials.apiSecret}`).toString('base64');
     
-    this.client = axios.create({
-      baseURL: credentials.baseUrl,
-      headers: {
-        'Authorization': `Basic ${token}`,
-        'Content-Type': 'application/json',
-        'User-Agent': `${credentials.supplierId} - Trendyolsoft`
-      }
+    this.headers = new Headers({
+      'Authorization': `Basic ${token}`,
+      'Content-Type': 'application/json',
+      'User-Agent': `${credentials.supplierId} - Trendyolsoft`
     });
-
-    this.setupInterceptors();
   }
 
   private async rateLimiter() {
     await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
   }
 
-  private setupInterceptors() {
-    this.client.interceptors.request.use(
-      config => {
-        console.log('Request:', `${config.baseURL}${config.url}`);
-        return config;
-      },
-      error => {
-        console.error('Request error:', error);
-        return Promise.reject(error);
+  private async fetchWithTimeout(
+    url: string, 
+    options: RequestInit & { 
+      validateStatus?: (status: number) => boolean 
+    } = {}
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const fullUrl = `${this.baseURL}${url}`;
+      console.log('Request:', fullUrl);
+
+      const response = await fetch(fullUrl, {
+        ...options,
+        signal: controller.signal,
+        headers: this.headers
+      });
+      clearTimeout(id);
+
+      // Özel durum doğrulama fonksiyonu varsa kullan
+      if (options.validateStatus) {
+        if (!options.validateStatus(response.status)) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } else if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    );
 
-    this.client.interceptors.response.use(
-      response => response,
-      error => this.handleApiError(error)
-    );
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      console.error('API Error:', {
+        url,
+        error: error
+      });
+      throw error;
+    }
   }
 
-  private handleApiError(error: AxiosError): Promise<never> {
-    console.error('API Error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-    return Promise.reject(error);
-  }
-
-  async getBrands(): Promise<{brands: TrendyolBrand[]; totalPages: number;}> {
+  async getBrands(): Promise<{ brands: TrendyolBrand[]; totalPages: number; }> {
     await this.rateLimiter();
     try {
-      const response = await this.client.get('/brands', {
+      const response = await this.fetchWithTimeout('/integration/product/brands', {
         validateStatus: (status) => status >= 200 && status < 500
       });
-  
-      const brands = response.data?.brands || [];
-      // Marka datası yoksa boş dizi dön
+
+      const data = await response.json();
+      const brands = data?.brands || [];
+
       if (!brands.length) return { brands: [], totalPages: 0 };
-      
+
       return {
         brands: brands.filter((brand: any) => brand?.id && brand?.name),
-        totalPages: response.data.totalPages || 1
+        totalPages: data.totalPages || 1
       };
     } catch {
       return { brands: [], totalPages: 0 };
@@ -130,15 +145,21 @@ export class TrendyolAdapter {
     if (cachedBrand) {
       return { id: brandId, name: `Marka ${brandId}` };
     }
+
     try {
-      const response = await this.client.get(`/brands/${brandId}`, {
-        validateStatus: (status) => [200, 404].includes(status)
-      });
-      
-      return {
-        id: brandId,
-        name: response.status === 404 ? `Marka ${brandId}` : response.data.name
-      };
+      const response = await this.fetchWithTimeout(
+        `/integration/product/brands/${brandId}`,
+        {
+          validateStatus: (status) => [200, 404].includes(status)
+        }
+      );
+
+      if (response.status === 404) {
+        return { id: brandId, name: `Marka ${brandId}` };
+      }
+
+      const data = await response.json();
+      return { id: brandId, name: data.name };
     } catch {
       return { id: brandId, name: `Marka ${brandId}` };
     }
@@ -149,30 +170,40 @@ export class TrendyolAdapter {
     totalPages: number;
   }> {
     await this.rateLimiter();
-    const response = await this.client.get('/product-categories', {
-      params: { page, size }
-    });
+    const response = await this.fetchWithTimeout(
+      `/integration/product/product-categories?page=${page}&size=${size}`
+    );
 
-    const categories = response.data.categories || [];
+    const data = await response.json();
+    const categories = data.categories || [];
+
     return {
       categories: categories.filter((cat: any) => cat?.id && cat?.name),
-      totalPages: response.data.totalPages || Math.ceil(categories.length / size)
+      totalPages: data.totalPages || Math.ceil(categories.length / size)
     };
   }
 
   async getCategoryById(categoryId: number): Promise<TrendyolCategory> {
     await this.rateLimiter();
     try {
-      const response = await this.client.get(`/product-categories/${categoryId}`, {
-        validateStatus: (status) => [200, 404].includes(status)
-      });
-      
-      return response.status === 404 ? {
-        id: categoryId,
-        name: `Kategori ${categoryId}`,
-        parentId: null,
-        subCategories: []
-      } : response.data;
+      const response = await this.fetchWithTimeout(
+        `/integration/product/product-categories/${categoryId}`,
+        {
+          validateStatus: (status) => [200, 404].includes(status)
+        }
+      );
+
+      if (response.status === 404) {
+        return {
+          id: categoryId,
+          name: `Kategori ${categoryId}`,
+          parentId: null,
+          subCategories: []
+        };
+      }
+
+      const data = await response.json();
+      return data;
     } catch {
       return {
         id: categoryId,
@@ -185,53 +216,40 @@ export class TrendyolAdapter {
 
   async getProducts(page: number = 0, size: number = 100): Promise<TrendyolProductResponse> {
     console.log(`Ürün çekme isteği - Sayfa: ${page}, Boyut: ${size}`);
-    console.log(`Tam URL: /suppliers/${this.credentials.supplierId}/products`);
-    
     const MAX_RETRIES = 5;
     const BASE_DELAY = 5000;
-  
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const params = {
-          page,
-          size,
-          onSale: true,
+        const params = new URLSearchParams({
+          page: page.toString(),
+          size: size.toString(),
+          onSale: 'true',
           dateTo: new Date().toISOString()
-        };
-        console.log('API Parametreleri:', JSON.stringify(params));
-  
-        const response = await this.client.get(
-          `/suppliers/${this.credentials.supplierId}/products`,
+        });
+
+        const response = await this.fetchWithTimeout(
+          `/integration/product/sellers/${this.credentials.supplierId}/products?${params}`,
           {
-            params,
-            timeout: 30000
+            headers: {
+              ...this.headers,
+              'Accept': 'application/json'
+            }
           }
         );
-  
+
+        const data = await response.json();
         console.log('Yanıt Detayları:', {
-          status: response.status,
-          totalPages: response.data.totalPages,
-          totalElements: response.data.totalElements
+          totalPages: data.totalPages,
+          totalElements: data.totalElements
         });
-  
-        const products = response.data.content || [];
-        console.log(`Sayfa ${page} içinde ${products.length} ürün var`);
-  
+
         return {
-          ...response.data,
-          content: products
+          ...data,
+          content: data.content || []
         };
-      } catch (error) {
-        console.error(`Ürün çekme hatası - Sayfa: ${page}, Deneme: ${attempt + 1}`, error);
-        
-        if ((error as any).response) {
-          console.log('Hata Yanıtı:', {
-            status: (error as any).response.status,
-            data: (error as any).response.data
-          });
-        }
-        
-        if ((error as any).response?.status === 429) {
+      } catch (error: any) {
+        if (error.status === 429) {
           const waitTime = BASE_DELAY * Math.pow(2, attempt);
           console.log(`Rate limit hatası. ${waitTime} ms beklenecek.`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -240,7 +258,7 @@ export class TrendyolAdapter {
         throw error;
       }
     }
-  
+
     throw new Error('Maksimum deneme sayısına ulaşıldı');
   }
 
@@ -250,23 +268,24 @@ export class TrendyolAdapter {
     if (cachedVariations) return cachedVariations;
 
     try {
-      const response = await this.client.get(
-        `/suppliers/${this.credentials.supplierId}/products/${productMainId}/variations`,
+      const response = await this.fetchWithTimeout(
+        `/integration/product/sellers/${this.credentials.supplierId}/products/${productMainId}/variations`,
         {
-          timeout: 30000,
           validateStatus: (status) => status === 200 || status === 404
         }
       );
 
       if (response.status === 404) return [];
 
-      const variations = response.data?.content || [];
-      return variations.filter((variation: any) => 
+      const data = await response.json();
+      const variations = data?.content || [];
+
+      return variations.filter((variation: any) =>
         variation.barcode !== productMainId &&
         variation.productMainId === productMainId &&
-        variation.attributes?.some((attr: any) => 
+        variation.attributes?.some((attr: any) =>
           attr.attributeName?.toLowerCase().includes('renk') ||
-          attr.attributeName?.toLowerCase().includes('beden') 
+          attr.attributeName?.toLowerCase().includes('beden')
         )
       );
     } catch (error) {
@@ -278,17 +297,16 @@ export class TrendyolAdapter {
   async getProductDetails(barcode: string): Promise<TrendyolProduct | null> {
     await this.rateLimiter();
     try {
-      const response = await this.client.get(
-        `/suppliers/${this.credentials.supplierId}/products/${barcode}`,
+      const response = await this.fetchWithTimeout(
+        `/integration/product/sellers/${this.credentials.supplierId}/products/${barcode}`,
         {
-          timeout: 30000,
           validateStatus: (status) => status === 200 || status === 404
         }
       );
 
       if (response.status === 404) return null;
 
-      return response.data;
+      return await response.json();
     } catch (error) {
       console.warn(`Product details fetch error: ${barcode}`, error);
       return null;
@@ -298,22 +316,110 @@ export class TrendyolAdapter {
   async getProductsByModelCode(modelCode: string): Promise<TrendyolProduct[]> {
     await this.rateLimiter();
     try {
-      const response = await this.client.get(
-        `/suppliers/${this.credentials.supplierId}/products`,
-        {
-          params: {
-            productMainId: modelCode,
-            size: 100
-          },
-          timeout: 30000
-        }
+      const params = new URLSearchParams({
+        productMainId: modelCode,
+        size: '100'
+      });
+
+      const response = await this.fetchWithTimeout(
+        `/integration/product/sellers/${this.credentials.supplierId}/products?${params}`
       );
 
-      return response.data?.content || [];
+      const data = await response.json();
+      return data?.content || [];
     } catch (error) {
       console.warn(`Products by model code fetch error: ${modelCode}`, error);
       return [];
     }
+  }
+
+  async getProductStock(barcode: string): Promise<number | null> {
+    await this.rateLimiter();
+    try {
+      const params = new URLSearchParams({
+        barcode,
+        size: '1',
+        onSale: 'true' // Onaylı ürünler için
+      });
+  
+      // Yeni endpoint kullanımı
+      const response = await this.fetchWithTimeout(
+        `/integration/product/sellers/${this.credentials.supplierId}/products?${params}`,
+        {
+          method: 'GET',
+          validateStatus: (status) => status === 200 || status === 404
+        }
+      );
+  
+      console.log(`Stok API yanıtı - Barkod: ${barcode}, Status: ${response.status}`);
+  
+      if (response.status === 404) {
+        throw new Error(`Ürün bulunamadı - Barkod: ${barcode}`);
+      }
+  
+      const data = await response.json();
+      console.log('API Response:', data);
+  
+      // Dokümantasyona göre content dizisini kontrol et
+      if (!data?.content?.length) {
+        throw new Error(`Ürün stok bilgisi bulunamadı: ${barcode}`);
+      }
+  
+      // İlk ürünü al (size: '1' olduğu için)
+      const product = data.content[0];
+  
+      // Quantity kontrolü
+      if (product.barcode !== barcode) {
+        throw new Error(`Barkod eşleşmesi bulunamadı: ${barcode}`);
+      }
+  
+      const quantity = product.quantity;
+      console.log(`Stok miktarı - Barkod: ${barcode}, Miktar: ${quantity}`);
+  
+      return quantity;
+    } catch (error) {
+      console.error(`Ürün stok bilgisi alınamadı: ${barcode}`, error);
+      throw error; // Hatayı fırlat, 0 dönme
+    }
+  }
+  
+  async updateProductStock(data: { items: StockUpdateItem[] }): Promise<void> {
+    const MAX_RETRIES = 3;
+    const BASE_DELAY = 1000;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const response = await this.fetchWithTimeout(
+          `/integration/inventory/sellers/${this.credentials.supplierId}/products/price-and-inventory`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              items: data.items.map(item => ({
+                barcode: item.barcode,
+                quantity: Number(item.quantity)
+              }))
+            })
+          }
+        );
+
+        const responseData = await response.json();
+        if (!responseData) {
+          throw new Error('Stok güncellemesi başarısız');
+        }
+
+        return;
+      } catch (error: any) {
+        if (error.status === 429) {
+          const waitTime = BASE_DELAY * Math.pow(2, attempt);
+          console.log(`Rate limit aşıldı. ${waitTime}ms bekleniyor...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error('Maksimum deneme sayısına ulaşıldı');
   }
 
   async checkProductAvailability(barcode: string): Promise<{
@@ -323,10 +429,9 @@ export class TrendyolAdapter {
   }> {
     await this.rateLimiter();
     try {
-      const response = await this.client.get(
-        `/suppliers/${this.credentials.supplierId}/products/${barcode}/stocks`,
+      const response = await this.fetchWithTimeout(
+        `/integration/product/sellers/${this.credentials.supplierId}/products/${barcode}/stocks`,
         {
-          timeout: 30000,
           validateStatus: (status) => status === 200 || status === 404
         }
       );
@@ -335,10 +440,11 @@ export class TrendyolAdapter {
         return { isAvailable: false };
       }
 
+      const data = await response.json();
       return {
         isAvailable: true,
-        stockStatus: response.data?.stockStatus,
-        quantity: response.data?.quantity
+        stockStatus: data?.stockStatus,
+        quantity: data?.quantity
       };
     } catch (error) {
       console.warn(`Stock availability check error: ${barcode}`, error);

@@ -2825,13 +2825,13 @@ async function main() {
             name: "Trendyol Store",
             marketPlaceId: marketPlace2.id, // MarketPlace ile ilişkilendirme
             apiCredentials: JSON.stringify({
-                baseUrl: "https://stageapi.trendyol.com/stagesapigw",
-                apiKey: "ij17ZioQkwtNQK6rgWr2",
-                apiSecret: "P6nnQNGk5Ws0eUqslj3N",
+                baseUrl: "https://stageapi.trendyol.com",
+                apiKey: "icri6yUpwUtFDOXAcNNE",
+                apiSecret: "fqOwS0Up8HDO2ZGAFkup",
                 supplierId: "2738",
                 environment: "STAGE"
             }),
-            autoInvoiceCreation: true,
+            autoInvoiceCreation: false,
             storeUrl: "https://stagepartner.trendyol.com"
         },
     });
