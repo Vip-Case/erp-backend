@@ -1,7 +1,9 @@
 import pino from 'pino';
-import fs from 'fs';
+import fs, { WriteStream } from 'fs';
 import dotenv from 'dotenv';
 import pinoCaller from 'pino-caller';
+import net from 'net';
+import { Writable } from 'stream';
 
 dotenv.config();
 
@@ -20,30 +22,38 @@ const streams = [
     { stream: fs.createWriteStream(logFilePath, { flags: 'a' }) }
 ];
 
-// Sadece production ortamında Logstash'e bağlanmayı dene
+// Sadece production ortamında Logstash'e bağlan
 if (isProduction) {
-    try {
-        streams.push({
-            stream: pino.transport({
-                target: 'pino-socket',
-                options: {
-                    address: 'logstash',
-                    port: 5044,
-                    reconnectInterval: 1000,
-                    timeout: 2000,
-                    onError: (error: Error) => {
-                        console.warn('Logstash bağlantı hatası:', error.message);
-                    }
-                }
-            })
+    const logstashStream = (() => {
+        const stream = new net.Socket();
+        const logstashHost = process.env.LOGSTASH_URL?.split(':')[0] || 'localhost';
+        const logstashPort = parseInt(process.env.LOGSTASH_URL?.split(':')[1] || '5044');
+
+        stream.connect(logstashPort, logstashHost, () => {
+            console.log('Logstash bağlantısı başarılı');
         });
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.warn('Logstash transport oluşturulamadı:', error.message);
-        } else {
-            console.warn('Logstash transport oluşturulamadı: Bilinmeyen hata');
+
+        stream.on('error', (err) => {
+            console.error('Logstash bağlantı hatası:', err);
+        });
+
+        return stream;
+    })();
+
+    const logstashWritable = new Writable({
+        write(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void) {
+            try {
+                const logObject = JSON.parse(chunk.toString());
+                logstashStream.write(JSON.stringify(logObject) + '\n');
+                callback();
+            } catch (err) {
+                console.error('Log gönderme hatası:', err);
+                callback(err as Error);
+            }
         }
-    }
+    }) as WriteStream;
+
+    streams.push({ stream: logstashWritable });
 }
 
 // Pino logger'ı oluşturuyoruz

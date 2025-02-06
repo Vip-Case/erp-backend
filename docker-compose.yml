@@ -8,9 +8,6 @@ services:
     container_name: erp-backend
     ports:
       - "1303:1303"
-    networks:
-      - elk
-      - default
     environment:
       - NODE_ENV=production
       - DB_HOST=postgres
@@ -20,8 +17,9 @@ services:
       - DB_NAME=erp_db
       - DATABASE_URL=postgresql://postgres:xderensa3@postgres:5432/erp_db?schema=public
     depends_on:
-      - postgres
-    entrypoint: ["/bin/sh", "-c", "/init.sh"]
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
     develop:
       watch:
@@ -45,46 +43,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
-    environment:
-      - discovery.type=single-node
-    ports:
-      - "9200:9200"
-    volumes:
-      - ./elk/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - esdata:/usr/share/elasticsearch/data
-    networks:
-      - elk
-
-  logstash:
-    image: docker.elastic.co/logstash/logstash:7.17.0
-    volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-      - ./logs:/logs
-    ports:
-      - "5044:5044"
-    depends_on:
-      - elasticsearch
-    networks:
-      - elk
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.0
-    ports:
-      - "5601:5601"
-    volumes:
-      - ./elk/config/kibana.yml:/usr/share/kibana/config/kibana.yml
-    depends_on:
-      - elasticsearch
-    networks:
-      - elk
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
-  esdata:
-
-networks:
-  elk:
-  default:

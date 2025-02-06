@@ -1,27 +1,27 @@
-FROM oven/bun:debian
+FROM oven/bun:debian as builder
 
-# Çalışma dizini ayarla
 WORKDIR /app
 
-# Paket dosyalarını kopyala
+# Sadece package.json ve prisma dosyalarını kopyala
 COPY package.json bun.lockb ./
+COPY prisma ./prisma/
 
-# Çevresel değişken dosyasını kopyala
-COPY .env .env
-
-# Bağımlılıkları kur
+# Bağımlılıkları yükle
 RUN bun install
 RUN bun add prisma --global
 
-# Uygulama dosyalarını kopyala
+# Prisma client'ı oluştur
+RUN bunx prisma generate
+
+FROM oven/bun:debian
+
+WORKDIR /app
+
+# Builder aşamasından gerekli dosyaları kopyala
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Geri kalan dosyaları kopyala
 COPY . .
 
-# wait-for-it.sh ve init.sh dosyalarını kopyala
-COPY wait-for-it.sh /wait-for-it.sh
-COPY init.sh /init.sh
-
-# Çalıştırma izinlerini ayarla
-RUN chmod +x /wait-for-it.sh /init.sh
-
-# Uygulamayı başlatma komutu
-CMD ["/wait-for-it.sh", "postgres:5432", "--", "/init.sh"]
+CMD ["bun", "dev"]
