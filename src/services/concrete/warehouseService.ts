@@ -7,6 +7,8 @@ import {
   StockTakeStatus,
   StokManagementType,
   GCCode,
+  DocumentType,
+  InvoiceType,
 } from "@prisma/client";
 import { BaseRepository } from "../../repositories/baseRepository";
 import logger from "../../utils/logger";
@@ -27,34 +29,14 @@ export interface StockTakeWarehouse {
   products: StockTakeWarehouseProduct[];
 }
 
-export interface OrderPrepareWarehouse {
-  id: string;
-  warehouseId: string;
-  branchCode: string;
-  currentId: string;
-  products: Array<{
-    stockCardId: string;
-    quantity: number;
-  }>;
-}
-
-export interface OrderReturnWarehouse {
-  id: string;
-  warehouseId: string;
-  branchCode: string;
-  currentId: string;
-  products: Array<{
-    stockCardId: string;
-    quantity: number;
-  }>;
-}
-
 export interface ReceiptFilters {
   startDate?: Date;
   endDate?: Date;
+  createdAtFrom?: Date;
   receiptType?: ReceiptType;
   documentNo?: string;
-  currentId?: string;
+  currentCode?: string;
+  currentName?: string;
 }
 
 export interface PaginationParams {
@@ -70,6 +52,16 @@ export interface ReceiptResponse {
     description: string | null;
     branchCode: string;
     createdAt: Date;
+    outWarehouse: {
+      id: string;
+      warehouseCode: string;
+      warehouseName: string;
+    } | null;
+    inWarehouse: {
+      id: string;
+      warehouseCode: string;
+      warehouseName: string;
+    } | null;
     current: {
       id: string;
       currentCode: string;
@@ -84,6 +76,7 @@ export interface ReceiptResponse {
         id: string;
         productName: string;
         productCode: string;
+        unit: string;
       };
     }>;
     createdByUser: {
@@ -106,6 +99,16 @@ export interface DetailedReceiptResponse {
   description: string | null;
   branchCode: string;
   createdAt: Date;
+  outWarehouse: {
+    id: string;
+    warehouseCode: string;
+    warehouseName: string;
+  } | null;
+  inWarehouse: {
+    id: string;
+    warehouseCode: string;
+    warehouseName: string;
+  } | null;
   current: {
     id: string;
     currentCode: string;
@@ -130,6 +133,21 @@ export interface DetailedReceiptResponse {
       productName: string;
       productCode: string;
       unit: string;
+      stockCardPriceLists: Array<{
+        select: {
+          id: string;
+          price: Prisma.Decimal;
+          vatRate: Prisma.Decimal;
+          priceList: {
+            select: {
+              id: string;
+              priceListName: string;
+              currency: string;
+              isVatIncluded: boolean;
+            };
+          };
+        };
+      }>;
     };
   }>;
   currentMovement: {
@@ -146,6 +164,18 @@ export interface DetailedReceiptResponse {
     firstName: string | null;
     lastName: string | null;
   } | null;
+}
+
+export interface OrderWarehouseType {
+  id: string;
+  warehouseId: string;
+  branchCode: string;
+  currentId: string;
+  orderType: "prepare" | "return";
+  products: Array<{
+    stockCardId: string;
+    quantity: number;
+  }>;
 }
 
 async function generateDocumentNumber(
@@ -443,7 +473,7 @@ export class WarehouseService {
                 invoiceType: "Other",
                 movementType: "Sayim",
                 gcCode: detail.difference.isPositive() ? "Giris" : "Cikis",
-                type: "Stok Sayım",
+                type: "Stok Sayım Farkı",
                 description: "Stok Sayım Farkı",
                 quantity: detail.difference.abs(),
                 stockCard: {
@@ -646,464 +676,6 @@ export class WarehouseService {
     }
   }
 
-  async createOrderPrepareWarehouse(
-    data: OrderPrepareWarehouse,
-    bearerToken: string
-  ): Promise<any> {
-    try {
-      const username = extractUsernameFromToken(bearerToken);
-      const result = await prisma.$transaction(async (prisma) => {
-        // Branch'e ait company code'u al
-        const branch = await prisma.branch.findUnique({
-          where: { branchCode: data.branchCode },
-          select: { companyCode: true },
-        });
-
-        if (!branch) {
-          throw new Error("Şube bulunamadı");
-        }
-
-        let totalAmount = 0;
-        let receiptDetails = [];
-
-        // Cariye ait aktif fiyat listesini al
-        const currentPriceList = await prisma.current.findFirst({
-          where: {
-            id: data.currentId,
-          },
-          include: {
-            priceList: true,
-          },
-        });
-
-        if (!currentPriceList) {
-          throw new Error("Cariye tanımlı aktif fiyat listesi bulunamadı");
-        }
-
-        for (const product of data.products) {
-          // Stok kartının fiyat listesindeki fiyatını al
-          const stockCardPrice = await prisma.stockCardPriceListItems.findFirst(
-            {
-              where: {
-                stockCardId: product.stockCardId,
-                priceListId: currentPriceList.priceListId,
-              },
-            }
-          );
-
-          if (!stockCardPrice) {
-            throw new Error(
-              `${product.stockCardId} ID'li stok kartı için fiyat listesinde fiyat bulunamadı`
-            );
-          }
-
-          const productUnitPrice = stockCardPrice.price.toNumber();
-          const subtotal = productUnitPrice * product.quantity;
-          const vatRate = stockCardPrice.vatRate || 0;
-          const vatAmount = (subtotal * Number(vatRate)) / 100;
-          const total = subtotal + vatAmount;
-
-          totalAmount += total;
-
-          receiptDetails.push({
-            stockCardId: product.stockCardId,
-            quantity: product.quantity,
-            unitPrice: productUnitPrice,
-            subtotal: subtotal,
-            vatRate: vatRate,
-            vatAmount: vatAmount,
-            total: total,
-            warehouseId: data.warehouseId,
-            discount: 0,
-            netPrice: productUnitPrice,
-          });
-
-          // Mevcut stok kontrolü ve güncelleme kodları...
-
-          // Önce mevcut stok kartı-depo ilişkisini bul
-          const existingStockCardWarehouse =
-            await prisma.stockCardWarehouse.findFirst({
-              where: {
-                stockCardId: product.stockCardId,
-                warehouseId: data.warehouseId,
-              },
-              include: {
-                stockCard: true,
-              },
-            });
-
-          if (!existingStockCardWarehouse) {
-            throw new Error(`Stok kartı bulunamadı: ${product.stockCardId}`);
-          }
-
-          // Yeni miktar = Mevcut miktar - Çıkılacak miktar
-          const newQuantity =
-            existingStockCardWarehouse.quantity.toNumber() - product.quantity;
-
-          if (newQuantity < 0) {
-            throw new Error(
-              `Yetersiz stok. Stok kartı: ${product.stockCardId}, Mevcut: ${existingStockCardWarehouse.quantity}, İstenen: ${product.quantity}`
-            );
-          }
-
-          const stockCardWarehouse = await prisma.stockCardWarehouse.update({
-            where: {
-              id: existingStockCardWarehouse.id,
-            },
-            data: {
-              quantity: newQuantity,
-            },
-            include: {
-              stockCard: true,
-              warehouse: true,
-            },
-          });
-
-          const _productCode = await prisma.stockCard.findUnique({
-            where: { id: product.stockCardId },
-            select: { productCode: true },
-          });
-          const _warehouseCode = await prisma.warehouse.findUnique({
-            where: { id: data.warehouseId },
-            select: { warehouseCode: true },
-          });
-
-          await prisma.stockMovement.create({
-            data: {
-              documentType: "Order",
-              invoiceType: "Other",
-              movementType: "Devir",
-              gcCode: "Cikis",
-              type: "Siparis Hazirlama",
-              description: "Siparis Hazirlama Cikisi",
-              quantity: product.quantity,
-              stockCard: {
-                connect: { productCode: _productCode?.productCode },
-              },
-              warehouse: {
-                connect: { warehouseCode: _warehouseCode?.warehouseCode },
-              },
-              branch: {
-                connect: { branchCode: data.branchCode },
-              },
-            },
-          });
-        }
-
-        // CurrentMovement oluştur
-        const _current = await prisma.current.findUnique({
-          where: { id: data.currentId },
-          select: { currentName: true },
-        });
-
-        const currentMovement = await prisma.currentMovement.create({
-          data: {
-            current: {
-              connect: { id: data.currentId },
-            },
-            documentType: "Muhtelif",
-            movementType: "Borc",
-            debtAmount: totalAmount,
-            creditAmount: 0,
-            createdByUser: {
-              connect: { username: username },
-            },
-            description: `Sipariş Hazırlama - ${_current?.currentName}`,
-            branch: {
-              connect: { branchCode: data.branchCode },
-            },
-            company: {
-              connect: { companyCode: branch.companyCode },
-            },
-          },
-        });
-
-        const orderPrepare = await prisma.orderPrepareWarehouse.create({
-          data: {
-            warehouse: {
-              connect: { id: data.warehouseId },
-            },
-            createdByUser: {
-              connect: { username: username },
-            },
-            current: {
-              connect: { id: data.currentId },
-            },
-            currentMovement: {
-              connect: { id: currentMovement.id },
-            },
-          },
-          include: {
-            warehouse: true,
-            current: true,
-          },
-        });
-
-        // Receipt oluştur
-        const receipt = await prisma.receipt.create({
-          data: {
-            receiptType: ReceiptType.Cikis,
-            documentNo: await generateDocumentNumber(prisma, "SH"),
-            description: "Sipariş Hazırlama",
-            branchCode: data.branchCode,
-            createdBy: username,
-            currentId: data.currentId,
-            currentMovementId: currentMovement.id,
-          },
-        });
-
-        // Receipt Details oluştur
-        for (const detail of receiptDetails) {
-          await prisma.receiptDetail.create({
-            data: {
-              receiptId: receipt.id,
-              stockCardId: detail.stockCardId,
-              quantity: new Prisma.Decimal(String(detail.quantity)),
-              unitPrice: new Prisma.Decimal(String(detail.unitPrice)),
-              totalPrice: new Prisma.Decimal(String(detail.total)),
-              vatRate: new Prisma.Decimal(String(detail.vatRate)),
-              discount: new Prisma.Decimal(String(detail.discount)),
-              netPrice: new Prisma.Decimal(String(detail.netPrice)),
-            },
-          });
-        }
-
-        return orderPrepare;
-      });
-      return result;
-    } catch (error) {
-      logger.error("Error preparing order warehouse", error);
-      throw error;
-    }
-  }
-
-  async createOrderReturnWarehouse(
-    data: OrderReturnWarehouse,
-    bearerToken: string
-  ): Promise<any> {
-    try {
-      const username = extractUsernameFromToken(bearerToken);
-      const result = await prisma.$transaction(async (prisma) => {
-        // Branch'e ait company code'u al
-        const branch = await prisma.branch.findUnique({
-          where: { branchCode: data.branchCode },
-          select: { companyCode: true },
-        });
-
-        if (!branch) {
-          throw new Error("Şube bulunamadı");
-        }
-
-        let totalAmount = 0;
-        let receiptDetails = [];
-
-        // Cariye ait aktif fiyat listesini al
-        const currentPriceList = await prisma.current.findFirst({
-          where: {
-            id: data.currentId,
-          },
-          include: {
-            priceList: true,
-          },
-        });
-
-        if (!currentPriceList) {
-          throw new Error("Cariye tanımlı aktif fiyat listesi bulunamadı");
-        }
-
-        for (const product of data.products) {
-          // Stok kartının fiyat listesindeki fiyatını al
-          const stockCardPrice = await prisma.stockCardPriceListItems.findFirst(
-            {
-              where: {
-                stockCardId: product.stockCardId,
-                priceListId: currentPriceList.priceListId,
-              },
-            }
-          );
-
-          if (!stockCardPrice) {
-            throw new Error(
-              `${product.stockCardId} ID'li stok kartı için fiyat listesinde fiyat bulunamadı`
-            );
-          }
-
-          const productUnitPrice = stockCardPrice.price.toNumber();
-          const subtotal = productUnitPrice * product.quantity;
-          const vatRate = stockCardPrice.vatRate || 0;
-          const vatAmount = (subtotal * Number(vatRate)) / 100;
-          const total = subtotal + vatAmount;
-
-          totalAmount += total;
-
-          receiptDetails.push({
-            stockCardId: product.stockCardId,
-            quantity: product.quantity,
-            unitPrice: productUnitPrice,
-            subtotal: subtotal,
-            vatRate: vatRate,
-            vatAmount: vatAmount,
-            total: total,
-            warehouseId: data.warehouseId,
-            discount: 0,
-            netPrice: productUnitPrice,
-          });
-
-          // Mevcut stok kontrolü ve güncelleme
-          const existingStockCardWarehouse =
-            await prisma.stockCardWarehouse.findFirst({
-              where: {
-                stockCardId: product.stockCardId,
-                warehouseId: data.warehouseId,
-              },
-              include: {
-                stockCard: true,
-              },
-            });
-
-          if (!existingStockCardWarehouse) {
-            // Eğer stok kartı-depo ilişkisi yoksa yeni oluştur
-            await prisma.stockCardWarehouse.create({
-              data: {
-                stockCardId: product.stockCardId,
-                warehouseId: data.warehouseId,
-                quantity: product.quantity,
-              },
-            });
-          } else {
-            // Varolan stok kartı-depo ilişkisini güncelle
-            const newQuantity =
-              existingStockCardWarehouse.quantity.toNumber() + product.quantity;
-
-            await prisma.stockCardWarehouse.update({
-              where: {
-                id: existingStockCardWarehouse.id,
-              },
-              data: {
-                quantity: newQuantity,
-              },
-            });
-          }
-
-          const _productCode = await prisma.stockCard.findUnique({
-            where: { id: product.stockCardId },
-            select: { productCode: true },
-          });
-          const _warehouseCode = await prisma.warehouse.findUnique({
-            where: { id: data.warehouseId },
-            select: { warehouseCode: true },
-          });
-
-          await prisma.stockMovement.create({
-            data: {
-              documentType: "Order",
-              invoiceType: "Other",
-              movementType: "Devir",
-              gcCode: "Giris",
-              type: "Siparis Iade",
-              description: "Siparis Iade Girisi",
-              quantity: product.quantity,
-              stockCard: {
-                connect: { productCode: _productCode?.productCode },
-              },
-              warehouse: {
-                connect: { warehouseCode: _warehouseCode?.warehouseCode },
-              },
-              branch: {
-                connect: { branchCode: data.branchCode },
-              },
-            },
-          });
-        }
-
-        // CurrentMovement oluştur
-        const _current = await prisma.current.findUnique({
-          where: { id: data.currentId },
-          select: { currentName: true },
-        });
-
-        const currentMovement = await prisma.currentMovement.create({
-          data: {
-            current: {
-              connect: { id: data.currentId },
-            },
-            documentType: "Muhtelif",
-            movementType: "Alacak",
-            debtAmount: 0,
-            creditAmount: totalAmount,
-            createdByUser: {
-              connect: { username: username },
-            },
-            description: `Sipariş İade - ${_current?.currentName}`,
-            branch: {
-              connect: { branchCode: data.branchCode },
-            },
-            company: {
-              connect: { companyCode: branch.companyCode },
-            },
-          },
-        });
-
-        const orderReturn = await prisma.orderPrepareWarehouse.create({
-          data: {
-            warehouse: {
-              connect: { id: data.warehouseId },
-            },
-            createdByUser: {
-              connect: { username: username },
-            },
-            current: {
-              connect: { id: data.currentId },
-            },
-            currentMovement: {
-              connect: { id: currentMovement.id },
-            },
-            status: "Returned",
-          },
-          include: {
-            warehouse: true,
-            current: true,
-          },
-        });
-
-        // Receipt oluştur
-        const receipt = await prisma.receipt.create({
-          data: {
-            receiptType: ReceiptType.Giris,
-            documentNo: await generateDocumentNumber(prisma, "SI"),
-            description: "Sipariş İade",
-            branchCode: data.branchCode,
-            createdBy: username,
-            currentId: data.currentId,
-            currentMovementId: currentMovement.id,
-          },
-        });
-
-        // Receipt Details oluştur
-        for (const detail of receiptDetails) {
-          await prisma.receiptDetail.create({
-            data: {
-              receiptId: receipt.id,
-              stockCardId: detail.stockCardId,
-              quantity: new Prisma.Decimal(String(detail.quantity)),
-              unitPrice: new Prisma.Decimal(String(detail.unitPrice)),
-              totalPrice: new Prisma.Decimal(String(detail.total)),
-              vatRate: new Prisma.Decimal(String(detail.vatRate)),
-              discount: new Prisma.Decimal(String(detail.discount)),
-              netPrice: new Prisma.Decimal(String(detail.netPrice)),
-            },
-          });
-        }
-
-        return orderReturn;
-      });
-      return result;
-    } catch (error) {
-      logger.error("Error returning order warehouse", error);
-      throw error;
-    }
-  }
-
   async getAllReceipts(
     filters?: ReceiptFilters,
     pagination?: PaginationParams
@@ -1122,6 +694,18 @@ export class WarehouseService {
         };
       }
 
+      if (filters?.createdAtFrom) {
+        where.createdAt =
+          filters?.startDate && filters?.endDate
+            ? {
+                ...(where.createdAt as object),
+                gte: filters.createdAtFrom,
+              }
+            : {
+                gte: filters.createdAtFrom,
+              };
+      }
+
       if (filters?.receiptType) {
         where.receiptType = filters.receiptType;
       }
@@ -1132,8 +716,25 @@ export class WarehouseService {
         };
       }
 
-      if (filters?.currentId) {
-        where.currentId = filters.currentId;
+      if (filters?.currentCode) {
+        where.current = {
+          currentCode: filters.currentCode,
+        };
+      }
+
+      if (filters?.currentName) {
+        where.current = filters?.currentCode
+          ? {
+              ...(where.current as object),
+              currentName: {
+                contains: filters.currentName,
+              },
+            }
+          : {
+              currentName: {
+                contains: filters.currentName,
+              },
+            };
       }
 
       const total = await prisma.receipt.count({ where });
@@ -1148,6 +749,20 @@ export class WarehouseService {
               currentName: true,
             },
           },
+          outReceiptWarehouse: {
+            select: {
+              id: true,
+              warehouseCode: true,
+              warehouseName: true,
+            },
+          },
+          inReceiptWarehouse: {
+            select: {
+              id: true,
+              warehouseCode: true,
+              warehouseName: true,
+            },
+          },
           receiptDetail: {
             include: {
               stockCard: {
@@ -1155,6 +770,7 @@ export class WarehouseService {
                   id: true,
                   productName: true,
                   productCode: true,
+                  unit: true,
                 },
               },
             },
@@ -1182,6 +798,20 @@ export class WarehouseService {
         description: receipt.description,
         branchCode: receipt.branchCode,
         createdAt: receipt.createdAt,
+        outWarehouse: receipt.outReceiptWarehouse
+          ? {
+              id: receipt.outReceiptWarehouse.id,
+              warehouseCode: receipt.outReceiptWarehouse.warehouseCode,
+              warehouseName: receipt.outReceiptWarehouse.warehouseName,
+            }
+          : null,
+        inWarehouse: receipt.inReceiptWarehouse
+          ? {
+              id: receipt.inReceiptWarehouse.id,
+              warehouseCode: receipt.inReceiptWarehouse.warehouseCode,
+              warehouseName: receipt.inReceiptWarehouse.warehouseName,
+            }
+          : null,
         current: receipt.current
           ? {
               id: receipt.current.id,
@@ -1198,6 +828,7 @@ export class WarehouseService {
             id: detail.stockCard.id,
             productName: detail.stockCard.productName,
             productCode: detail.stockCard.productCode,
+            unit: detail.stockCard.unit,
           },
         })),
         createdByUser: receipt.createdByUser
@@ -1236,6 +867,21 @@ export class WarehouseService {
                   productName: true,
                   productCode: true,
                   unit: true,
+                  stockCardPriceLists: {
+                    select: {
+                      id: true,
+                      price: true,
+                      vatRate: true,
+                      priceList: {
+                        select: {
+                          id: true,
+                          priceListName: true,
+                          currency: true,
+                          isVatIncluded: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -1250,6 +896,20 @@ export class WarehouseService {
                   isVatIncluded: true,
                 },
               },
+            },
+          },
+          outReceiptWarehouse: {
+            select: {
+              id: true,
+              warehouseCode: true,
+              warehouseName: true,
+            },
+          },
+          inReceiptWarehouse: {
+            select: {
+              id: true,
+              warehouseCode: true,
+              warehouseName: true,
             },
           },
           currentMovement: {
@@ -1284,6 +944,20 @@ export class WarehouseService {
         description: receipt.description,
         branchCode: receipt.branchCode,
         createdAt: receipt.createdAt,
+        outWarehouse: receipt.outReceiptWarehouse
+          ? {
+              id: receipt.outReceiptWarehouse.id,
+              warehouseCode: receipt.outReceiptWarehouse.warehouseCode,
+              warehouseName: receipt.outReceiptWarehouse.warehouseName,
+            }
+          : null,
+        inWarehouse: receipt.inReceiptWarehouse
+          ? {
+              id: receipt.inReceiptWarehouse.id,
+              warehouseCode: receipt.inReceiptWarehouse.warehouseCode,
+              warehouseName: receipt.inReceiptWarehouse.warehouseName,
+            }
+          : null,
         current: receipt.current
           ? {
               id: receipt.current.id,
@@ -1305,6 +979,23 @@ export class WarehouseService {
             productName: detail.stockCard.productName,
             productCode: detail.stockCard.productCode,
             unit: detail.stockCard.unit,
+            stockCardPriceLists: detail.stockCard.stockCardPriceLists.map(
+              (priceList) => ({
+                select: {
+                  id: priceList.id,
+                  price: priceList.price,
+                  vatRate: priceList.vatRate || new Prisma.Decimal(0),
+                  priceList: {
+                    select: {
+                      id: priceList.priceList.id,
+                      priceListName: priceList.priceList.priceListName,
+                      currency: priceList.priceList.currency,
+                      isVatIncluded: priceList.priceList.isVatIncluded,
+                    },
+                  },
+                },
+              })
+            ),
           },
         })),
         currentMovement: receipt.currentMovement,
@@ -1318,176 +1009,37 @@ export class WarehouseService {
     }
   }
 
-  async deleteOrderPrepareWarehouseByReceiptId(
-    receiptId: string
-  ): Promise<any> {
-    try {
-      const result = await prisma.$transaction(async (prisma) => {
-        // Önce fiş kaydını bul
-        const receipt = await prisma.receipt.findUnique({
-          where: { id: receiptId },
-          include: {
-            currentMovement: true,
-          },
-        });
-
-        if (!receipt) {
-          throw new Error("Fiş kaydı bulunamadı");
-        }
-
-        // Fiş üzerinden currentMovementId'yi al
-        const currentMovementId = receipt.currentMovementId;
-
-        if (!currentMovementId) {
-          throw new Error("Cari hareket kaydı bulunamadı");
-        }
-
-        // CurrentMovement ile ilişkili OrderPrepareWarehouse kaydını bul
-        const orderPrepare = await prisma.orderPrepareWarehouse.findFirst({
-          where: { currentMovementId },
-          include: {
-            currentMovement: {
-              include: {
-                VaultMovement: true,
-                BankMovement: true,
-                PosMovement: true,
-              },
-            },
-          },
-        });
-
-        if (!orderPrepare) {
-          throw new Error("Sipariş hazırlama kaydı bulunamadı");
-        }
-
-        // Kasa hareketlerini sil
-        await prisma.vaultMovement.deleteMany({
-          where: { currentMovementId },
-        });
-
-        // Banka hareketlerini sil
-        await prisma.bankMovement.deleteMany({
-          where: { currentMovementId },
-        });
-
-        // POS hareketlerini sil
-        await prisma.posMovement.deleteMany({
-          where: { currentMovementId },
-        });
-
-        // Stok hareketlerini bul
-        const stockMovements = await prisma.stockMovement.findMany({
-          where: { documentNo: receipt.documentNo },
-        });
-
-        // Her bir stok hareketi için stok miktarlarını geri al
-        for (const movement of stockMovements) {
-          if (movement.gcCode === "Cikis") {
-            // Çıkış yapılan ürünleri geri ekle
-            await prisma.stockCardWarehouse.updateMany({
-              where: {
-                stockCardId: movement.productCode,
-                warehouseId: movement.warehouseCode,
-              },
-              data: {
-                quantity: {
-                  increment: movement.quantity || 0,
-                },
-              },
-            });
-          } else if (movement.gcCode === "Giris") {
-            // Giriş yapılan ürünleri çıkar
-            await prisma.stockCardWarehouse.updateMany({
-              where: {
-                stockCardId: movement.productCode,
-                warehouseId: movement.warehouseCode,
-              },
-              data: {
-                quantity: {
-                  decrement: movement.quantity || 0,
-                },
-              },
-            });
-          }
-        }
-
-        // Stok hareketlerini sil
-        await prisma.stockMovement.deleteMany({
-          where: { documentNo: receipt.documentNo },
-        });
-
-        // Fiş detaylarını sil
-        await prisma.receiptDetail.deleteMany({
-          where: { receiptId },
-        });
-
-        // Fişi sil
-        await prisma.receipt.delete({
-          where: { id: receiptId },
-        });
-
-        // Cari hareketi sil
-        await prisma.currentMovement.delete({
-          where: { id: currentMovementId },
-        });
-
-        // Son olarak sipariş hazırlama kaydını sil
-        return await prisma.orderPrepareWarehouse.delete({
-          where: { id: orderPrepare.id },
-        });
-      });
-
-      return result;
-    } catch (error) {
-      logger.error(
-        "Error deleting order prepare warehouse by receipt id",
-        error
-      );
-      throw error;
-    }
-  }
-
-  async updateOrderPrepareWarehouseByReceiptId(
-    receiptId: string,
-    updateData: OrderPrepareWarehouse,
+  async createOrderWarehouse(
+    data: OrderWarehouseType,
     bearerToken: string
   ): Promise<any> {
     try {
       const username = extractUsernameFromToken(bearerToken);
       const result = await prisma.$transaction(async (prisma) => {
-        // Önce fiş kaydını bul
-        const receipt = await prisma.receipt.findUnique({
-          where: { id: receiptId },
-          include: {
-            currentMovement: true,
-            receiptDetail: true,
-          },
+        // Branch'e ait company code'u al
+        const branch = await prisma.branch.findUnique({
+          where: { branchCode: data.branchCode },
+          select: { companyCode: true },
         });
 
-        if (!receipt) {
-          throw new Error("Fiş kaydı bulunamadı");
+        if (!branch) {
+          throw new Error("Şube bulunamadı");
         }
 
-        // Fiş üzerinden currentMovementId'yi al
-        const currentMovementId = receipt.currentMovementId;
-
-        if (!currentMovementId) {
-          throw new Error("Cari hareket kaydı bulunamadı");
-        }
-
-        // CurrentMovement ile ilişkili OrderPrepareWarehouse kaydını bul
-        const orderPrepare = await prisma.orderPrepareWarehouse.findFirst({
-          where: { currentMovementId },
+        // Warehouse'dan warehouseCode'u al
+        const warehouse = await prisma.warehouse.findUnique({
+          where: { id: data.warehouseId },
+          select: { warehouseCode: true },
         });
 
-        if (!orderPrepare) {
-          throw new Error("Sipariş hazırlama kaydı bulunamadı");
+        if (!warehouse) {
+          throw new Error("Depo bulunamadı");
         }
 
         // Cariye ait aktif fiyat listesini al
         const currentPriceList = await prisma.current.findFirst({
           where: {
-            id: updateData.currentId,
+            id: data.currentId,
           },
           include: {
             priceList: true,
@@ -1499,37 +1051,17 @@ export class WarehouseService {
         }
 
         let totalAmount = 0;
+        let stockMovements = [];
         let receiptDetails = [];
 
-        // Eski stok hareketlerini bul ve stok miktarlarını geri al
-        const oldStockMovements = await prisma.stockMovement.findMany({
-          where: { documentNo: receipt.documentNo },
-        });
+        // Fiş numarasını önceden oluştur
+        const documentNo = await generateDocumentNumber(
+          prisma,
+          data.orderType === "prepare" ? "SH" : "SI"
+        );
 
-        for (const movement of oldStockMovements) {
-          if (movement.gcCode === "Cikis") {
-            // Eski çıkışları geri ekle
-            await prisma.stockCardWarehouse.updateMany({
-              where: {
-                stockCardId: movement.productCode,
-                warehouseId: movement.warehouseCode,
-              },
-              data: {
-                quantity: {
-                  increment: movement.quantity || 0,
-                },
-              },
-            });
-          }
-        }
-
-        // Eski stok hareketlerini sil
-        await prisma.stockMovement.deleteMany({
-          where: { documentNo: receipt.documentNo },
-        });
-
-        // Yeni ürünler için işlemler
-        for (const product of updateData.products) {
+        // Ürünleri işle ve stok kontrolü yap
+        for (const product of data.products) {
           // Stok kartının fiyat listesindeki fiyatını al
           const stockCardPrice = await prisma.stockCardPriceListItems.findFirst(
             {
@@ -1554,104 +1086,162 @@ export class WarehouseService {
 
           totalAmount += total;
 
-          receiptDetails.push({
-            stockCardId: product.stockCardId,
-            quantity: product.quantity,
-            unitPrice: productUnitPrice,
-            subtotal: subtotal,
-            vatRate: vatRate,
-            vatAmount: vatAmount,
-            total: total,
-            discount: 0,
-            netPrice: productUnitPrice,
+          // Stok kartı ve depo bilgilerini al
+          const stockCard = await prisma.stockCard.findUnique({
+            where: { id: product.stockCardId },
           });
+
+          const warehouse = await prisma.warehouse.findUnique({
+            where: { id: data.warehouseId },
+          });
+
+          if (!stockCard || !warehouse) {
+            throw new Error("Stok kartı veya depo bilgisi bulunamadı");
+          }
 
           // Stok kontrolü ve güncelleme
           const existingStockCardWarehouse =
             await prisma.stockCardWarehouse.findFirst({
               where: {
                 stockCardId: product.stockCardId,
-                warehouseId: updateData.warehouseId,
+                warehouseId: data.warehouseId,
               },
             });
 
-          if (!existingStockCardWarehouse) {
-            throw new Error(`Stok kartı bulunamadı: ${product.stockCardId}`);
+          if (data.orderType === "prepare") {
+            if (!existingStockCardWarehouse) {
+              throw new Error(`Stok kartı bulunamadı: ${product.stockCardId}`);
+            }
+
+            const newQuantity =
+              existingStockCardWarehouse.quantity.toNumber() - product.quantity;
+
+            if (newQuantity < 0 && !stockCard.allowNegativeStock) {
+              throw new Error(
+                `Yetersiz stok. Stok kartı: ${stockCard.productCode}, Mevcut: ${existingStockCardWarehouse.quantity}, İstenen: ${product.quantity}`
+              );
+            }
+
+            await prisma.stockCardWarehouse.update({
+              where: { id: existingStockCardWarehouse.id },
+              data: { quantity: newQuantity },
+            });
+          } else {
+            if (!existingStockCardWarehouse) {
+              await prisma.stockCardWarehouse.create({
+                data: {
+                  stockCardId: product.stockCardId,
+                  warehouseId: data.warehouseId,
+                  quantity: product.quantity,
+                },
+              });
+            } else {
+              await prisma.stockCardWarehouse.update({
+                where: { id: existingStockCardWarehouse.id },
+                data: {
+                  quantity: {
+                    increment: product.quantity,
+                  },
+                },
+              });
+            }
           }
 
-          const newQuantity =
-            existingStockCardWarehouse.quantity.toNumber() - product.quantity;
-
-          if (newQuantity < 0) {
-            throw new Error(
-              `Yetersiz stok. Stok kartı: ${product.stockCardId}, Mevcut: ${existingStockCardWarehouse.quantity}, İstenen: ${product.quantity}`
-            );
-          }
-
-          await prisma.stockCardWarehouse.update({
-            where: {
-              id: existingStockCardWarehouse.id,
-            },
-            data: {
-              quantity: newQuantity,
-            },
+          // Stok hareketi oluştur
+          stockMovements.push({
+            documentType: DocumentType.Order,
+            invoiceType: InvoiceType.Other,
+            movementType: "Devir" as StokManagementType,
+            gcCode: data.orderType === "prepare" ? GCCode.Cikis : GCCode.Giris,
+            type:
+              data.orderType === "prepare"
+                ? "Siparis Hazirlama"
+                : "Siparis Iade",
+            description:
+              data.orderType === "prepare"
+                ? "Siparis Hazirlama Cikisi"
+                : "Siparis Iade Girisi",
+            quantity: new Prisma.Decimal(String(product.quantity)),
+            productCode: stockCard?.productCode || "",
+            warehouseCode: warehouse?.warehouseCode || "",
+            branchCode: data.branchCode,
+            currentCode: currentPriceList.currentCode,
+            receiptNo: documentNo,
+            createdBy: username,
+            updatedBy: username,
           });
 
-          const _productCode = await prisma.stockCard.findUnique({
-            where: { id: product.stockCardId },
-            select: { productCode: true },
-          });
-
-          const _warehouseCode = await prisma.warehouse.findUnique({
-            where: { id: updateData.warehouseId },
-            select: { warehouseCode: true },
-          });
-
-          // Yeni stok hareketi oluştur
-          await prisma.stockMovement.create({
-            data: {
-              documentType: "Order",
-              invoiceType: "Other",
-              movementType: "Devir",
-              gcCode: "Cikis",
-              type: "Siparis Hazirlama",
-              description: "Siparis Hazirlama Cikisi",
-              quantity: product.quantity,
-              stockCard: {
-                connect: { productCode: _productCode?.productCode },
-              },
-              warehouse: {
-                connect: { warehouseCode: _warehouseCode?.warehouseCode },
-              },
-              branch: {
-                connect: { branchCode: updateData.branchCode },
-              },
-            },
+          // Fiş detayı bilgilerini hazırla
+          receiptDetails.push({
+            stockCardId: product.stockCardId,
+            quantity: product.quantity,
+            unitPrice: productUnitPrice,
+            totalPrice: total,
+            vatRate: vatRate,
+            discount: 0,
+            netPrice: productUnitPrice,
           });
         }
 
-        // Cari hareketi güncelle
-        await prisma.currentMovement.update({
-          where: { id: currentMovementId },
+        // Cari hareket oluştur
+        const currentMovement = await prisma.currentMovement.create({
           data: {
-            debtAmount: totalAmount,
-            updatedBy: username,
+            current: { connect: { id: data.currentId } },
+            documentType: "Muhtelif",
+            movementType: data.orderType === "prepare" ? "Borc" : "Alacak",
+            debtAmount: data.orderType === "prepare" ? totalAmount : 0,
+            creditAmount: data.orderType === "prepare" ? 0 : totalAmount,
+            createdByUser: { connect: { username: username } },
+            updatedByUser: { connect: { username: username } },
+            description: `${
+              data.orderType === "prepare"
+                ? "Sipariş Hazırlama"
+                : "Sipariş İade"
+            }`,
+            branch: { connect: { branchCode: data.branchCode } },
+            company: { connect: { companyCode: branch.companyCode } },
           },
         });
 
-        // Fiş detaylarını güncelle
-        await prisma.receiptDetail.deleteMany({
-          where: { receiptId },
+        // Fiş oluştur
+        const receipt = await prisma.receipt.create({
+          data: {
+            receiptType:
+              data.orderType === "prepare"
+                ? ReceiptType.Cikis
+                : ReceiptType.Giris,
+            documentNo: documentNo,
+            description:
+              data.orderType === "prepare"
+                ? "Sipariş Hazırlama"
+                : "Sipariş İade",
+            branchCode: data.branchCode,
+            createdBy: username,
+            updatedBy: username,
+            currentId: data.currentId,
+            currentMovementId: currentMovement.id,
+            ...(data.orderType === "prepare"
+              ? { outWarehouse: warehouse.warehouseCode }
+              : { inWarehouse: warehouse.warehouseCode }),
+          },
         });
 
+        // Stok hareketlerini oluştur
+        for (const movement of stockMovements) {
+          await prisma.stockMovement.create({
+            data: movement,
+          });
+        }
+
+        // Fiş detaylarını oluştur
         for (const detail of receiptDetails) {
           await prisma.receiptDetail.create({
             data: {
-              receiptId,
+              receiptId: receipt.id,
               stockCardId: detail.stockCardId,
               quantity: new Prisma.Decimal(String(detail.quantity)),
               unitPrice: new Prisma.Decimal(String(detail.unitPrice)),
-              totalPrice: new Prisma.Decimal(String(detail.total)),
+              totalPrice: new Prisma.Decimal(String(detail.totalPrice)),
               vatRate: new Prisma.Decimal(String(detail.vatRate)),
               discount: new Prisma.Decimal(String(detail.discount)),
               netPrice: new Prisma.Decimal(String(detail.netPrice)),
@@ -1659,22 +1249,172 @@ export class WarehouseService {
           });
         }
 
-        // OrderPrepareWarehouse kaydını güncelle
-        return await prisma.orderPrepareWarehouse.update({
-          where: { id: orderPrepare.id },
+        // OrderPrepareWarehouse kaydı oluştur
+        return await prisma.orderPrepareWarehouse.create({
           data: {
-            warehouseId: updateData.warehouseId,
-            currentId: updateData.currentId,
-            updatedBy: username,
+            warehouse: { connect: { id: data.warehouseId } },
+            current: { connect: { id: data.currentId } },
+            currentMovement: { connect: { id: currentMovement.id } },
+            createdByUser: { connect: { username: username } },
+            updatedByUser: { connect: { username: username } },
+            status: data.orderType === "return" ? "Returned" : undefined,
+          },
+          include: {
+            warehouse: true,
+            current: true,
+            currentMovement: true,
           },
         });
       });
 
       return result;
     } catch (error) {
-      logger.error("Error updating order prepare warehouse", error);
+      logger.error("Error creating order warehouse", error);
       throw error;
     }
+  }
+
+  async deleteOrderWarehouseByReceiptId(receiptId: string): Promise<any> {
+    try {
+      const result = await prisma.$transaction(async (prisma) => {
+        // Önce fiş kaydını bul
+        const receipt = await prisma.receipt.findUnique({
+          where: { id: receiptId },
+          include: {
+            currentMovement: true,
+            receiptDetail: {
+              include: {
+                stockCard: true,
+              },
+            },
+          },
+        });
+
+        if (!receipt) {
+          throw new Error("Fiş kaydı bulunamadı");
+        }
+
+        // Stok hareketlerini bul
+        const stockMovements = await prisma.stockMovement.findMany({
+          where: { receiptNo: receipt.documentNo },
+          include: {
+            stockCard: true,
+            warehouse: true,
+          },
+        });
+
+        // Her bir stok hareketi için stok miktarlarını geri al
+        for (const movement of stockMovements) {
+          const existingStockCardWarehouse =
+            await prisma.stockCardWarehouse.findFirst({
+              where: {
+                stockCardId: movement.stockCard.id,
+                warehouseId: movement.warehouse.id,
+              },
+            });
+
+          if (!existingStockCardWarehouse) {
+            throw new Error(
+              `Stok kartı-depo ilişkisi bulunamadı: ${movement.stockCard.productCode}`
+            );
+          }
+
+          // Eğer çıkış hareketi ise geri iade et, giriş hareketi ise geri çık
+          if (movement.gcCode === "Cikis") {
+            await prisma.stockCardWarehouse.update({
+              where: { id: existingStockCardWarehouse.id },
+              data: {
+                quantity: {
+                  increment: movement.quantity || 0,
+                },
+              },
+            });
+          } else {
+            await prisma.stockCardWarehouse.update({
+              where: { id: existingStockCardWarehouse.id },
+              data: {
+                quantity: {
+                  decrement: movement.quantity || 0,
+                },
+              },
+            });
+          }
+        }
+
+        // Stok hareketlerini sil
+        await prisma.stockMovement.deleteMany({
+          where: { receiptNo: receipt.documentNo },
+        });
+
+        // Fiş detaylarını sil
+        await prisma.receiptDetail.deleteMany({
+          where: { receiptId },
+        });
+
+        // Kasa, banka ve POS hareketlerini sil
+        await prisma.vaultMovement.deleteMany({
+          where: { receiptId },
+        });
+
+        await prisma.bankMovement.deleteMany({
+          where: { receiptId },
+        });
+
+        await prisma.posMovement.deleteMany({
+          where: { receiptId },
+        });
+
+        // Fişi sil
+        await prisma.receipt.delete({
+          where: { id: receiptId },
+        });
+
+        // Cari hareketi sil
+        if (receipt.currentMovementId) {
+          await prisma.currentMovement.delete({
+            where: { id: receipt.currentMovementId },
+          });
+        }
+
+        // OrderPrepareWarehouse kaydını bul ve sil
+        const orderWarehouse = await prisma.orderPrepareWarehouse.findFirst({
+          where: { currentMovementId: receipt.currentMovementId },
+        });
+
+        if (orderWarehouse) {
+          return await prisma.orderPrepareWarehouse.delete({
+            where: { id: orderWarehouse.id },
+          });
+        }
+
+        return { success: true, message: "Sipariş başarıyla silindi" };
+      });
+
+      return result;
+    } catch (error) {
+      logger.error("Error deleting order warehouse by receipt id", error);
+      throw error;
+    }
+  }
+
+  async updateOrderWarehouseByReceiptId(
+    receiptId: string,
+    data: OrderWarehouseType,
+    bearerToken: string
+  ): Promise<any> {
+    try {
+      await this.deleteOrderWarehouseByReceiptId(receiptId);
+      const orderWarehouse = await this.createOrderWarehouse(data, bearerToken);
+      return orderWarehouse;
+    } catch (error) {
+      logger.error("Error updating order warehouse", error);
+      throw error;
+    }
+  }
+
+  async convertOrderWarehouseToInvoice(ids: string[]): Promise<any> {
+    try {
+    } catch (error) {}
   }
 }
 

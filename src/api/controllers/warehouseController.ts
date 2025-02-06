@@ -1,6 +1,6 @@
 import WarehouseService, {
-  OrderReturnWarehouse,
   StockTakeWarehouse,
+  OrderWarehouseType,
 } from "../../services/concrete/warehouseService";
 import { Context } from "elysia";
 import { Warehouse, ReceiptType } from "@prisma/client";
@@ -214,9 +214,8 @@ export const WarehouseController = {
     }
   },
 
-  createOrderPrepareWarehouse: async (ctx: Context) => {
-    const orderPrepareData: OrderPrepareWarehouse =
-      ctx.body as OrderPrepareWarehouse;
+  createOrderWarehouse: async (ctx: Context) => {
+    const orderData = ctx.body as OrderWarehouseType;
     const bearerToken = ctx.request.headers.get("Authorization");
 
     if (!bearerToken) {
@@ -224,57 +223,33 @@ export const WarehouseController = {
     }
 
     try {
-      const result = await warehouseService.createOrderPrepareWarehouse(
-        orderPrepareData,
+      const result = await warehouseService.createOrderWarehouse(
+        orderData,
         bearerToken
       );
       if (!result) {
-        return ctx.error(400, "Sipariş hazırlama işlemi oluşturulamadı");
+        return ctx.error(
+          400,
+          `Sipariş ${
+            orderData.orderType === "prepare" ? "hazırlama" : "iade"
+          } işlemi oluşturulamadı`
+        );
       }
       ctx.set.status = 201;
       return {
         success: true,
         data: result,
-        message: "Sipariş hazırlama işlemi başarıyla oluşturuldu",
+        message: `Sipariş ${
+          orderData.orderType === "prepare" ? "hazırlama" : "iade"
+        } işlemi başarıyla oluşturuldu`,
       };
     } catch (error: any) {
       ctx.set.status = error.status || 500;
       return {
         success: false,
-        error: "Sipariş hazırlama işlemi oluşturulurken hata oluştu",
-        details: error.message,
-      };
-    }
-  },
-
-  createOrderReturnWarehouse: async (ctx: Context) => {
-    const orderReturnData: OrderReturnWarehouse =
-      ctx.body as OrderReturnWarehouse;
-    const bearerToken = ctx.request.headers.get("Authorization");
-
-    if (!bearerToken) {
-      return ctx.error(401, "Authorization header is missing.");
-    }
-
-    try {
-      const result = await warehouseService.createOrderReturnWarehouse(
-        orderReturnData,
-        bearerToken
-      );
-      if (!result) {
-        return ctx.error(400, "Sipariş iade işlemi oluşturulamadı");
-      }
-      ctx.set.status = 201;
-      return {
-        success: true,
-        data: result,
-        message: "Sipariş iade işlemi başarıyla oluşturuldu",
-      };
-    } catch (error: any) {
-      ctx.set.status = error.status || 500;
-      return {
-        success: false,
-        error: "Sipariş iade işlemi oluşturulurken hata oluştu",
+        error: `Sipariş ${
+          orderData.orderType === "prepare" ? "hazırlama" : "iade"
+        } işlemi oluşturulurken hata oluştu`,
         details: error.message,
       };
     }
@@ -287,9 +262,11 @@ export const WarehouseController = {
         limit,
         startDate,
         endDate,
+        createdAtFrom,
         receiptType,
         documentNo,
-        currentId,
+        currentCode,
+        currentName,
       } = ctx.query;
 
       const filters = {
@@ -299,9 +276,13 @@ export const WarehouseController = {
               endDate: new Date(endDate as string),
             }
           : {}),
+        ...(createdAtFrom
+          ? { createdAtFrom: new Date(createdAtFrom as string) }
+          : {}),
         ...(receiptType ? { receiptType: receiptType as ReceiptType } : {}),
         ...(documentNo ? { documentNo: documentNo as string } : {}),
-        ...(currentId ? { currentId: currentId as string } : {}),
+        ...(currentCode ? { currentCode: currentCode as string } : {}),
+        ...(currentName ? { currentName: currentName as string } : {}),
       };
 
       const pagination = {
@@ -340,33 +321,32 @@ export const WarehouseController = {
     }
   },
 
-  deleteOrderPrepareWarehouse: async (ctx: Context) => {
+  deleteOrderWarehouse: async (ctx: Context) => {
     const { id } = ctx.params;
     try {
-      const result =
-        await warehouseService.deleteOrderPrepareWarehouseByReceiptId(id);
+      const result = await warehouseService.deleteOrderWarehouseByReceiptId(id);
       if (!result) {
-        return ctx.error(404, "Sipariş hazırlama kaydı bulunamadı");
+        return ctx.error(404, "Sipariş kaydı bulunamadı");
       }
       ctx.set.status = 200;
       return {
         success: true,
-        message: "Sipariş hazırlama kaydı başarıyla silindi",
+        message: "Sipariş kaydı başarıyla silindi",
         data: result,
       };
     } catch (error: any) {
       ctx.set.status = error.message.includes("bulunamadı") ? 404 : 500;
       return {
         success: false,
-        error: "Sipariş hazırlama kaydı silinirken hata oluştu",
+        error: "Sipariş kaydı silinirken hata oluştu",
         details: error.message,
       };
     }
   },
 
-  updateOrderPrepareWarehouse: async (ctx: Context) => {
+  updateOrderWarehouse: async (ctx: Context) => {
     const { id } = ctx.params;
-    const updateData: OrderPrepareWarehouse = ctx.body as OrderPrepareWarehouse;
+    const updateData = ctx.body as OrderWarehouseType;
     const bearerToken = ctx.request.headers.get("Authorization");
 
     if (!bearerToken) {
@@ -374,26 +354,34 @@ export const WarehouseController = {
     }
 
     try {
-      const result =
-        await warehouseService.updateOrderPrepareWarehouseByReceiptId(
-          id,
-          updateData,
-          bearerToken
-        );
+      const result = await warehouseService.updateOrderWarehouseByReceiptId(
+        id,
+        updateData,
+        bearerToken
+      );
       if (!result) {
-        return ctx.error(404, "Sipariş hazırlama kaydı bulunamadı");
+        return ctx.error(
+          404,
+          `Sipariş ${
+            updateData.orderType === "prepare" ? "hazırlama" : "iade"
+          } kaydı bulunamadı`
+        );
       }
       ctx.set.status = 200;
       return {
         success: true,
-        message: "Sipariş hazırlama kaydı başarıyla güncellendi",
+        message: `Sipariş ${
+          updateData.orderType === "prepare" ? "hazırlama" : "iade"
+        } kaydı başarıyla güncellendi`,
         data: result,
       };
     } catch (error: any) {
       ctx.set.status = error.message.includes("bulunamadı") ? 404 : 500;
       return {
         success: false,
-        error: "Sipariş hazırlama kaydı güncellenirken hata oluştu",
+        error: `Sipariş ${
+          updateData.orderType === "prepare" ? "hazırlama" : "iade"
+        } kaydı güncellenirken hata oluştu`,
         details: error.message,
       };
     }

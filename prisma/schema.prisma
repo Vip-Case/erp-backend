@@ -416,6 +416,7 @@ model StockMovement {
   invoiceType      InvoiceType?
   movementType     StokManagementType
   documentNo       String?
+  receiptNo        String?
   type             String?
   description      String?
   quantity         Decimal?            @db.Decimal(15, 4)
@@ -433,6 +434,7 @@ model StockMovement {
   createdByUser    User?               @relation("StockMovementCreatedBy", fields: [createdBy], references: [username])
   current          Current?            @relation(fields: [currentCode], references: [currentCode])
   invoice          Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
+  receipt          Receipt?            @relation(fields: [receiptNo], references: [documentNo])
   outWarehouse     Warehouse?          @relation("StockMovementOutWarehouse", fields: [outWarehouseCode], references: [warehouseCode])
   priceList        StockCardPriceList? @relation(fields: [priceListId], references: [id])
   stockCard        StockCard           @relation(fields: [productCode], references: [productCode])
@@ -592,7 +594,7 @@ model Receipt {
   id                  String           @id @default(cuid())
   receiptType         ReceiptType
   receiptDate         DateTime         @default(now())
-  documentNo          String           @db.VarChar(50)
+  documentNo          String           @unique @db.VarChar(50)
   branchCode          String           @db.VarChar(50)
   isTransfer          Boolean          @default(false)
   outWarehouse        String?
@@ -614,6 +616,8 @@ model Receipt {
   updatedByUser       User?            @relation("ReceiptUpdatedBy", fields: [updatedBy], references: [username])
   receiptDetail       ReceiptDetail[]
   vaultMovement       VaultMovement[]
+
+  StockMovement StockMovement[]
 }
 
 model ReceiptDetail {

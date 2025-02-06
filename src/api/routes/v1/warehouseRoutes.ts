@@ -33,20 +33,13 @@ export const WarehouseRoutes = (app: Elysia) => {
       .delete("/stocktake/:id", WarehouseController.deleteStocktakeWarehouse, {
         tags: ["Warehouses"],
       })
-      .post("/order-prepare", WarehouseController.createOrderPrepareWarehouse, {
+      .post("/order", WarehouseController.createOrderWarehouse, {
         tags: ["Warehouses"],
       })
-      .put(
-        "/order-prepare/:id",
-        WarehouseController.updateOrderPrepareWarehouse,
-        { tags: ["Warehouses"] }
-      )
-      .delete(
-        "/order-prepare/:id",
-        WarehouseController.deleteOrderPrepareWarehouse,
-        { tags: ["Warehouses"] }
-      )
-      .post("/order-return", WarehouseController.createOrderReturnWarehouse, {
+      .put("/order/:id", WarehouseController.updateOrderWarehouse, {
+        tags: ["Warehouses"],
+      })
+      .delete("/order/:id", WarehouseController.deleteOrderWarehouse, {
         tags: ["Warehouses"],
       })
       .get("/receipts", WarehouseController.getAllReceipts, {
