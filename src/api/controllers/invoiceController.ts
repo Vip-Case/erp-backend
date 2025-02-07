@@ -11,12 +11,25 @@ const InvoiceController = {
   // API to get all invoices
   getAllInvoices: async (ctx: Context) => {
     try {
-      const invoices = await invoiceService.getAllInvoices();
+      const { page, limit, orderBy, filter } = ctx.query;
+
+      // Query parametrelerini dönüştürme
+      const params = {
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+        orderBy: orderBy ? JSON.parse(orderBy as string) : undefined,
+        filter: filter ? JSON.parse(filter as string) : undefined,
+      };
+
+      const invoices = await invoiceService.getAllInvoices(params);
       ctx.set.status = 200;
       return invoices;
     } catch (error: any) {
       ctx.set.status = 500;
-      return { error: "Error getting all invoices", details: error.message };
+      return {
+        error: "Faturalar listelenirken bir hata oluştu",
+        details: error.message,
+      };
     }
   },
 

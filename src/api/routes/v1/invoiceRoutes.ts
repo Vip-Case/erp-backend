@@ -1,10 +1,18 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import InvoiceController from "../../controllers/invoiceController";
 
 export const InvoiceRoutes = (app: Elysia) => {
   app.group("/invoices", (app) =>
     app
-      .get("/", InvoiceController.getAllInvoices, { tags: ["Invoices"] })
+      .get("/", InvoiceController.getAllInvoices, {
+        query: t.Object({
+          page: t.Optional(t.String()),
+          limit: t.Optional(t.String()),
+          orderBy: t.Optional(t.String()),
+          filter: t.Optional(t.String()),
+        }),
+        tags: ["Invoices"],
+      })
       .get("/:id", InvoiceController.getInvoiceById, { tags: ["Invoices"] })
       .post("/purchase", InvoiceController.createPurchaseInvoiceWithRelations, {
         tags: ["Invoices"],

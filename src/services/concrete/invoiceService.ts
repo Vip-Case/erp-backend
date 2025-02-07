@@ -1,4 +1,10 @@
-import { Invoice, InvoiceDetail, InvoiceType, Prisma } from "@prisma/client";
+import {
+  Invoice,
+  InvoiceDetail,
+  InvoiceType,
+  Prisma,
+  DocumentType,
+} from "@prisma/client";
 import prisma from "../../config/prisma";
 import logger from "../../utils/logger";
 import { BaseRepository } from "../../repositories/baseRepository";
@@ -258,12 +264,106 @@ export class InvoiceService {
     }
   };
 
-  async getAllInvoices(): Promise<Invoice[]> {
-    return this.invoiceRepository.findAll({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+  async getAllInvoices(params?: {
+    page?: number;
+    limit?: number;
+    orderBy?: {
+      field: string;
+      direction: "asc" | "desc";
+    };
+    filter?: {
+      invoiceType?: InvoiceType | null;
+      documentType?: DocumentType | null;
+      startDate?: Date;
+      endDate?: Date;
+      currentCode?: string;
+      currentName?: string;
+      branchCode?: string;
+    };
+  }): Promise<{
+    data: Invoice[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const {
+      page = 1,
+      limit = 10,
+      orderBy = { field: "createdAt", direction: "desc" },
+      filter,
+    } = params || {};
+
+    const where: Prisma.InvoiceWhereInput = {};
+
+    // Filtreleri ekle
+    if (filter) {
+      if (filter.invoiceType) where.invoiceType = filter.invoiceType;
+      if (filter.documentType) where.documentType = filter.documentType;
+      if (filter.currentCode) where.currentCode = filter.currentCode;
+      if (filter.branchCode) where.branchCode = filter.branchCode;
+      if (filter.currentName) {
+        where.current = {
+          currentName: {
+            contains: filter.currentName,
+            mode: "insensitive",
+          },
+        };
+      }
+      if (filter.startDate || filter.endDate) {
+        where.invoiceDate = {
+          gte: filter.startDate,
+          lte: filter.endDate,
+        };
+      }
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        include: {
+          current: {
+            select: {
+              currentCode: true,
+              currentName: true,
+            },
+          },
+          branch: {
+            select: {
+              branchCode: true,
+              branchName: true,
+            },
+          },
+          warehouse: {
+            select: {
+              warehouseCode: true,
+              warehouseName: true,
+            },
+          },
+          createdByUser: {
+            select: {
+              username: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: {
+          [orderBy.field]: orderBy.direction,
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.invoice.count({ where }),
+    ]);
+
+    return {
+      data: invoices,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getInvoiceById(id: string): Promise<Invoice | null> {
