@@ -272,6 +272,8 @@ model StockCard {
   Store                   Store[]                   @relation("StockCardToStore")
   ProductMatch            ProductMatch[]
   StockTakeDetail         StockTakeDetail[]
+
+  PrintQueue PrintQueue[]
 }
 
 model StockCardEFatura {
@@ -865,6 +867,8 @@ model User {
   updatedByOrderPrepareWarehouse OrderPrepareWarehouse[] @relation("OrderPrepareWarehouseUpdatedBy")
   createdByStockTake             StockTake[]             @relation("StockTakeCreatedBy")
   updatedByStockTake             StockTake[]             @relation("StockTakeUpdatedBy")
+
+  PrintQueue PrintQueue[] @relation("PrintQueuePrintedBy")
 }
 
 model Invoice {
@@ -1277,10 +1281,19 @@ model OrderPrepareWarehouse {
 }
 
 model PrintQueue {
-  id          String   @id @default(cuid())
-  productCode String
-  quantity    Int
-  isPrinted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  productCode   String
+  stockCard     StockCard @relation(fields: [productCode], references: [productCode])
+  quantity      Int
+  status        String    @default("PENDING")
+  printedAt     DateTime?
+  printedBy     String?
+  printedByUser User?     @relation("PrintQueuePrintedBy", fields: [printedBy], references: [username])
+  printerName   String?
+  errorMessage  String?
+  retryCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
 }
