@@ -115,6 +115,25 @@ interface StockTurnoverReportParams {
   pageSize?: number;
 }
 
+interface UpdateCriticalStockAnalysisResult {
+  stockCardId: string;
+  productCode: string;
+  productName: string;
+  oldCriticalLevel: number | null;
+  newCriticalLevel: number;
+  reason: string;
+  status: "updated" | "skipped" | "failed";
+  message?: string;
+}
+
+interface UpdateCriticalStockSummary {
+  totalAnalyzed: number;
+  totalUpdated: number;
+  totalSkipped: number;
+  totalFailed: number;
+  details: UpdateCriticalStockAnalysisResult[];
+}
+
 export class StockCardService {
   async createStockCard(
     stockCard: StockCard,
@@ -1691,6 +1710,23 @@ export class StockCardService {
     }
   }
 
+  async updateCriticalStockForAnalyze(
+    productCode: string,
+    criticalStock: number
+  ): Promise<StockCard> {
+    try {
+      return await prisma.stockCard.update({
+        where: { productCode: productCode },
+        data: {
+          riskQuantities: criticalStock,
+        },
+      });
+    } catch (error) {
+      logger.error("Kritik stok seviyesi güncellenirken hata oluştu:", error);
+      throw new Error("Kritik stok seviyesi güncellenemedi");
+    }
+  }
+
   async createStockCardFromMobile(
     data: MobileStockCardInput,
     bearerToken: string
@@ -2022,6 +2058,160 @@ export class StockCardService {
       logger.error("Stok devir raporu oluşturulurken hata:", error);
       throw new Error("Stok devir raporu oluşturulamadı");
     }
+  }
+
+  async analyzeCriticalStockLevels(params: {
+    minDays: number;
+    maxDays: number;
+    updateThreshold: number;
+  }): Promise<UpdateCriticalStockSummary> {
+    try {
+      // Stok devir raporunu al
+      const stockTurnoverReport = await this.getStockTurnoverReport();
+      const results: UpdateCriticalStockAnalysisResult[] = [];
+
+      for (const item of stockTurnoverReport) {
+        try {
+          // Hareket hızını kategorize et
+          const movementCategory = this.categorizeMovement(item.turnoverRate);
+
+          // Güvenlik gün sayısını belirle
+          const securityDays = this.calculateSecurityDays(
+            movementCategory,
+            params.minDays,
+            params.maxDays
+          );
+
+          // Trend faktörünü hesapla
+          const trendFactor = this.calculateTrendFactor(
+            item.movementAnalysis.velocityChange,
+            item.periodComparison.changePercentage
+          );
+
+          // Yeni kritik stok seviyesini hesapla
+          const newCriticalLevel = Math.ceil(
+            item.averageDailyOutQuantity * securityDays * (1 + trendFactor)
+          );
+
+          // Mevcut kritik seviye ile karşılaştır
+          const currentCriticalLevel = item.criticalLevel;
+          const changePercentage = currentCriticalLevel
+            ? Math.abs(
+                ((newCriticalLevel - currentCriticalLevel) /
+                  currentCriticalLevel) *
+                  100
+              )
+            : 100;
+
+          // Değişim yeterince büyükse güncelle
+          if (changePercentage >= params.updateThreshold) {
+            try {
+              await this.updateCriticalStockForAnalyze(
+                item.productCode,
+                newCriticalLevel
+              );
+
+              results.push({
+                stockCardId: item.productCode,
+                productCode: item.productCode,
+                productName: item.productName,
+                oldCriticalLevel: currentCriticalLevel,
+                newCriticalLevel,
+                reason: `${movementCategory} hareket, ${
+                  trendFactor > 0 ? "artan" : "azalan"
+                } trend`,
+                status: "updated",
+                message: `Kritik stok seviyesi ${currentCriticalLevel} -> ${newCriticalLevel} olarak güncellendi`,
+              });
+            } catch (error) {
+              results.push({
+                stockCardId: item.productCode,
+                productCode: item.productCode,
+                productName: item.productName,
+                oldCriticalLevel: currentCriticalLevel,
+                newCriticalLevel,
+                reason: `Güncelleme hatası`,
+                status: "failed",
+                message:
+                  error instanceof Error ? error.message : "Bilinmeyen hata",
+              });
+            }
+          } else {
+            results.push({
+              stockCardId: item.productCode,
+              productCode: item.productCode,
+              productName: item.productName,
+              oldCriticalLevel: currentCriticalLevel,
+              newCriticalLevel,
+              reason: "Değişim eşik değerinin altında",
+              status: "skipped",
+              message: `Değişim oranı (${changePercentage.toFixed(
+                2
+              )}%) eşik değerinin (${params.updateThreshold}%) altında`,
+            });
+          }
+        } catch (error) {
+          results.push({
+            stockCardId: item.productCode,
+            productCode: item.productCode,
+            productName: item.productName,
+            oldCriticalLevel: item.criticalLevel,
+            newCriticalLevel: 0,
+            reason: "Analiz hatası",
+            status: "failed",
+            message: error instanceof Error ? error.message : "Bilinmeyen hata",
+          });
+        }
+      }
+
+      // Sonuçları özetle
+      const summary: UpdateCriticalStockSummary = {
+        totalAnalyzed: results.length,
+        totalUpdated: results.filter((r) => r.status === "updated").length,
+        totalSkipped: results.filter((r) => r.status === "skipped").length,
+        totalFailed: results.filter((r) => r.status === "failed").length,
+        details: results,
+      };
+
+      return summary;
+    } catch (error) {
+      logger.error("Kritik stok seviyesi analizi sırasında hata:", error);
+      throw new Error("Kritik stok seviyesi analizi yapılamadı");
+    }
+  }
+
+  private categorizeMovement(turnoverRate: number): "hızlı" | "orta" | "yavaş" {
+    if (turnoverRate >= 1.5) return "hızlı";
+    if (turnoverRate >= 0.5) return "orta";
+    return "yavaş";
+  }
+
+  private calculateSecurityDays(
+    movementCategory: "hızlı" | "orta" | "yavaş",
+    minDays: number,
+    maxDays: number
+  ): number {
+    switch (movementCategory) {
+      case "hızlı":
+        return Math.max(minDays, Math.min(14, maxDays));
+      case "orta":
+        return Math.max(minDays, Math.min(30, maxDays));
+      case "yavaş":
+        return Math.max(minDays, Math.min(45, maxDays));
+    }
+  }
+
+  private calculateTrendFactor(
+    velocityChange: number,
+    periodChangePercentage: number
+  ): number {
+    // Hem hız değişimi hem de dönemsel değişimi değerlendir
+    const trendScore =
+      (velocityChange > 0 ? 1 : -1) + (periodChangePercentage > 0 ? 1 : -1);
+
+    if (trendScore > 0) return 0.2; // Artan trend
+    if (trendScore === 0) return 0.1; // Sabit trend
+    return 0.05; // Azalan trend
   }
 }
 

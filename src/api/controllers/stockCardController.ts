@@ -486,6 +486,54 @@ const StockCardController = {
       };
     }
   },
+
+  analyzeCriticalStockLevels: async (ctx: Context) => {
+    try {
+      const params = ctx.query as {
+        minDays?: string;
+        maxDays?: string;
+        updateThreshold?: string;
+      };
+
+      // Varsayılan değerler ve validasyon
+      const minDays = params.minDays ? parseInt(params.minDays) : 7;
+      const maxDays = params.maxDays ? parseInt(params.maxDays) : 45;
+      const updateThreshold = params.updateThreshold
+        ? parseFloat(params.updateThreshold)
+        : 20;
+
+      // Parametre validasyonları
+      if (isNaN(minDays) || minDays < 1) {
+        return ctx.error(400, "Minimum gün sayısı geçersiz");
+      }
+      if (isNaN(maxDays) || maxDays < minDays) {
+        return ctx.error(400, "Maksimum gün sayısı geçersiz");
+      }
+      if (isNaN(updateThreshold) || updateThreshold < 0) {
+        return ctx.error(400, "Güncelleme eşik değeri geçersiz");
+      }
+
+      const result = await stockCardService.analyzeCriticalStockLevels({
+        minDays,
+        maxDays,
+        updateThreshold,
+      });
+
+      ctx.set.status = 200;
+      return {
+        success: true,
+        data: result,
+        message: `${result.totalAnalyzed} ürün analiz edildi, ${result.totalUpdated} ürün güncellendi`,
+      };
+    } catch (error: any) {
+      ctx.set.status = 500;
+      return {
+        success: false,
+        error: "Kritik stok seviyesi analizi sırasında hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 };
 
 export default StockCardController;

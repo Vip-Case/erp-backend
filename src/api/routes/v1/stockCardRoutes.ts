@@ -87,6 +87,19 @@ export const StockCardRoutes = (app: Elysia) => {
           tags: ["Stock Cards", "Reports"],
         },
       })
+      .get(
+        "/analyze-critical-stock",
+        StockCardController.analyzeCriticalStockLevels,
+        {
+          tags: ["Stock Cards"],
+          detail: {
+            summary: "Kritik Stok Seviyesi Analizi",
+            description:
+              "Stok devir raporuna göre kritik stok seviyelerini analiz eder ve günceller",
+            tags: ["Stock Cards", "Reports"],
+          },
+        }
+      )
   );
   return app;
 };
