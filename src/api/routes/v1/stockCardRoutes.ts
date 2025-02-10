@@ -78,6 +78,15 @@ export const StockCardRoutes = (app: Elysia) => {
       .post("/balance-report", StockCardController.getStockBalanceReport, {
         tags: ["Stock Cards"],
       })
+      .get("/turnover-report", StockCardController.getStockTurnoverReport, {
+        tags: ["Stock Cards"],
+        detail: {
+          summary: "Stok Devir Raporu",
+          description:
+            "Stok kartlarının devir hızı ve hareket analizini içeren detaylı rapor",
+          tags: ["Stock Cards", "Reports"],
+        },
+      })
   );
   return app;
 };

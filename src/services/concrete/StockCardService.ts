@@ -75,6 +75,46 @@ interface MobileStockCardInput {
   }>;
 }
 
+interface StockTurnoverReport {
+  productCode: string;
+  productName: string;
+  currentStock: number;
+  last90DaysOutQuantity: number;
+  last30DaysOutQuantity: number;
+  last7DaysOutQuantity: number;
+  averageDailyOutQuantity: number;
+  turnoverRate: number;
+  isBelowCriticalLevel: boolean;
+  criticalLevel: number | null;
+  warehouseDetails: {
+    warehouseName: string;
+    currentStock: number;
+    last30DaysOutQuantity: number;
+  }[];
+  movementAnalysis: {
+    trend: "active" | "inactive";
+    velocityChange: number;
+    stockSufficiency: number;
+  };
+  periodComparison: {
+    previousPeriodOut: number;
+    changePercentage: number;
+  };
+}
+
+interface StockTurnoverReportParams {
+  startDate?: Date;
+  endDate?: Date;
+  warehouseId?: string;
+  productCode?: string; // Stok kodu ile arama
+  productName?: string; // Stok adı ile arama
+  searchQuery?: string; // Genel arama (hem kod hem ad için)
+  sortBy?: "turnoverRate" | "currentStock" | "last30DaysOutQuantity";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
 export class StockCardService {
   async createStockCard(
     stockCard: StockCard,
@@ -1727,6 +1767,260 @@ export class StockCardService {
     } catch (error) {
       logger.error("Mobil uygulamadan stok kartı oluşturulurken hata:", error);
       throw new Error("Stok kartı oluşturulamadı");
+    }
+  }
+
+  async getStockTurnoverReport(
+    params?: StockTurnoverReportParams
+  ): Promise<StockTurnoverReport[]> {
+    try {
+      // Tarih aralıklarını hesapla
+      const endDate = params?.endDate || new Date();
+
+      // Son 90, 30 ve 7 gün için tarihleri hesapla
+      const last90Days = new Date(endDate);
+      last90Days.setDate(last90Days.getDate() - 90);
+
+      const last30Days = new Date(endDate);
+      last30Days.setDate(last30Days.getDate() - 30);
+
+      const last7Days = new Date(endDate);
+      last7Days.setDate(last7Days.getDate() - 7);
+
+      // Önceki dönem için tarih
+      const previousPeriodStart = new Date(
+        last90Days.getTime() - 90 * 24 * 60 * 60 * 1000
+      );
+
+      // Arama koşullarını oluştur
+      const searchConditions: Prisma.StockCardWhereInput = {
+        AND: [
+          // Stok kodu araması
+          ...(params?.productCode
+            ? [
+                {
+                  productCode: {
+                    contains: params.productCode,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              ]
+            : []),
+          // Stok adı araması
+          ...(params?.productName
+            ? [
+                {
+                  productName: {
+                    contains: params.productName,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              ]
+            : []),
+          // Genel arama (hem kod hem ad için)
+          ...(params?.searchQuery
+            ? [
+                {
+                  OR: [
+                    {
+                      productCode: {
+                        contains: params.searchQuery,
+                        mode: Prisma.QueryMode.insensitive,
+                      },
+                    },
+                    {
+                      productName: {
+                        contains: params.searchQuery,
+                        mode: Prisma.QueryMode.insensitive,
+                      },
+                    },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      };
+
+      // Stok kartlarını ve ilişkili verileri getir
+      const stockCards = await prisma.stockCard.findMany({
+        where: searchConditions,
+        include: {
+          stockCardWarehouse: {
+            include: {
+              warehouse: true,
+            },
+          },
+          stockMovement: {
+            where: {
+              AND: [
+                { gcCode: "Cikis" },
+                {
+                  createdAt: {
+                    gte: previousPeriodStart,
+                    lte: endDate,
+                  },
+                },
+                ...(params?.warehouseId
+                  ? [{ warehouseCode: params.warehouseId }]
+                  : []),
+              ],
+            },
+          },
+        },
+      });
+
+      // Rapor verilerini hazırla
+      let report: StockTurnoverReport[] = await Promise.all(
+        stockCards.map(async (card) => {
+          // Toplam mevcut stok
+          const currentStock = card.stockCardWarehouse.reduce(
+            (sum, warehouse) => sum + Number(warehouse.quantity),
+            0
+          );
+
+          // Çıkış miktarlarını hesapla
+          const last90DaysOut = card.stockMovement
+            .filter(
+              (mov) => mov.createdAt >= last90Days && mov.createdAt <= endDate
+            )
+            .reduce((sum, mov) => sum + Number(mov.quantity || 0), 0);
+
+          const last30DaysOut = card.stockMovement
+            .filter(
+              (mov) => mov.createdAt >= last30Days && mov.createdAt <= endDate
+            )
+            .reduce((sum, mov) => sum + Number(mov.quantity || 0), 0);
+
+          const last7DaysOut = card.stockMovement
+            .filter(
+              (mov) => mov.createdAt >= last7Days && mov.createdAt <= endDate
+            )
+            .reduce((sum, mov) => sum + Number(mov.quantity || 0), 0);
+
+          // Önceki dönem hareketlerini hesapla
+          const previousPeriodOut = card.stockMovement
+            .filter(
+              (mov) =>
+                mov.createdAt >= previousPeriodStart &&
+                mov.createdAt < last90Days
+            )
+            .reduce((sum, mov) => sum + Number(mov.quantity || 0), 0);
+
+          // Günlük ortalama çıkış hesapla (son 30 gün baz alınarak)
+          const averageDailyOutQuantity = last30DaysOut / 30;
+
+          // Stok devir hızı hesapla (30 günlük çıkış / Ortalama stok)
+          const turnoverRate =
+            currentStock > 0 ? last30DaysOut / currentStock : 0;
+
+          // Kritik seviye kontrolü
+          const criticalLevel = card.riskQuantities
+            ? Number(card.riskQuantities)
+            : null;
+          const isBelowCriticalLevel =
+            criticalLevel !== null && currentStock < criticalLevel;
+
+          // Depo detaylarını hazırla
+          const warehouseDetails = card.stockCardWarehouse.map((warehouse) => {
+            const warehouseMovements = card.stockMovement.filter(
+              (mov) =>
+                mov.warehouseCode === warehouse.warehouse.warehouseCode &&
+                mov.createdAt >= last30Days &&
+                mov.createdAt <= endDate
+            );
+
+            const warehouseLast30DaysOut = warehouseMovements.reduce(
+              (sum, mov) => sum + Number(mov.quantity || 0),
+              0
+            );
+
+            return {
+              warehouseName: warehouse.warehouse.warehouseName,
+              currentStock: Number(warehouse.quantity),
+              last30DaysOutQuantity: warehouseLast30DaysOut,
+            };
+          });
+
+          // Hareket analizi
+          const movementAnalysis = {
+            trend:
+              last7DaysOut > 0 ? ("active" as const) : ("inactive" as const),
+            velocityChange: last7DaysOut / 7 - last30DaysOut / 30,
+            stockSufficiency:
+              averageDailyOutQuantity > 0
+                ? currentStock / averageDailyOutQuantity
+                : 0,
+          };
+
+          // Dönemsel karşılaştırma
+          const periodComparison = {
+            previousPeriodOut,
+            changePercentage:
+              previousPeriodOut > 0
+                ? ((last90DaysOut - previousPeriodOut) / previousPeriodOut) *
+                  100
+                : 0,
+          };
+
+          return {
+            productCode: card.productCode,
+            productName: card.productName,
+            currentStock,
+            last90DaysOutQuantity: last90DaysOut,
+            last30DaysOutQuantity: last30DaysOut,
+            last7DaysOutQuantity: last7DaysOut,
+            averageDailyOutQuantity,
+            turnoverRate,
+            isBelowCriticalLevel,
+            criticalLevel,
+            warehouseDetails,
+            movementAnalysis,
+            periodComparison,
+          };
+        })
+      );
+
+      // Sıralama işlemini uygula
+      if (params?.sortBy) {
+        report.sort((a, b) => {
+          let valueA: number;
+          let valueB: number;
+
+          switch (params.sortBy) {
+            case "turnoverRate":
+              valueA = a.turnoverRate;
+              valueB = b.turnoverRate;
+              break;
+            case "currentStock":
+              valueA = a.currentStock;
+              valueB = b.currentStock;
+              break;
+            case "last30DaysOutQuantity":
+              valueA = a.last30DaysOutQuantity;
+              valueB = b.last30DaysOutQuantity;
+              break;
+            default:
+              valueA = 0;
+              valueB = 0;
+          }
+
+          return params.sortDirection === "desc"
+            ? valueB - valueA
+            : valueA - valueB;
+        });
+      }
+
+      // Sayfalama uygula
+      if (params?.page && params?.pageSize) {
+        const start = (params.page - 1) * params.pageSize;
+        const end = start + params.pageSize;
+        report = report.slice(start, end);
+      }
+
+      return report;
+    } catch (error) {
+      logger.error("Stok devir raporu oluşturulurken hata:", error);
+      throw new Error("Stok devir raporu oluşturulamadı");
     }
   }
 }

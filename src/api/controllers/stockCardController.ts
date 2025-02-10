@@ -419,6 +419,73 @@ const StockCardController = {
       };
     }
   },
+
+  getStockTurnoverReport: async (ctx: Context) => {
+    try {
+      const params = ctx.query as {
+        startDate?: string;
+        endDate?: string;
+        warehouseId?: string;
+        productCode?: string;
+        productName?: string;
+        searchQuery?: string;
+        sortBy?: "turnoverRate" | "currentStock" | "last30DaysOutQuantity";
+        sortDirection?: "asc" | "desc";
+        page?: string;
+        pageSize?: string;
+      };
+
+      // Query parametrelerini dönüştür
+      const reportParams = {
+        ...(params.startDate && { startDate: new Date(params.startDate) }),
+        ...(params.endDate && { endDate: new Date(params.endDate) }),
+        ...(params.warehouseId && { warehouseId: params.warehouseId }),
+        ...(params.productCode && { productCode: params.productCode }),
+        ...(params.productName && { productName: params.productName }),
+        ...(params.searchQuery && { searchQuery: params.searchQuery }),
+        ...(params.sortBy && { sortBy: params.sortBy }),
+        ...(params.sortDirection && { sortDirection: params.sortDirection }),
+        ...(params.page && { page: parseInt(params.page) }),
+        ...(params.pageSize && { pageSize: parseInt(params.pageSize) }),
+      };
+
+      // Tarih validasyonları
+      if (params.startDate && isNaN(Date.parse(params.startDate))) {
+        return ctx.error(400, "Geçersiz başlangıç tarihi formatı");
+      }
+
+      if (params.endDate && isNaN(Date.parse(params.endDate))) {
+        return ctx.error(400, "Geçersiz bitiş tarihi formatı");
+      }
+
+      // Sayfa numarası ve boyutu validasyonları
+      if (params.page && isNaN(parseInt(params.page))) {
+        return ctx.error(400, "Geçersiz sayfa numarası");
+      }
+
+      if (params.pageSize && isNaN(parseInt(params.pageSize))) {
+        return ctx.error(400, "Geçersiz sayfa boyutu");
+      }
+
+      const report = await stockCardService.getStockTurnoverReport(
+        reportParams
+      );
+
+      ctx.set.status = 200;
+      return {
+        success: true,
+        data: report,
+        message: "Stok devir raporu başarıyla oluşturuldu",
+      };
+    } catch (error: any) {
+      ctx.set.status = 500;
+      return {
+        success: false,
+        error: "Stok devir raporu oluşturulurken hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 };
 
 export default StockCardController;
