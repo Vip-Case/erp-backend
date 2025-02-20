@@ -2823,11 +2823,12 @@ async function main() {
     const store2 = await prisma.store.create({
         data: {
             name: "Trendyol Store",
+            warehouseCode: "W1",
             marketPlaceId: marketPlace2.id, // MarketPlace ile ilişkilendirme
             apiCredentials: JSON.stringify({
                 baseUrl: "https://stageapi.trendyol.com",
-                apiKey: "icri6yUpwUtFDOXAcNNE",
-                apiSecret: "fqOwS0Up8HDO2ZGAFkup",
+                apiKey: "jqQ66qiavzzAwqLgaQ03",
+                apiSecret: "aHbZrSVcgu0iBMkXP2w9",
                 supplierId: "2738",
                 environment: "STAGE"
             }),

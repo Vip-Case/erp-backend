@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: erp-backend
     ports:
-      - "1303:1303"
+      - "3000:1303"
     networks:
       - elk
       - default

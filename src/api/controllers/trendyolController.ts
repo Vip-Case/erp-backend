@@ -518,45 +518,6 @@ export class TrendyolController {
     }
   }
 
-  static async updateAllStockInTrendyol(ctx: Context) {
-    try {
-      const { storeId, warehouseId } = ctx.body as {
-        storeId: string;
-        warehouseId?: string;
-      };
-  
-      if (!storeId) {
-        return {
-          status: 400,
-          body: {
-            success: false,
-            error: "storeId zorunludur"
-          }
-        };
-      }
-  
-      const trendyolService = new TrendyolService(storeId);
-      const results = await trendyolService.updateAllTrendyolStock(warehouseId);
-  
-      return {
-        status: 200,
-        body: {
-          success: true,
-          message: "Toplu stok güncelleme tamamlandı",
-          results
-        }
-      };
-    } catch (error: any) {
-      console.error("Toplu stok güncelleme hatası:", error);
-      return {
-        status: 500,
-        body: {
-          success: false,
-          error: error.message || 'Toplu stok güncelleme başarısız'
-        }
-      };
-    }
-  }
 
   static async checkMatchStatus(ctx: Context) {
     try {
