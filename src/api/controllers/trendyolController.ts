@@ -2,8 +2,15 @@
 import { Context } from "elysia";
 import { TrendyolService } from "../../services/concrete/trendyolService";
 import prisma from "../../config/prisma";
+import { TrendyolOrder } from "../../types/trendyolTypes";
 
 export class TrendyolController {
+  private trendyolService: TrendyolService;
+
+  constructor(private readonly storeId: string) {
+    this.trendyolService = new TrendyolService(storeId);
+  }
+
   static async testConnection(ctx: Context) {
     try {
       const { storeId } = ctx.body as { storeId: string };
@@ -518,7 +525,6 @@ export class TrendyolController {
     }
   }
 
-
   static async checkMatchStatus(ctx: Context) {
     try {
       const { storeId, barcode } = ctx.query as { 
@@ -567,4 +573,286 @@ export class TrendyolController {
     }
   }
 
+  static async createWebhook(ctx: Context) {
+    try {
+      const { storeId, url, username, password, authenticationType, subscribedStatuses } = ctx.body as any;
+
+      if (!storeId || !url) {
+        return {
+          status: 400,
+          body: {
+            success: false,
+            error: "storeId ve url zorunludur"
+          }
+        };
+      }
+
+      // URL'nin doğru endpoint'i içerdiğinden emin olun
+      let webhookUrl = url;
+      if (!webhookUrl.includes('/api/webhook-handler')) {
+        // URL'nin sonunda / varsa kaldır
+        webhookUrl = webhookUrl.endsWith('/') ? webhookUrl.slice(0, -1) : webhookUrl;
+        // Endpoint'i ekle
+        webhookUrl = `${webhookUrl}/api/webhook-handler`;
+      }
+
+      console.log(`Webhook oluşturuluyor: ${webhookUrl}`);
+
+      const trendyolService = new TrendyolService(storeId);
+      const result = await trendyolService.createWebhook({
+        url: webhookUrl,
+        username: username || "",
+        password: password || "",
+        authenticationType: authenticationType || "BASIC_AUTHENTICATION",
+        subscribedStatuses
+      });
+
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: "Webhook başarıyla oluşturuldu",
+          data: result
+        }
+      };
+    } catch (error: any) {
+      console.error("Webhook oluşturma hatası:", error);
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: error.message || 'Webhook oluşturma başarısız'
+        }
+      };
+    }
+  }
+
+  static async listWebhooks(ctx: Context) {
+    try {
+      const { storeId } = ctx.query as { storeId: string };
+
+      if (!storeId) {
+        return {
+          status: 400,
+          body: {
+            success: false,
+            error: "storeId zorunludur"
+          }
+        };
+      }
+
+      const trendyolService = new TrendyolService(storeId);
+      const webhooks = await trendyolService.listWebhooks();
+
+      return {
+        status: 200,
+        body: {
+          success: true,
+          data: webhooks
+        }
+      };
+    } catch (error: any) {
+      console.error("Webhook listeleme hatası:", error);
+      return {
+        status: error.message.includes('API bilgileri bulunamadı') ? 400 : 500,
+        body: {
+          success: false,
+          error: error.message
+        }
+      };
+    }
+  }
+
+  static async deleteWebhook(ctx: Context) {
+    try {
+      const { webhookId } = ctx.params;
+      const { storeId } = ctx.body as { storeId: string };
+
+      if (!storeId || !webhookId) {
+        return {
+          status: 400,
+          body: {
+            success: false,
+            error: "storeId ve webhookId zorunludur"
+          }
+        };
+      }
+
+      const trendyolService = new TrendyolService(storeId);
+      await trendyolService.deleteWebhook(webhookId);
+
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: `Webhook başarıyla silindi: ${webhookId}`
+        }
+      };
+    } catch (error: any) {
+      console.error("Webhook silme hatası:", error);
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: error.message || 'Webhook silme işlemi başarısız'
+        }
+      };
+    }
+  }
+
+  static async syncOrders(ctx: Context) {
+    const { storeId } = ctx.body as { storeId: string };
+    
+    if (!storeId) {
+      return {
+        status: 400,
+        body: { 
+          success: false,
+          error: "storeId zorunludur" 
+        }
+      };
+    }
+
+    const trendyolService = new TrendyolService(storeId);
+    await trendyolService.initialize();
+    await trendyolService.syncOrders();
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        message: "Siparişler başarıyla senkronize edildi."
+      }
+    };
+  }
+
+  // Tek sipariş güncelleme
+  static async updateOrder(ctx: Context) {
+    try {
+      const { orderNumber } = ctx.params;
+      const { storeId } = ctx.body as { storeId: string };
+
+      const trendyolService = new TrendyolService(storeId);
+      await trendyolService.updateOrderStatus(orderNumber);
+
+      return {
+        status: 200,
+        body: { 
+          success: true,
+          message: `Sipariş başarıyla güncellendi: ${orderNumber}` 
+        }
+      };
+    } catch (error: any) {
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: 'Sipariş güncelleme hatası',
+          details: error?.message || 'Bilinmeyen hata'
+        }
+      };
+    }
+  }
+
+  // Son X saatteki siparişleri güncelle
+  static async updateRecentOrders(ctx: Context) {
+    try {
+      const { storeId } = ctx.body as { storeId: string };
+      const hours = parseInt(ctx.query.hours as string) || 24;
+
+      const trendyolService = new TrendyolService(storeId);
+      await trendyolService.updateRecentOrders(hours);
+
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: `Son ${hours} saatteki siparişler güncellendi`
+        }
+      };
+    } catch (error: any) {
+      return {
+        status: 500,
+        body: {
+          success: false,
+          error: 'Toplu sipariş güncelleme hatası',
+          details: error?.message || 'Bilinmeyen hata'
+        }
+      };
+    }
+  }
+
+  static async handleWebhookEvent(ctx: Context) {
+    try {
+      console.log('Webhook headers:', ctx.headers);
+      const payload = ctx.body as any;
+      console.log('Webhook payload:', JSON.stringify(payload, null, 2));
+
+      // Sipariş bilgilerini çıkar
+      const { orderNumber, status, shipmentPackageStatus } = payload;
+
+      if (!orderNumber) {
+        console.error('Geçersiz webhook verisi:', payload);
+        return {
+          status: 200,
+          body: { success: true }
+        };
+      }
+
+      console.log(`Sipariş durumu güncellendi: ${orderNumber} - ${status || shipmentPackageStatus}`);
+
+      // Sipariş işleme
+      try {
+        // Tüm mağazaları çek ve JavaScript ile filtrele
+        const stores = await prisma.store.findMany({
+          include: {
+            marketPlace: true
+          }
+        });
+
+        // Trendyol mağazasını bul
+        const trendyolStore = stores.find(s => 
+          s.marketPlace?.name === 'Trendyol'
+        );
+
+        if (trendyolStore) {
+          const trendyolService = new TrendyolService(trendyolStore.id);
+          
+          // Sipariş zaten varsa güncelle, yoksa yeni oluştur
+          const existingOrder = await prisma.order.findFirst({
+            where: {
+              platformOrderId: orderNumber,
+              platform: 'Trendyol'
+            }
+          });
+
+          if (existingOrder) {
+            // Mevcut siparişi güncelle
+            await trendyolService.updateOrderStatus(orderNumber);
+            console.log(`Webhook: Mevcut sipariş güncellendi: ${orderNumber}`);
+          } else {
+            // Yeni sipariş oluştur
+            await trendyolService.syncOrderById(orderNumber);
+            console.log(`Webhook: Yeni sipariş oluşturuldu: ${orderNumber}`);
+          }
+        } else {
+          console.error('Trendyol mağazası bulunamadı');
+        }
+      } catch (error) {
+        console.error(`Webhook sipariş işleme hatası (${orderNumber}):`, error);
+        // Hata olsa bile 200 dönelim
+      }
+
+      return {
+        status: 200,
+        body: { success: true }
+      };
+    } catch (error) {
+      console.error('Webhook error:', error);
+      return {
+        status: 200, // Hata olsa bile 200 dönün
+        body: { success: true }
+      };
+    }
+  }
 }

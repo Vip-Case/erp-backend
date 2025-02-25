@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { TrendyolOrderResponse, TrendyolOrder } from './types'; // Gerekli tipleri içe aktar
 
 interface TrendyolCredentials {
   supplierId: string;
@@ -55,13 +56,28 @@ interface TrendyolProductResponse {
   content: TrendyolProduct[];
 }
 
+interface WebhookCreateRequest {
+    url: string;
+    username?: string;
+    password?: string;
+    authenticationType: "BASIC_AUTHENTICATION" | "API_KEY";
+    apiKey?: string;
+    subscribedStatuses?: string[];
+}
+
 export class TrendyolAdapter {
   private readonly baseURL: string;
   private readonly headers: Headers;
   private readonly timeout: number = 30000;
-  private readonly rateLimitDelay: number = 1000;
+  private lastRequestTime = 0;
+  private readonly rateLimitDelay = 1000; // 1 saniye (5 saniye çok uzun)
+  private readonly maxRetries = 3;
   private readonly brandCache: Map<string, TrendyolBrand> = new Map();
   private readonly variationsCache: Map<string, TrendyolProduct[]> = new Map();
+  private brandListCache: { brands: TrendyolBrand[]; timestamp: number } | null = null;
+  private readonly CACHE_DURATION = 1000 * 30; // 30 saniye
+  private readonly categoryCache: Map<string, TrendyolCategory> = new Map();
+  private categoryListCache: { categories: TrendyolCategory[]; timestamp: number } | null = null;
 
   constructor(private readonly credentials: TrendyolCredentials) {
     this.baseURL = credentials.baseUrl;
@@ -74,8 +90,16 @@ export class TrendyolAdapter {
     });
   }
 
-  private async rateLimiter() {
-    await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
+  private async handleRateLimit() {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.rateLimitDelay) {
+        const waitTime = this.rateLimitDelay - timeSinceLastRequest;
+        await this.delay(waitTime);
+    }
+    
+    this.lastRequestTime = Date.now(); // Son istek zamanını güncelle
   }
 
   private async fetchWithTimeout(
@@ -118,99 +142,160 @@ export class TrendyolAdapter {
     }
   }
 
-  async getBrands(): Promise<{ brands: TrendyolBrand[]; totalPages: number; }> {
-    await this.rateLimiter();
+  async getBrands(): Promise<{ brands: TrendyolBrand[]; totalPages: number }> {
+    // Cache kontrolü
+    if (this.brandListCache && 
+        (Date.now() - this.brandListCache.timestamp) < this.CACHE_DURATION) {
+        return {
+            brands: this.brandListCache.brands,
+            totalPages: Math.ceil(this.brandListCache.brands.length / 1000)
+        };
+    }
+
+    await this.handleRateLimit(); // Cache miss olduğunda rate limit uygula
+
     try {
-      const response = await this.fetchWithTimeout('/integration/product/brands', {
-        validateStatus: (status) => status >= 200 && status < 500
-      });
+        const response = await this.fetchWithTimeout('/integration/product/brands', {
+            validateStatus: (status) => status >= 200 && status < 500
+        });
 
-      const data = await response.json();
-      const brands = data?.brands || [];
+        const data = await response.json();
+        const brands = data?.brands || [];
 
-      if (!brands.length) return { brands: [], totalPages: 0 };
+        // Cache'i güncelle
+        this.brandListCache = {
+            brands: brands.filter((brand: any) => brand?.id && brand?.name),
+            timestamp: Date.now()
+        };
 
-      return {
-        brands: brands.filter((brand: any) => brand?.id && brand?.name),
-        totalPages: data.totalPages || 1
-      };
-    } catch {
-      return { brands: [], totalPages: 0 };
+        // Tekil cache'i de güncelle
+        this.brandListCache.brands.forEach(brand => {
+            this.brandCache.set(brand.id.toString(), brand);
+        });
+
+        return {
+            brands: this.brandListCache.brands,
+            totalPages: data.totalPages || 1
+        };
+    } catch (error) {
+        console.error('Markalar alınamadı:', error);
+        return { brands: [], totalPages: 0 };
     }
   }
 
   async getBrandById(brandId: number): Promise<TrendyolBrand> {
-    await this.rateLimiter();
-    const cachedBrand = await this.brandCache.get(brandId.toString());
+    // Önce tekil cache'den kontrol
+    const cachedBrand = this.brandCache.get(brandId.toString());
     if (cachedBrand) {
-      return { id: brandId, name: `Marka ${brandId}` };
+        return cachedBrand;
     }
 
-    try {
-      const response = await this.fetchWithTimeout(
-        `/integration/product/brands/${brandId}`,
-        {
-          validateStatus: (status) => [200, 404].includes(status)
+    // Sonra liste cache'den kontrol
+    if (this.brandListCache) {
+        const brand = this.brandListCache.brands.find(b => b.id === brandId);
+        if (brand) {
+            this.brandCache.set(brandId.toString(), brand);
+            return brand;
         }
-      );
-
-      if (response.status === 404) {
-        return { id: brandId, name: `Marka ${brandId}` };
-      }
-
-      const data = await response.json();
-      return { id: brandId, name: data.name };
-    } catch {
-      return { id: brandId, name: `Marka ${brandId}` };
     }
+
+    // Cache'de yoksa yeni istek yap
+    await this.handleRateLimit();
+    const { brands } = await this.getBrands();
+    const brand = brands.find(b => b.id === brandId);
+    
+    if (brand) {
+        this.brandCache.set(brandId.toString(), brand);
+        return brand;
+    }
+
+    return { id: brandId, name: `Marka ${brandId}` };
   }
 
   async getCategories(page: number = 0, size: number = 100): Promise<{
     categories: TrendyolCategory[];
     totalPages: number;
   }> {
-    await this.rateLimiter();
+    await this.handleRateLimit();
+
+    // Cache kontrolü
+    if (this.categoryListCache && 
+        (Date.now() - this.categoryListCache.timestamp) < this.CACHE_DURATION) {
+        return {
+            categories: this.categoryListCache.categories,
+            totalPages: Math.ceil(this.categoryListCache.categories.length / size)
+        };
+    }
+
     const response = await this.fetchWithTimeout(
-      `/integration/product/product-categories?page=${page}&size=${size}`
+        `/integration/product/product-categories?page=${page}&size=${size}`
     );
 
     const data = await response.json();
     const categories = data.categories || [];
 
+    // Cache'e kaydet
+    this.categoryListCache = {
+        categories: categories.filter((cat: any) => cat?.id && cat?.name),
+        timestamp: Date.now()
+    };
+
     return {
-      categories: categories.filter((cat: any) => cat?.id && cat?.name),
-      totalPages: data.totalPages || Math.ceil(categories.length / size)
+        categories: this.categoryListCache.categories,
+        totalPages: data.totalPages || Math.ceil(categories.length / size)
     };
   }
 
   async getCategoryById(categoryId: number): Promise<TrendyolCategory> {
-    await this.rateLimiter();
+    await this.handleRateLimit();
+    
+    // Önce cache'den kontrol et
+    const cachedCategory = this.categoryCache.get(categoryId.toString());
+    if (cachedCategory) {
+        return cachedCategory;
+    }
+
     try {
-      const response = await this.fetchWithTimeout(
-        `/integration/product/product-categories/${categoryId}`,
-        {
-          validateStatus: (status) => [200, 404].includes(status)
+        // Önce liste cache'inden kontrol et
+        if (this.categoryListCache && 
+            (Date.now() - this.categoryListCache.timestamp) < this.CACHE_DURATION) {
+            const category = this.categoryListCache.categories.find(c => c.id === categoryId);
+            if (category) {
+                this.categoryCache.set(categoryId.toString(), category);
+                return category;
+            }
         }
-      );
 
-      if (response.status === 404) {
-        return {
-          id: categoryId,
-          name: `Kategori ${categoryId}`,
-          parentId: null,
-          subCategories: []
-        };
-      }
+        const response = await this.fetchWithTimeout(
+            `/integration/product/product-categories/${categoryId}`,
+            {
+                validateStatus: (status) => [200, 404].includes(status)
+            }
+        );
 
-      const data = await response.json();
-      return data;
+        if (response.status === 404) {
+            const defaultCategory = {
+                id: categoryId,
+                name: `Kategori ${categoryId}`,
+                parentId: null,
+                subCategories: []
+            };
+            this.categoryCache.set(categoryId.toString(), defaultCategory);
+            return defaultCategory;
+        }
+
+        const category = await response.json();
+        this.categoryCache.set(categoryId.toString(), category);
+        return category;
     } catch {
-      return {
-        id: categoryId,
-        name: `Kategori ${categoryId}`,
-        parentId: null,
-        subCategories: []
-      };
+        const defaultCategory = {
+            id: categoryId,
+            name: `Kategori ${categoryId}`,
+            parentId: null,
+            subCategories: []
+        };
+        this.categoryCache.set(categoryId.toString(), defaultCategory);
+        return defaultCategory;
     }
   }
 
@@ -295,7 +380,7 @@ export class TrendyolAdapter {
   }
 
   async getProductDetails(barcode: string): Promise<TrendyolProduct | null> {
-    await this.rateLimiter();
+    await this.handleRateLimit();
     try {
       const response = await this.fetchWithTimeout(
         `/integration/product/sellers/${this.credentials.supplierId}/products/${barcode}`,
@@ -314,7 +399,7 @@ export class TrendyolAdapter {
   }
 
   async getProductsByModelCode(modelCode: string): Promise<TrendyolProduct[]> {
-    await this.rateLimiter();
+    await this.handleRateLimit();
     try {
       const params = new URLSearchParams({
         productMainId: modelCode,
@@ -334,7 +419,7 @@ export class TrendyolAdapter {
   }
 
   async getProductStock(barcode: string): Promise<number | null> {
-    await this.rateLimiter();
+    await this.handleRateLimit();
     try {
       const params = new URLSearchParams({
         barcode,
@@ -427,7 +512,7 @@ export class TrendyolAdapter {
     stockStatus?: string;
     quantity?: number;
   }> {
-    await this.rateLimiter();
+    await this.handleRateLimit();
     try {
       const response = await this.fetchWithTimeout(
         `/integration/product/sellers/${this.credentials.supplierId}/products/${barcode}/stocks`,
@@ -449,6 +534,190 @@ export class TrendyolAdapter {
     } catch (error) {
       console.warn(`Stock availability check error: ${barcode}`, error);
       return { isAvailable: false };
+    }
+  }
+
+  async getWebhooks() {
+    try {
+      const sellerId = this.credentials.supplierId;
+      
+      const response = await this.fetchWithTimeout(
+        `/integration/webhook/sellers/${sellerId}/webhooks`,
+        {
+          method: 'GET',
+          validateStatus: (status) => [200, 404].includes(status)
+        }
+      );
+
+      return response.status === 404 ? [] : await response.json();
+    } catch (error) {
+      console.error('Get webhooks error:', error);
+      throw error;
+    }
+  }
+
+  async createWebhook(request: WebhookCreateRequest): Promise<{ id: string }> {
+    const response = await this.fetchWithTimeout(
+        `/integration/webhook/sellers/${this.credentials.supplierId}/webhooks`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: request.url,
+                username: request.username,
+                password: request.password,
+                authenticationType: request.authenticationType,
+                apiKey: request.apiKey,
+                subscribedStatuses: request.subscribedStatuses || [
+                    "CREATED", "PICKING", "INVOICED", "SHIPPED",
+                    "CANCELLED", "DELIVERED", "UNDELIVERED", "RETURNED",
+                    "UNSUPPLIED", "AWAITING", "UNPACKED", "AT_COLLECTION_POINT",
+                    "VERIFIED"
+                ]
+            })
+        }
+    );
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Webhook oluşturma hatası: ${error.message || response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async updateWebhook(id: string, data: {
+    name?: string;
+    url?: string;
+    eventType?: string;
+    status?: 'ACTIVE' | 'PASSIVE';
+  }) {
+    return await this.fetchWithTimeout(`/webhooks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteWebhook(webhookId: string, timeout = 30000): Promise<void> {
+    const url = `/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}`;
+    
+    try {
+      console.log(`Webhook silme isteği: ${url}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(`${this.baseURL}${url}`, {
+        method: 'DELETE',
+        headers: this.headers,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Webhook silme hatası: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+      }
+      
+      console.log(`Webhook silme başarılı: ${webhookId}`);
+    } catch (error) {
+      console.error(`API Error: {
+        url: "${url}",
+        error: ${error},
+      }`);
+      throw error;
+    }
+  }
+
+  async activateWebhook(sellerId: string, webhookId: string, username: string, password: string) {
+    const endpoint = `${this.baseURL}/integration/webhook/sellers/${sellerId}/webhooks/${webhookId}/activate`;
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'PUT', // PUT isteği gönderiyoruz
+        headers: headers
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text(); // Hata mesajını al
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      return await response.json(); // Başarılı yanıtı döndür
+    } catch (error) {
+      console.error('Activate webhook error:', error);
+      throw error;
+    }
+  }
+
+  async getOrders(
+    status: string,
+    size: number = 50,
+    page: number = 0,
+    orderByField: string = 'PackageLastModifiedDate',
+    orderByDirection: string = 'DESC'
+  ): Promise<TrendyolOrderResponse> {
+    // Stage için 5 saniye çok kısa olabilir
+    await this.delay(10000); // 10 saniye bekle
+
+    try {
+      const response = await this.fetchWithTimeout(
+        `/integration/order/sellers/${this.credentials.supplierId}/orders?${new URLSearchParams({
+          status,
+          size: Math.min(size, 200).toString(),
+          page: page.toString(),
+          orderByField,
+          orderByDirection
+        })}`,
+        {
+          validateStatus: (status) => status === 200 || status === 429
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.exception === "TooManyRequestException") {
+        console.log('Rate limit aşıldı, 10 saniye bekleniyor...');
+        await this.delay(10000);
+        return this.getOrders(status, size, page, orderByField, orderByDirection);
+      }
+
+      return data;
+
+    } catch (error) {
+      console.error('Sipariş listesi alınamadı:', error);
+      throw error;
+    }
+  }
+
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async getOrderById(orderNumber: string): Promise<TrendyolOrder | null> {
+    try {
+      const response = await this.fetchWithTimeout(
+        `/integration/order/sellers/${this.credentials.supplierId}/orders/${orderNumber}`
+      );
+      
+      if (response.status === 404) {
+        return null;
+      }
+      
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('404')) {
+        return null;
+      }
+      throw error;
     }
   }
 }

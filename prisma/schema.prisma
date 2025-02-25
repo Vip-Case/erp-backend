@@ -1059,10 +1059,12 @@ model Order {
   store             Store                @relation(fields: [storeId], references: [id])
   cargos            OrderCargo[]
   items             OrderItem[]
+  orderInvoiceAddress OrderInvoiceAddress[]
 }
 
 model OrderInvoiceAddress {
   id             String   @id @default(uuid())
+  orderId        String
   address        String
   city           String
   district       String
@@ -1076,6 +1078,7 @@ model OrderInvoiceAddress {
   transactionId  String?
   billingOrders  Order[]  @relation("BillingAddress")
   shippingOrders Order[]  @relation("ShippingAddress")
+  order          Order    @relation(fields: [orderId], references: [id])
 }
 
 model OrderCargo {
@@ -1092,16 +1095,48 @@ model OrderCargo {
 }
 
 model OrderItem {
-  id          String     @id @default(cuid())
-  orderId     String
-  stockCardId String?
-  quantity    Int
-  unitPrice   Decimal    @db.Decimal(15, 4)
-  totalPrice  Decimal    @db.Decimal(15, 4)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  order       Order      @relation(fields: [orderId], references: [id])
-  stockCard   StockCard? @relation(fields: [stockCardId], references: [id])
+  id                      String              @id @default(cuid())
+  orderId                 String
+  stockCardId             String?
+  quantity                Int
+  unitPrice              Decimal             @db.Decimal(15, 4)
+  totalPrice             Decimal             @db.Decimal(15, 4)
+  productName            String
+  productCode            BigInt              // Int yerine BigInt kullanıyoruz
+  barcode               String?
+  merchantSku            String?             // Opsiyonel yaptık
+  productSize           String?
+  productColor          String?
+  productOrigin         String?
+  salesCampaignId       BigInt?             // Bunu da BigInt yapalım
+  merchantId            BigInt?              // Bunu da BigInt yapalım
+  amount                Decimal?             @db.Decimal(15, 2)
+  discount              Decimal?             @db.Decimal(15, 2)
+  tyDiscount            Decimal?             @db.Decimal(15, 2)
+  vatBaseAmount         Decimal?             @db.Decimal(15, 2)
+  currencyCode          String?
+  sku                   String?
+  orderLineId           BigInt?              // Bunu da BigInt yapalım
+  orderLineItemStatusName String?
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  order                 Order               @relation(fields: [orderId], references: [id])
+  stockCard             StockCard?          @relation(fields: [stockCardId], references: [id])
+  discountDetails       OrderItemDiscount[]
+}
+
+model OrderItemDiscount {
+  id                String    @id @default(cuid())
+  orderItemId       String
+  lineItemPrice     Decimal   @db.Decimal(15, 2)
+  lineItemDiscount  Decimal   @db.Decimal(15, 2)
+  lineItemTyDiscount Decimal  @db.Decimal(15, 2)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  orderItem         OrderItem @relation(fields: [orderItemId], references: [id])
+
 }
 
 model MarketPlace {

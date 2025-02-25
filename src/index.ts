@@ -79,7 +79,7 @@ app.onRequest(async (ctx) => {
     ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
     return; // İleri işlem yapmadan middleware'den çık
   }
-  const publicRoutes = ["/auth/login", "/auth/register", "/webhook/order-created", "/webhook/order-update"];
+  const publicRoutes = ["/auth/login", "/auth/register", "/webhook/order-created", "/webhook/order-update", "/api/webhook-handler"];
   const route = new URL(ctx.request.url).pathname;
 
   // Public route kontrolü
@@ -118,7 +118,7 @@ app.onRequest(async (ctx) => {
     return; // İleri işlem yapmadan middleware'den çık
   }
   const route = new URL(ctx.request.url).pathname; // Geçerli rota
-  const publicRoutes = ["/auth/login", "/auth/register", "/webhook/order-created", "/webhook/order-update"]; // Public rotalar
+  const publicRoutes = ["/auth/login", "/auth/register", "/webhook/order-created", "/webhook/order-update", "/api/webhook-handler"]; // Public rotalar
 
   // Public rotalarda izin kontrolü yapılmaz
   if (publicRoutes.includes(route)) {

@@ -49,7 +49,54 @@ const TrendyolRoutes = (app: Elysia) => {
   app.get("/api/trendyol/match-status", async (ctx) => {
     return await TrendyolController.checkMatchStatus(ctx);
   });
-  
+
+  // Webhook routes
+  app.post("/api/trendyol/webhooks/create", async (ctx) => {
+    return await TrendyolController.createWebhook(ctx);
+  });
+
+  app.get("/api/trendyol/webhooks", async (ctx) => {
+    return await TrendyolController.listWebhooks(ctx);
+  });
+
+  // Webhook silme endpoint'i
+  app.delete("/api/trendyol/webhooks/:webhookId", async (ctx) => {
+    return await TrendyolController.deleteWebhook(ctx);
+  });
+
+  app.post("/api/trendyol/sync/orders", async (ctx) => {
+    return await TrendyolController.syncOrders(ctx);
+  });
+
+  // Yeni eklenen sipariş güncelleme route'ları
+  app.put("/api/trendyol/orders/:orderNumber", async (ctx) => {
+    return await TrendyolController.updateOrder(ctx);
+  });
+
+  app.post("/api/trendyol/orders/update-recent", async (ctx) => {
+    return await TrendyolController.updateRecentOrders(ctx);
+  });
+
+  // Webhook handler endpoint'i
+  app.post("/api/webhook-handler", async (ctx) => {
+    // Gelen isteği logla
+    console.log('Webhook request received');
+    console.log('Headers:', JSON.stringify(ctx.headers, null, 2));
+    console.log('Body:', JSON.stringify(ctx.body, null, 2));
+    
+    // Basic Auth kontrolü
+    const authHeader = ctx.headers.authorization;
+    if (authHeader && authHeader.startsWith('Basic ')) {
+      const base64Credentials = authHeader.split(' ')[1];
+      const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+      const [username, password] = credentials.split(':');
+      
+      console.log(`Webhook auth: ${username}:${password.substring(0, 2)}***`);
+    }
+    
+    return await TrendyolController.handleWebhookEvent(ctx);
+  });
+
   return app;
 };
 

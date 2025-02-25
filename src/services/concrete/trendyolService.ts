@@ -1,6 +1,7 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { TrendyolAdapter } from "../../adapters/trendyolAdapter";
 import { PrismaClient, Prisma, MarketPlaceCategories, MarketPlaceProducts, StockUnits, ProductType } from "@prisma/client";
+import { TrendyolOrder, TrendyolOrderLine } from "../../adapters/types";
 
 const prisma = new PrismaClient();
 
@@ -165,82 +166,152 @@ export class TrendyolService {
 
   async syncCategories(): Promise<void> {
     await this.initialize();
-    const batchSize = 100;
-    let page = 0;
 
-    while (true) {
-      const response = await this.retryOperation(() =>
-        this.trendyol.getCategories(page, 1000)
-      );
+    try {
+        const response = await this.retryOperation(() =>
+            this.trendyol.getCategories()
+        );
 
-      if (!response.categories?.length) break;
+        if (!response.categories?.length) {
+            console.log('Kategori bulunamadı');
+            return;
+        }
 
-      const categoryArray = response.categories;
-      for (let i = 0; i < categoryArray.length; i += batchSize) {
-        const batch = categoryArray.slice(i, i + batchSize);
+        // Tüm kategorileri düzleştirip parent-child ilişkisini koru
+        const flattenCategories = (
+            categories: TrendyolCategory[],
+            parentId: string | null = null
+        ): { id: string; name: string; parentId: string | null }[] => {
+            return categories.reduce((acc: any[], category) => {
+                acc.push({
+                    id: category.id.toString(),
+                    name: category.name,
+                    parentId: parentId
+                });
 
-        await prisma.$transaction(async (tx) => {
-          for (const category of batch) {
-            // Ana kategori kontrolü ve ilişkilendirme
-            let parentCategoryId = null;
-            if (category.parentId) {
-              const parentCategory = await this.findOrCreateCategory(tx, category.parentId);
-              if (parentCategory) {
-                parentCategoryId = parentCategory.id;
-              }
-            }
+                if (category.subCategories?.length) {
+                    acc.push(...flattenCategories(category.subCategories, category.id.toString()));
+                }
 
-            // Önce mevcut kategoriyi ara
-            const existingCategory = await tx.marketPlaceCategories.findFirst({
-              where: { marketPlaceCategoryId: category.id.toString() }
+                return acc;
+            }, []);
+        };
+
+        const allCategories = flattenCategories(response.categories);
+        console.log(`${allCategories.length} kategori işlenecek`);
+
+        // Kategorileri kaydet
+        for (const category of allCategories) {
+            // 1. MarketPlaceCategories için işlem
+            const existingMPCategory = await prisma.marketPlaceCategories.findFirst({
+                where: { marketPlaceCategoryId: category.id }
             });
 
-            if (existingCategory) {
-              // Varsa güncelle
-              await tx.marketPlaceCategories.update({
-                where: { id: existingCategory.id },
-                data: {
-                  categoryName: category.name,
-                  parentCategory: parentCategoryId ? {
-                    connect: { id: parentCategoryId }
-                  } : undefined
-                },
-                include: {
-                  parentCategory: true,
-                  subCategories: true,
-                  products: true
-                }
-              });
-            } else {
-              // Yoksa oluştur
-              await tx.marketPlaceCategories.create({
-                data: {
-                  marketPlaceCategoryId: category.id.toString(),
-                  categoryName: category.name,
-                  parentCategory: parentCategoryId ? {
-                    connect: {
-                      id: parentCategoryId
+            const parentMPCategory = category.parentId 
+                ? await prisma.marketPlaceCategories.findFirst({
+                    where: { marketPlaceCategoryId: category.parentId }
+                  })
+                : null;
+
+            let mpCategory;
+            if (existingMPCategory) {
+                mpCategory = await prisma.marketPlaceCategories.update({
+                    where: { id: existingMPCategory.id },
+                    data: {
+                        categoryName: category.name,
+                        marketPlaceCategoryParentId: parentMPCategory?.id || null
                     }
-                  } : undefined
-                },
-                include: {
-                  parentCategory: true,
-                  subCategories: true,
-                  products: true
-                }
-              });
+                });
+            } else {
+                mpCategory = await prisma.marketPlaceCategories.create({
+                    data: {
+                        categoryName: category.name,
+                        marketPlaceCategoryId: category.id,
+                        marketPlaceCategoryParentId: parentMPCategory?.id || null
+                    }
+                });
             }
-          }
-        }, { timeout: 20000 });
 
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+            // 2. StockCardCategory için işlem
+            const categoryCode = `CAT-${category.id}`;
+            const categoryName = `${category.name}_${category.id}`; // Benzersiz isim oluştur
 
-      if (page >= response.totalPages - 1) break;
-      page++;
+            const existingStockCategory = await prisma.stockCardCategory.findFirst({
+                where: { categoryCode }
+            });
+
+            const parentStockCategory = category.parentId 
+                ? await prisma.stockCardCategory.findFirst({
+                    where: { categoryCode: `CAT-${category.parentId}` }
+                  })
+                : null;
+
+            if (existingStockCategory) {
+                await prisma.stockCardCategory.update({
+                    where: { id: existingStockCategory.id },
+                    data: {
+                        categoryName: categoryName,
+                        parentCategoryId: parentStockCategory?.id || null
+                    }
+                });
+            } else {
+                await prisma.stockCardCategory.create({
+                    data: {
+                        categoryName: categoryName,
+                        categoryCode: categoryCode,
+                        parentCategoryId: parentStockCategory?.id || null
+                    }
+                });
+            }
+
+            // StockCardCategoryItem ilişkisini oluştur
+            if (mpCategory) {
+                const marketPlaceProducts = await prisma.marketPlaceProducts.findMany({
+                    where: {
+                        MarketPlaceCategories: {
+                            some: { id: mpCategory.id }
+                        }
+                    },
+                    select: { barcode: true }
+                });
+
+                const barcodes = marketPlaceProducts
+                    .map(p => p.barcode)
+                    .filter((barcode): barcode is string => barcode !== null);
+
+                const stockCards = await prisma.stockCard.findMany({
+                    where: {
+                        ProductMatch: {
+                            some: {
+                                barcode: {
+                                    in: barcodes
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // StockCardCategoryItem oluştur
+                for (const stockCard of stockCards) {
+                    if (existingStockCategory) {
+                        await prisma.stockCardCategoryItem.create({
+                            data: {
+                                stockCardId: stockCard.id,
+                                categoryId: existingStockCategory.id
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        console.log('Kategoriler güncellendi');
+        await this.loadCaches();
+
+    } catch (error) {
+        console.error('Kategori senkronizasyon hatası:', error);
+        throw error;
     }
-
-    await this.loadCaches();
   }
 
   private async findOrCreateCategory(tx: any, categoryId: number): Promise<any> {
@@ -263,45 +334,38 @@ export class TrendyolService {
 
     if (!trendyolCategory) return null;
 
-    // Mevcut kategoriyi kontrol et
+    // Önce kategoriyi bul
     const existingCategory = await tx.marketPlaceCategories.findFirst({
-      where: { marketPlaceCategoryId: categoryId.toString() }
+      where: { marketPlaceCategoryId: trendyolCategory.id }
     });
 
     if (existingCategory) {
-      return tx.marketPlaceCategories.update({
+      await tx.marketPlaceCategories.update({
         where: { id: existingCategory.id },
         data: {
           categoryName: trendyolCategory.name,
-          parentCategory: trendyolCategory.parentId ? {
-            connect: {
-              marketPlaceCategoryId: trendyolCategory.parentId.toString()
-            }
-          } : undefined
-        },
-        include: {
-          parentCategory: true,
-          subCategories: true
+          marketPlaceCategoryParentId: trendyolCategory.parentId 
+            ? (await tx.marketPlaceCategories.findFirst({
+                where: { marketPlaceCategoryId: trendyolCategory.parentId }
+              }))?.id 
+            : null
+        }
+      });
+    } else {
+      await tx.marketPlaceCategories.create({
+        data: {
+          categoryName: trendyolCategory.name,
+          marketPlaceCategoryId: trendyolCategory.id,
+          marketPlaceCategoryParentId: trendyolCategory.parentId 
+            ? (await tx.marketPlaceCategories.findFirst({
+                where: { marketPlaceCategoryId: trendyolCategory.parentId }
+              }))?.id 
+            : null
         }
       });
     }
 
-    return tx.marketPlaceCategories.create({
-      data: {
-        marketPlaceCategoryId: categoryId.toString(),
-        categoryName: trendyolCategory.name,
-        parentCategory: trendyolCategory.parentId ? {
-          connect: {
-            marketPlaceCategoryId: trendyolCategory.parentId.toString()
-          }
-        } : undefined
-      },
-      include: {
-        parentCategory: true,
-        subCategories: true,
-        products: true
-      }
-    });
+    return trendyolCategory;
   }
 
   private async findOrCreateBrand(tx: any, brandId: number): Promise<any> {
@@ -449,9 +513,7 @@ export class TrendyolService {
             marketPlaceAttributes: {
               deleteMany: {},
               create: product.attributes?.map(attr => ({
-                attributeMarketPlaceId: attr.attributeId.toString(),
                 attributeName: attr.attributeName || null,
-                valueMarketPlaceId: attr.attributeValueId?.toString(),
                 valueName: attr.customAttributeValue || null
               })) || []
             }
@@ -476,9 +538,7 @@ export class TrendyolService {
             },
             marketPlaceAttributes: {
               create: product.attributes?.map(attr => ({
-                attributeMarketPlaceId: attr.attributeId.toString(),
                 attributeName: attr.attributeName || null,
-                valueMarketPlaceId: attr.attributeValueId?.toString(),
                 valueName: attr.customAttributeValue || null
               })) || []
             },
@@ -945,91 +1005,114 @@ export class TrendyolService {
     }
   }
 
-  public async updateTrendyolStock(stockCardWarehouseId: string): Promise<void> {
+  public async updateStock(barcode: string, quantity: number, isTempQuantity: boolean = false) {
     try {
-      const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
-        where: { id: stockCardWarehouseId },
-        include: {
-          stockCard: {
-            include: {
-              barcodes: true,
-              ProductMatch: true
+        let stockCard = await prisma.stockCard.findFirst({
+            where: {
+                barcodes: {
+                    some: { barcode: barcode }
+                }
             }
-          },
-          warehouse: true
+        });
+
+        if (!stockCard) {
+            throw new Error(`StockCard bulunamadı: ${barcode}`);
         }
-      });
 
-      if (!stockCardWarehouse) {
-        throw new Error('StockCardWarehouse bulunamadı');
-      }
+        const store = await prisma.store.findUnique({
+            where: { id: this.storeId },
+            include: { warehouse: true }
+        });
 
-      if (!stockCardWarehouse.stockCard?.barcodes?.length) {
-        throw new Error('Ürün barkodu bulunamadı');
-      }
-
-      const productMatch = stockCardWarehouse.stockCard.ProductMatch?.[0];
-      if (!productMatch) {
-        throw new Error('ProductMatch bulunamadı');
-      }
-
-      const store = await prisma.store.findUnique({
-        where: { id: this.storeId }
-      });
-
-      if (!store?.apiCredentials) {
-        throw new Error('Store API kimlik bilgileri bulunamadı');
-      }
-
-      const barcode = stockCardWarehouse.stockCard.barcodes[0].barcode;
-
-      // ProductMatch'den stok miktarı kontrolü
-      const quantity = productMatch.isTempQuantity && productMatch.tempQuantity !== null
-        ? new Prisma.Decimal(productMatch.tempQuantity)
-        : stockCardWarehouse.quantity || new Prisma.Decimal(0);
-
-      this.trendyol = new TrendyolAdapter(JSON.parse(store.apiCredentials));
-
-      const MAX_RETRIES = 2;
-      const RETRY_DELAYS = [1000, 3000];
-
-      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-          console.log(`Stok güncelleme denemesi ${attempt + 1}/${MAX_RETRIES}`);
-
-          await this.trendyol.updateProductStock({
-            items: [{
-              barcode: barcode,
-              quantity: Number(quantity)
-            }]
-          });
-
-          console.log(`Stok başarıyla güncellendi: ${barcode}, Miktar: ${quantity}`);
-          return;
-
-        } catch (error: any) {
-          console.error(`Stok güncelleme hatası (Deneme ${attempt + 1}):`, {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status
-          });
-
-          if (attempt < MAX_RETRIES - 1) {
-            const delay = RETRY_DELAYS[attempt];
-            console.log(`${delay}ms bekleniyor...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          } else {
-            throw new Error(`Stok güncelleme işlemi başarısız: ${error.message}`);
-          }
+        if (!store?.warehouse) {
+            throw new Error('Store için warehouse tanımlanmamış');
         }
-      }
 
-    } catch (error: any) {
-      console.error('Trendyol stok güncelleme hatası:', error);
-      throw error;
+        // Warehouse kaydını güncelle
+        const existingWarehouse = await prisma.stockCardWarehouse.findFirst({
+            where: {
+                stockCardId: stockCard.id,
+                warehouseId: store.warehouse.id
+            }
+        });
+
+        if (existingWarehouse) {
+            await prisma.stockCardWarehouse.update({
+                where: { id: existingWarehouse.id },
+                data: { quantity: new Prisma.Decimal(isTempQuantity ? 0 : quantity) }
+            });
+        } else {
+            await prisma.stockCardWarehouse.create({
+                data: {
+                    stockCardId: stockCard.id,
+                    warehouseId: store.warehouse.id,
+                    quantity: new Prisma.Decimal(isTempQuantity ? 0 : quantity)
+                }
+            });
+        }
+
+        // ProductMatch güncelle
+        const productMatch = await prisma.productMatch.findFirst({
+            where: { barcode: barcode }
+        });
+
+        if (productMatch && isTempQuantity) {
+            await prisma.productMatch.update({
+                where: { id: productMatch.id },
+                data: {
+                    isTempQuantity: true,
+                    tempQuantity: quantity
+                }
+            });
+        }
+
+        console.log(`Stok güncellendi - Barkod: ${barcode}, Miktar: ${quantity}, Geçici: ${isTempQuantity}`);
+    } catch (error) {
+        console.error(`Stok güncelleme hatası - Barkod: ${barcode}:`, error);
+        throw error;
     }
   }
 
+  public async updateTrendyolStock(stockCardWarehouseId: string): Promise<void> {
+    try {
+        const stockCardWarehouse = await prisma.stockCardWarehouse.findUnique({
+            where: { id: stockCardWarehouseId },
+            include: {
+                stockCard: {
+                    include: {
+                        barcodes: true,
+                        ProductMatch: true
+                    }
+                }
+            }
+        });
+
+        if (!stockCardWarehouse?.stockCard?.barcodes?.length) {
+            throw new Error('Ürün bilgileri bulunamadı');
+        }
+
+        const productMatch = stockCardWarehouse.stockCard.ProductMatch?.[0];
+        const barcode = stockCardWarehouse.stockCard.barcodes[0].barcode;
+
+        // Stok miktarı kontrolü
+        const quantity = productMatch?.isTempQuantity && productMatch.tempQuantity !== null
+            ? new Prisma.Decimal(productMatch.tempQuantity)
+            : stockCardWarehouse.quantity || new Prisma.Decimal(0);
+
+        await this.trendyol.updateProductStock({
+            items: [{
+                barcode: barcode,
+                quantity: Number(quantity)
+            }]
+        });
+
+        console.log(`Stok başarıyla güncellendi: ${barcode}, Miktar: ${quantity}`);
+    } catch (error) {
+        console.error('Trendyol stok güncelleme hatası:', error);
+        throw error;
+    }
+  }
+  
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -1061,4 +1144,658 @@ export class TrendyolService {
     return `BRD${brandName.substring(0, 3).toUpperCase()}${Date.now()}`;
   }
 
+  async createWebhook(data: {
+    url: string;
+    username: string; 
+    password: string;
+    authenticationType: "BASIC_AUTHENTICATION";
+    subscribedStatuses?: string[];
+  }) {
+    await this.initialize();
+    
+    try {
+      // Varsayılan durumları ekleyelim
+      const subscribedStatuses = data.subscribedStatuses || [
+        "CREATED", "PICKING", "INVOICED", "SHIPPED", "CANCELLED", 
+        "DELIVERED", "UNDELIVERED", "RETURNED", "UNSUPPLIED", "UNPACKED", "AT_COLLECTION_POINT", "VERIFIED"
+      ];
+      
+      console.log(`Webhook oluşturma isteği: ${data.url}`);
+      
+      // Retry mekanizması ekleyelim
+      let retries = 3;
+      let result;
+      
+      while (retries > 0) {
+        try {
+          result = await this.trendyol.createWebhook({
+            url: data.url,
+            username: data.username,
+            password: data.password,
+            authenticationType: data.authenticationType,
+            subscribedStatuses
+          });
+          break; // Başarılı olursa döngüden çık
+        } catch (error: any) {
+          retries--;
+          if (retries === 0) throw error;
+          
+          console.log(`Webhook oluşturma başarısız, tekrar deneniyor (${retries} deneme kaldı): ${error.message}`);
+          await this.delay(2000); // 2 saniye bekle
+        }
+      }
+      
+      console.log('Webhook created:', result);
+      return result;
+    } catch (error) {
+      console.error('Webhook oluşturma hatası:', error);
+      throw error;
+    }
+  }
+
+  async listWebhooks() {
+    try {
+      await this.initialize();
+      const webhooks = await this.trendyol.getWebhooks();
+      return webhooks;
+    } catch (error) {
+      console.error('Get webhooks error:', error);
+      throw error;
+    }
+  }
+
+  async updateWebhook(id: string, data: {
+    name?: string;
+    url?: string;
+    eventType?: string;
+    status?: 'ACTIVE' | 'PASSIVE';
+  }) {
+    try {
+      await this.initialize();
+      const result = await this.trendyol.updateWebhook(id, data);
+      return result;
+    } catch (error) {
+      console.error('Update webhook error:', error);
+      throw error;
+    }
+  }
+
+  async deleteWebhook(webhookId: string): Promise<void> {
+    await this.initialize();
+    
+    try {
+      // Zaman aşımı süresini artıralım
+      const timeout = 30000; // 30 saniye
+      
+      // Retry mekanizması ekleyelim
+      let retries = 3;
+      let success = false;
+      
+      while (retries > 0 && !success) {
+        try {
+          await this.trendyol.deleteWebhook(webhookId, timeout);
+          success = true;
+          console.log(`Webhook silindi: ${webhookId}`);
+        } catch (error: any) {
+          retries--;
+          if (retries === 0) throw error;
+          
+          console.log(`Webhook silme başarısız, tekrar deneniyor (${retries} deneme kaldı): ${error.message}`);
+          await this.delay(2000); // 2 saniye bekle
+        }
+      }
+    } catch (error) {
+      console.error(`Webhook silme hatası (${webhookId}):`, error);
+      throw error;
+    }
+  }
+
+  async syncOrders(): Promise<void> {
+    try {
+      await this.initialize();
+      
+      const store = await prisma.store.findUniqueOrThrow({
+        where: { id: this.storeId }
+      });
+
+      let totalProcessed = 0;
+      let totalErrors = 0;
+
+      // Tüm sipariş statülerini tanımlayalım
+      const orderStatuses = [
+        'Created',       // Gönderime hazır
+        'Picking',       // Toplama/paketleme aşamasında
+        'Invoiced',      // Faturası kesilmiş
+        'Shipped',       // Kargoya verilmiş
+        'AtCollectionPoint', // PUDO noktasında
+        'Cancelled',     // İptal edilmiş
+        'UnPacked',      // Paketi bölünmüş
+        'Delivered',     // Teslim edilmiş
+        'UnDelivered',   // Teslim edilememiş
+        'UnDeliveredAndReturned', // İade edilmiş
+        'Returned',      // İade
+        'Repack',        // Yeniden paketleme
+        'UnSupplied'     // Tedarik edilememiş
+      ];
+
+      const size = 20;
+
+      for (const status of orderStatuses) {
+        console.log(`\n${status} durumundaki siparişler alınıyor...`);
+        
+        let page = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const response = await this.trendyol.getOrders(
+            status, 
+            size, 
+            page,
+            'PackageLastModifiedDate',  // Son güncellemeye göre sırala
+            'DESC'                      // Yeniden eskiye
+          );
+
+          if (!response.content || response.content.length === 0) {
+            console.log(`${status} durumunda sipariş yok`);
+            break;
+          }
+
+          console.log(`${response.content.length} sipariş bulundu (Sayfa ${page + 1}/${response.totalPages})`);
+
+          for (const orderData of response.content) {
+            try {
+              await prisma.$transaction(async (tx) => {
+                await this.processOrder(tx, orderData, store.id);
+              });
+              console.log(`Sipariş işlendi: ${orderData.orderNumber} (${status})`);
+              totalProcessed++;
+            } catch (err: any) {
+              if (err.message?.includes('Merchant SKU eksik')) {
+                console.warn(`Sipariş işlenirken uyarı (${orderData.orderNumber}): ${err.message}`);
+                totalProcessed++;
+              } else {
+                console.error(`Sipariş işleme hatası (${orderData.orderNumber}):`, err);
+                totalErrors++;
+              }
+            }
+          }
+
+          page++;
+          hasMore = page < response.totalPages;
+
+          // Rate limiting - Her sayfa sonrası bekle
+          await this.delay(5000);
+        }
+      }
+
+      console.log(`\nSipariş senkronizasyonu tamamlandı:
+        Toplam İşlenen: ${totalProcessed}
+        Başarısız: ${totalErrors}
+      `);
+
+    } catch (error) {
+      console.error('Sipariş senkronizasyon hatası:', error);
+      throw error;
+    }
+  }
+
+  private async processOrder(
+    tx: Prisma.TransactionClient,
+    orderData: TrendyolOrder,
+    storeId: string
+  ): Promise<void> {
+    try {
+      // Mevcut siparişi kontrol et
+      const existingOrder = await tx.order.findFirst({
+        where: {
+          platformOrderId: orderData.orderNumber,
+          platform: 'Trendyol'
+        },
+        include: {
+          items: true,
+          cargos: true
+        }
+      });
+
+      if (existingOrder) {
+        // Durum değişmişse (örn: 'Picking' -> 'Shipped')
+        if (existingOrder.status !== orderData.status) {
+          await tx.order.update({
+            where: { id: existingOrder.id },
+            data: {
+              status: orderData.status,
+              updatedAt: new Date()
+            }
+          });
+          console.log(`Sipariş durumu güncellendi: ${orderData.orderNumber} -> ${orderData.status}`);
+        }
+
+        // Kargo bilgisi değiştiyse güncelle
+        if (orderData.cargoTrackingNumber) {
+          const currentCargo = existingOrder.cargos[0];
+          const newTrackingNumber = orderData.cargoTrackingNumber.toString();
+
+          if (!currentCargo || currentCargo.trackingNumber !== newTrackingNumber) {
+            // Eski kargo kaydını sil
+            if (currentCargo) {
+              await tx.orderCargo.delete({
+                where: { id: currentCargo.id }
+              });
+            }
+
+            // Yeni kargo kaydı ekle
+            await tx.orderCargo.create({
+              data: {
+                orderId: existingOrder.id,
+                name: orderData.cargoProviderName || 'Trendyol Kargo',
+                shortName: orderData.cargoProviderName?.split(' ')[0] || 'TY',
+                trackingNumber: newTrackingNumber,
+                deliveredAt: orderData.status === 'Delivered' ? new Date() : null
+              }
+            });
+
+            console.log(`Kargo bilgisi güncellendi: ${orderData.orderNumber}`);
+          }
+        }
+
+        return; // Diğer bilgiler aynı kalır
+      }
+
+      // Önce siparişi oluştur
+      const order = await tx.order.create({
+        data: {
+          platformOrderId: orderData.orderNumber,
+          platform: 'Trendyol',
+          customerId: orderData.customerId.toString(),
+          status: orderData.status,
+          currency: orderData.currencyCode || 'TRY',
+          orderDate: new Date(orderData.orderDate),
+          totalPrice: Number(orderData.totalPrice),
+          deliveryType: orderData.deliveryAddressType,
+          cargoCompany: orderData.cargoProviderName,
+          storeId: storeId,
+        }
+      });
+
+      // Fatura adresini oluştur
+      const billingAddress = await tx.orderInvoiceAddress.create({
+        data: {
+          orderId: order.id,
+          address: orderData.invoiceAddress.address1,
+          city: orderData.invoiceAddress.city,
+          district: orderData.invoiceAddress.district,
+          postalCode: orderData.invoiceAddress.postalCode,
+          country: orderData.invoiceAddress.countryCode,
+          fullName: orderData.invoiceAddress.fullName,
+          email: orderData.invoiceAddress.email || null,
+          paymentMethod: 'Individual'
+        }
+      });
+
+      // Teslimat adresi
+      const shippingAddress = await tx.orderInvoiceAddress.create({
+        data: {
+          orderId: order.id,
+          address: orderData.shipmentAddress.address1,
+          city: orderData.shipmentAddress.city,
+          district: orderData.shipmentAddress.district,
+          postalCode: orderData.shipmentAddress.postalCode,
+          country: orderData.shipmentAddress.countryCode,
+          fullName: orderData.shipmentAddress.fullName,
+          email: orderData.shipmentAddress.email || null,
+          paymentMethod: 'Individual'
+        }
+      });
+
+      // Sipariş adres ilişkilerini güncelle
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          billingAddressId: billingAddress.id,
+          shippingAddressId: shippingAddress.id
+        }
+      });
+
+      // Sipariş kalemlerini oluştur
+      for (const line of orderData.lines) {
+        try {
+          this.validateOrderLine(line);
+          const orderItem = await tx.orderItem.create({
+            data: {
+              orderId: order.id,
+              quantity: line.quantity,
+              unitPrice: new Prisma.Decimal(line.price),
+              totalPrice: new Prisma.Decimal(line.price * line.quantity),
+              stockCardId: null,
+              productName: line.productName,
+              productCode: BigInt(line.productCode),
+              barcode: line.barcode || null,
+              merchantSku: line.merchantSku || null,
+              productSize: line.productSize || null,
+              productColor: line.productColor || null,
+              productOrigin: line.productOrigin || null,
+              salesCampaignId: line.salesCampaignId ? BigInt(line.salesCampaignId) : null,
+              merchantId: line.merchantId ? BigInt(line.merchantId) : null,
+              amount: line.amount ? new Prisma.Decimal(line.amount) : null,
+              discount: line.discount ? new Prisma.Decimal(line.discount) : null,
+              tyDiscount: line.tyDiscount ? new Prisma.Decimal(line.tyDiscount) : null,
+              vatBaseAmount: line.vatBaseAmount ? new Prisma.Decimal(line.vatBaseAmount) : null,
+              currencyCode: line.currencyCode || 'TRY',
+              sku: line.sku || null,
+              orderLineId: line.id ? BigInt(line.id) : null,
+              orderLineItemStatusName: line.orderLineItemStatusName || null,
+              
+              discountDetails: {
+                create: line.discountDetails?.map(detail => ({
+                  lineItemPrice: new Prisma.Decimal(detail.lineItemPrice),
+                  lineItemDiscount: new Prisma.Decimal(detail.lineItemDiscount),
+                  lineItemTyDiscount: new Prisma.Decimal(detail.lineItemTyDiscount)
+                })) || []
+              }
+            }
+          });
+
+          console.log(`Ürün detayları kaydedildi: 
+            Ürün Adı: ${line.productName}
+            Ürün Kodu: ${line.productCode}
+            Barkod: ${line.barcode || 'Yok'}
+            Merchant SKU: ${line.merchantSku || 'Yok'}
+            Durum: ${line.orderLineItemStatusName || 'Belirtilmemiş'}
+          `);
+        } catch (error: any) {
+          console.error(`Ürün kaydı hatası:
+            Ürün: ${line.productName}
+            Hata: ${error.message}
+          `);
+          throw error;
+        }
+      }
+
+      // Kargo bilgisi varsa ekle
+      if (orderData.cargoTrackingNumber) {
+        await tx.orderCargo.create({
+          data: {
+            orderId: order.id,
+            name: orderData.cargoProviderName || 'Trendyol Kargo',
+            shortName: orderData.cargoProviderName?.split(' ')[0] || 'TY',
+            trackingNumber: orderData.cargoTrackingNumber.toString()
+          }
+        });
+      }
+
+      console.log(`Sipariş oluşturuldu: ${order.platformOrderId}`);
+
+      console.log(`Sipariş detayları:
+        Sipariş No: ${orderData.orderNumber}
+        Müşteri: ${orderData.customerId}
+        Durum: ${orderData.status}
+        Toplam: ${orderData.totalPrice} ${orderData.currencyCode}
+        Kargo: ${orderData.cargoProviderName || 'Belirtilmemiş'}
+        Takip No: ${orderData.cargoTrackingNumber || 'Yok'}
+        Ürün Sayısı: ${orderData.lines.length}
+      `);
+    } catch (error) {
+      console.error(`Sipariş işleme hatası (${orderData.orderNumber}):`, error);
+      throw error;
+    }
+  }
+
+  private validateOrderLine(line: TrendyolOrderLine): void {
+    if (!line.productCode) {
+      throw new Error(`Ürün kodu eksik: ${line.productName}`);
+    }
+
+    if (!line.price || line.price <= 0) {
+      throw new Error(`Geçersiz fiyat: ${line.productName}`);
+    }
+  }
+
+  async updateOrderStatus(orderNumber: string): Promise<void> {
+    await this.initialize();
+    
+    try {
+      const orderDetails = await this.trendyol.getOrderById(orderNumber);
+      
+      if (!orderDetails) {
+        throw new Error(`Sipariş bulunamadı: ${orderNumber}`);
+      }
+      
+      // Siparişi veritabanında bul
+      const order = await prisma.order.findFirst({
+        where: {
+          platformOrderId: orderNumber,
+          platform: 'Trendyol'
+        }
+      });
+      
+      if (!order) {
+        // Sipariş yoksa, yeni sipariş oluştur
+        await this.syncOrderById(orderNumber);
+        return;
+      }
+      
+      // Sipariş durumunu güncelle
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: orderDetails.status,
+          updatedAt: new Date()
+        }
+      });
+      
+      // Kargo bilgisi varsa güncelle
+      if (orderDetails.cargoTrackingNumber) {
+        const existingCargo = await prisma.orderCargo.findFirst({
+          where: { orderId: order.id }
+        });
+        
+        if (existingCargo) {
+          await prisma.orderCargo.update({
+            where: { id: existingCargo.id },
+            data: {
+              trackingNumber: orderDetails.cargoTrackingNumber.toString()
+            }
+          });
+        } else {
+          await prisma.orderCargo.create({
+            data: {
+              orderId: order.id,
+              name: orderDetails.cargoProviderName || 'Trendyol Kargo',
+              shortName: orderDetails.cargoProviderName?.split(' ')[0] || 'TY',
+              trackingNumber: orderDetails.cargoTrackingNumber.toString()
+            }
+          });
+        }
+      }
+      
+      console.log(`Sipariş durumu güncellendi: ${orderNumber}, Yeni durum: ${orderDetails.status}`);
+    } catch (error) {
+      console.error(`Sipariş durum güncelleme hatası (${orderNumber}):`, error);
+      throw error;
+    }
+  }
+
+  async syncOrderById(orderNumber: string): Promise<void> {
+    await this.initialize();
+    
+    try {
+      const orderDetails = await this.trendyol.getOrderById(orderNumber);
+      
+      if (!orderDetails) {
+        throw new Error(`Sipariş bulunamadı: ${orderNumber}`);
+      }
+      
+      // Önce siparişin zaten var olup olmadığını kontrol et
+      const existingOrder = await prisma.order.findFirst({
+        where: {
+          platformOrderId: orderNumber,
+          platform: 'Trendyol'
+        }
+      });
+      
+      if (existingOrder) {
+        // Sipariş zaten varsa, sadece durumunu güncelle
+        await prisma.order.update({
+          where: { id: existingOrder.id },
+          data: {
+            status: orderDetails.status,
+            updatedAt: new Date()
+          }
+        });
+        
+        console.log(`Sipariş güncellendi: ${orderNumber}, Durum: ${orderDetails.status}`);
+      } else {
+        // Sipariş yoksa, yeni sipariş oluştur
+        await prisma.$transaction(async (tx) => {
+          // Mevcut processOrderInTransaction metodunu kullan
+          await this.processOrderInTransaction(tx, orderDetails, this.storeId);
+        });
+        
+        console.log(`Yeni sipariş oluşturuldu: ${orderNumber}`);
+      }
+    } catch (error) {
+      console.error(`Sipariş senkronizasyon hatası (${orderNumber}):`, error);
+      throw error;
+    }
+  }
+
+  private async processOrderInTransaction(
+    tx: Prisma.TransactionClient,
+    orderData: TrendyolOrder,
+    storeId: string
+  ): Promise<void> {
+    // Önce siparişi oluştur
+    const order = await tx.order.create({
+      data: {
+        platformOrderId: orderData.orderNumber,
+        platform: 'Trendyol',
+        customerId: orderData.customerId.toString(),
+        status: orderData.status,
+        currency: orderData.currencyCode || 'TRY',
+        orderDate: new Date(Number(orderData.orderDate)),
+        totalPrice: Number(orderData.totalPrice),
+        deliveryType: orderData.deliveryAddressType,
+        cargoCompany: orderData.cargoProviderName,
+        storeId: storeId,
+      }
+    });
+
+    // Fatura ve teslimat adresleri
+    const [billingAddress, shippingAddress] = await Promise.all([
+      tx.orderInvoiceAddress.create({
+        data: {
+          orderId: order.id,
+          address: orderData.invoiceAddress.address1,
+          city: orderData.invoiceAddress.city,
+          district: orderData.invoiceAddress.district,
+          postalCode: orderData.invoiceAddress.postalCode,
+          country: orderData.invoiceAddress.countryCode,
+          fullName: orderData.invoiceAddress.fullName,
+          email: orderData.invoiceAddress.email || null,
+          paymentMethod: 'Individual'
+        }
+      }),
+      tx.orderInvoiceAddress.create({
+        data: {
+          orderId: order.id,
+          address: orderData.shipmentAddress.address1,
+          city: orderData.shipmentAddress.city,
+          district: orderData.shipmentAddress.district,
+          postalCode: orderData.shipmentAddress.postalCode,
+          country: orderData.shipmentAddress.countryCode,
+          fullName: orderData.shipmentAddress.fullName,
+          email: orderData.shipmentAddress.email || null,
+          paymentMethod: 'Individual'
+        }
+      })
+    ]);
+
+    // Sipariş adres ilişkilerini güncelle
+    await tx.order.update({
+      where: { id: order.id },
+      data: {
+        billingAddressId: billingAddress.id,
+        shippingAddressId: shippingAddress.id
+      }
+    });
+
+    // Sipariş kalemlerini oluştur
+    for (const line of orderData.lines) {
+      await tx.orderItem.create({
+        data: {
+          orderId: order.id,
+          quantity: line.quantity,
+          unitPrice: new Prisma.Decimal(line.price),
+          totalPrice: new Prisma.Decimal(line.price * line.quantity),
+          stockCardId: null,
+          productName: line.productName,
+          productCode: BigInt(line.productCode.toString()),
+          barcode: line.barcode || null,
+          merchantSku: line.merchantSku || null,
+          productSize: line.productSize || null,
+          productColor: line.productColor || null,
+          productOrigin: line.productOrigin || null,
+          salesCampaignId: line.salesCampaignId ? BigInt(line.salesCampaignId.toString()) : null,
+          merchantId: line.merchantId ? BigInt(line.merchantId.toString()) : null,
+          amount: line.amount ? new Prisma.Decimal(line.amount) : null,
+          discount: line.discount ? new Prisma.Decimal(line.discount) : null,
+          tyDiscount: line.tyDiscount ? new Prisma.Decimal(line.tyDiscount) : null,
+          vatBaseAmount: line.vatBaseAmount ? new Prisma.Decimal(line.vatBaseAmount) : null,
+          currencyCode: line.currencyCode || 'TRY',
+          sku: line.sku || null,
+          orderLineId: line.id ? BigInt(line.id.toString()) : null,
+          orderLineItemStatusName: line.orderLineItemStatusName || null
+        }
+      });
+    }
+
+    // Kargo bilgisi varsa ekle
+    if (orderData.cargoTrackingNumber) {
+      await tx.orderCargo.create({
+        data: {
+          orderId: order.id,
+          name: orderData.cargoProviderName || 'Trendyol Kargo',
+          shortName: orderData.cargoProviderName?.split(' ')[0] || 'TY',
+          trackingNumber: orderData.cargoTrackingNumber.toString()
+        }
+      });
+    }
+
+    console.log(`Sipariş oluşturuldu: ${order.platformOrderId}`);
+  }
+
+  async updateRecentOrders(hours: number = 24): Promise<void> {
+    try {
+      const recentOrders = await prisma.order.findMany({
+        where: {
+          platform: 'Trendyol',
+          createdAt: {
+            gte: new Date(Date.now() - hours * 60 * 60 * 1000)
+          },
+          status: {
+            notIn: ['Delivered', 'Cancelled', 'UnDelivered'] // Son duruma gelmiş siparişleri atlayalım
+          }
+        },
+        select: {
+          platformOrderId: true
+        }
+      });
+
+      console.log(`${recentOrders.length} sipariş güncellenecek`);
+
+      for (const order of recentOrders) {
+        try {
+          await this.updateOrderStatus(order.platformOrderId);
+          // Rate limit aşımını engellemek için bekle
+          await this.delay(300);
+        } catch (error) {
+          console.error(`Sipariş güncelleme hatası (${order.platformOrderId}):`, error);
+        }
+      }
+
+    } catch (error) {
+      console.error('Toplu sipariş güncelleme hatası:', error);
+      throw error;
+    }
+  }
 }
