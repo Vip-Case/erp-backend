@@ -498,18 +498,15 @@ export class StockCardService {
             );
           }
 
-          if (data.eFatura) {
-            await Promise.all(
-              data.eFatura.map((eFatura) =>
-                prisma.stockCardEFatura.create({
-                  data: {
-                    productCode: eFatura.productCode,
-                    productName: eFatura.productName,
-                    stockCardId: stockCardId,
-                  },
-                })
-              )
-            );
+          if (data.eFatura && data.eFatura.length > 0) {
+            const eFatura = data.eFatura[0]; // Artık sadece ilk elemanı alıyoruz çünkü one-to-one ilişki var
+            await prisma.stockCardEFatura.create({
+              data: {
+                productCode: eFatura.productCode,
+                productName: eFatura.productName,
+                stockCard: { connect: { id: stockCardId } },
+              },
+            });
           }
 
           if (data.manufacturers) {
@@ -765,7 +762,12 @@ export class StockCardService {
         if (data.stockCardWarehouse && data.stockCardWarehouse.length > 0) {
           for (const warehouseItem of data.stockCardWarehouse) {
             await prisma.stockCardWarehouse.upsert({
-              where: { id: warehouseItem.id },
+              where: {
+                stockCardId_warehouseId: {
+                  stockCardId: _id,
+                  warehouseId: warehouseItem.warehouseId,
+                },
+              },
               update: {
                 quantity: warehouseItem.quantity,
               },
@@ -780,21 +782,21 @@ export class StockCardService {
 
         // 3.3. eFatura (StockCardEFatura)
         if (data.eFatura && data.eFatura.length > 0) {
-          for (const eFaturaItem of data.eFatura) {
-            await prisma.stockCardEFatura.upsert({
-              where: { id: eFaturaItem.id },
-              update: {
-                productCode: eFaturaItem.productCode,
-                productName: eFaturaItem.productName,
-              },
-              create: {
-                id: eFaturaItem.id,
-                stockCardId: _id,
-                productCode: eFaturaItem.productCode,
-                productName: eFaturaItem.productName,
-              },
-            });
-          }
+          const eFatura = data.eFatura[0]; // Artık sadece ilk elemanı alıyoruz
+          await prisma.stockCardEFatura.upsert({
+            where: {
+              stockCardId: _id,
+            },
+            update: {
+              productCode: eFatura.productCode,
+              productName: eFatura.productName,
+            },
+            create: {
+              productCode: eFatura.productCode,
+              productName: eFatura.productName,
+              stockCard: { connect: { id: _id } },
+            },
+          });
         }
 
         // 3.4. Manufacturers (StockCardManufacturer)

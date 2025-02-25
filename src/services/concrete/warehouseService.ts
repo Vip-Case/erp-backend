@@ -1162,13 +1162,18 @@ export class WarehouseService {
                 ? "Siparis Hazirlama Cikisi"
                 : "Siparis Iade Girisi",
             quantity: new Prisma.Decimal(String(product.quantity)),
+            unitPrice: new Prisma.Decimal(String(productUnitPrice)),
+            totalPrice: new Prisma.Decimal(String(total)),
             productCode: stockCard?.productCode || "",
             warehouseCode: warehouse?.warehouseCode || "",
             branchCode: data.branchCode,
             currentCode: currentPriceList.currentCode,
             receiptNo: documentNo,
+            unitOfMeasure: stockCard.unit,
+            priceListId: currentPriceList.priceListId,
             createdBy: username,
             updatedBy: username,
+            updatedAt: new Date(),
           });
 
           // Fiş detayı bilgilerini hazırla
@@ -1200,6 +1205,12 @@ export class WarehouseService {
             }`,
             branch: { connect: { branchCode: data.branchCode } },
             company: { connect: { companyCode: branch.companyCode } },
+            dueDate: new Date(), // Vade tarihi şimdi olarak ayarlandı
+            stockCardPriceList: currentPriceList.priceListId
+              ? {
+                  connect: { id: currentPriceList.priceListId },
+                }
+              : undefined,
           },
         });
 
@@ -1220,6 +1231,8 @@ export class WarehouseService {
             updatedBy: username,
             currentId: data.currentId,
             currentMovementId: currentMovement.id,
+            receiptDate: new Date(),
+            isTransfer: false,
             ...(data.orderType === "prepare"
               ? { outWarehouse: warehouse.warehouseCode }
               : { inWarehouse: warehouse.warehouseCode }),
@@ -1257,7 +1270,7 @@ export class WarehouseService {
             currentMovement: { connect: { id: currentMovement.id } },
             createdByUser: { connect: { username: username } },
             updatedByUser: { connect: { username: username } },
-            status: data.orderType === "return" ? "Returned" : undefined,
+            status: data.orderType === "return" ? "Returned" : "Completed",
           },
           include: {
             warehouse: true,

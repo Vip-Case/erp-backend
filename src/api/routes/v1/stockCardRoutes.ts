@@ -4,9 +4,6 @@ import StockCardController from "../../controllers/stockCardController";
 export const StockCardRoutes = (app: Elysia) => {
   app.group("/stockcards", (app) =>
     app
-      .get("/createStockCard", StockCardController.getAllStockCards, {
-        tags: ["Stock Cards"],
-      }) //, body: StockCardPlainInputCreate, response: { body: StockCardPlain }
       .post("/create", StockCardController.createStockCard, {
         tags: ["Stock Cards"],
       }) //, response: { body: StockCardPlain }

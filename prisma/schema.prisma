@@ -193,23 +193,30 @@ model Role {
   updatedBy     String?
   createdByUser User?        @relation("RoleCreatedBy", fields: [createdBy], references: [username])
   updatedByUser User?        @relation("RoleUpdatedBy", fields: [updatedBy], references: [username])
-  permission    Permission[] @relation("PermissionToRole")
+  permissions   Permission[] @relation("PermissionToRole")
+  users         User[]
 
-  User User[]
+  @@index([roleName])
 }
 
 model Permission {
-  id             String           @id @default(cuid())
-  permissionName String           @unique @db.VarChar(50)
-  description    String           @db.VarChar(100)
+  id             String           @id @default(uuid())
+  permissionName String           @unique
+  description    String?
+  route          String?
+  method         String?
+  action         String?
+  resource       String?
+  groupId        String?
+  group          PermissionGroup? @relation(fields: [groupId], references: [id])
+  roles          Role[]           @relation("PermissionToRole")
+  users          User[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  groupId        String?
-  route          String?          @unique
-  group          PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
-  role           Role[]           @relation("PermissionToRole")
 
-  user User[]
+  @@index([route])
+  @@index([permissionName])
+  @@index([resource, action])
 }
 
 model PermissionGroup {
@@ -218,7 +225,7 @@ model PermissionGroup {
   description String?      @db.VarChar(100)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  permissions Permission[] @relation("PermissionToGroup")
+  permissions Permission[]
 }
 
 model StockCard {
@@ -261,7 +268,7 @@ model StockCard {
   stockCardAttributeItems StockCardAttributeItems[]
   barcodes                StockCardBarcode[]
   stockCardCategoryItem   StockCardCategoryItem[]
-  stockCardEFatura        StockCardEFatura[]
+  stockCardEFatura        StockCardEFatura?
   stockCardManufacturer   StockCardManufacturer[]
   stockCardMarketNames    StockCardMarketNames[]
   stockCardPriceLists     StockCardPriceListItems[]
@@ -277,14 +284,15 @@ model StockCard {
 }
 
 model StockCardEFatura {
-  id          String   @id @default(cuid())
-  productCode String   @unique @db.VarChar(100)
-  productName String   @db.VarChar(150)
-  stockCardId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          String    @id @default(cuid())
+  productCode String    @unique @db.VarChar(100)
+  productName String    @db.VarChar(150)
+  stockCardId String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  stockCard   StockCard @relation(fields: [stockCardId], references: [id])
 
-  StockCard StockCard[]
+  @@index([stockCardId])
 }
 
 model StockCardManufacturer {
@@ -807,20 +815,23 @@ model CurrentCategoryItem {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  username    String   @unique @db.VarChar(50)
-  password    String   @db.VarChar(100)
-  email       String   @unique @db.VarChar(100)
-  firstName   String   @db.VarChar(50)
-  lastName    String   @db.VarChar(50)
-  phone       String   @db.VarChar(50)
-  address     String   @db.VarChar(250)
-  isActive    Boolean  @default(true)
-  companyCode String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
+  id                  String    @id @default(cuid())
+  username            String    @unique @db.VarChar(50)
+  password            String    @db.VarChar(100)
+  email               String    @unique @db.VarChar(100)
+  firstName           String    @db.VarChar(50)
+  lastName            String    @db.VarChar(50)
+  phone               String    @db.VarChar(50)
+  address             String    @db.VarChar(250)
+  isActive            Boolean   @default(true)
+  companyCode         String?
+  failedLoginAttempts Int       @default(0)
+  lastFailedLoginAt   DateTime?
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  createdBy           String?
+  updatedBy           String?
 
   company Company? @relation(fields: [companyCode], references: [companyCode])
 
@@ -868,7 +879,36 @@ model User {
   createdByStockTake             StockTake[]             @relation("StockTakeCreatedBy")
   updatedByStockTake             StockTake[]             @relation("StockTakeUpdatedBy")
 
-  PrintQueue PrintQueue[] @relation("PrintQueuePrintedBy")
+  PrintQueue        PrintQueue[]  @relation("PrintQueuePrintedBy")
+  sessions          Session[]
+  securityLogs      SecurityLog[]
+  adminSecurityLogs SecurityLog[] @relation("AdminSecurityLogs")
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  refreshToken     String   @db.Text
+  deviceInfo       String?
+  ipAddress        String?
+  lastActivity     DateTime @default(now())
+  isActive         Boolean  @default(true)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  isSuspicious     Boolean  @default(false)
+  suspiciousReason String?
+  location         String?
+  userAgent        String?
+  browser          String?
+  os               String?
+  device           String?
+  rememberMe       Boolean  @default(false)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@index([isSuspicious])
 }
 
 model Invoice {
@@ -1296,4 +1336,19 @@ model PrintQueue {
   updatedAt     DateTime  @updatedAt
 
   @@index([status])
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  adminId     String?
+  admin       User?    @relation("AdminSecurityLogs", fields: [adminId], references: [id])
+  action      String
+  description String
+  timestamp   DateTime @default(now())
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([action])
 }

@@ -49,6 +49,11 @@ import DynamicRoutes from "./api/routes/v1/dynamicRoutes";
 import MarketPlaceRoutes from "./api/routes/v1/marketPlaceRoutes";
 import StoreRoutes from "./api/routes/v1/storeRoutes";
 import PrintQueueRoutes from "./api/routes/v1/printQueueRoutes";
+import {
+  AuthenticationError,
+  AuthorizationError,
+  ValidationError,
+} from "./utils/CustomError";
 dotenv.config();
 
 if (!process.env.JWT_SECRET) {
@@ -75,100 +80,63 @@ app.use(
 
 app.onRequest(async (ctx) => {
   if (ctx.request.method === "OPTIONS") {
-    ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
-    return; // İleri işlem yapmadan middleware'den çık
+    ctx.set.status = 204;
+    return;
   }
+
   const publicRoutes = [
     "/auth/login",
     "/auth/register",
-    "/webhook/order-created",
-    "/webhook/order-update",
+    "/auth/refresh-token",
+    "/docs",
   ];
   const route = new URL(ctx.request.url).pathname;
+  const method = ctx.request.method;
 
   // Public route kontrolü
   if (publicRoutes.some((r) => route.startsWith(r))) {
-    console.log("Public route, skipping auth.");
     return;
   }
 
   const authHeader = ctx.request.headers.get("Authorization");
   if (!authHeader) {
-    throw new Error("Unauthorized: Authorization header is missing.");
+    throw new AuthenticationError("Yetkilendirme başlığı eksik");
   }
 
   const token = authHeader.split(" ")[1];
+  if (!token) {
+    throw new AuthenticationError("Token bulunamadı");
+  }
+
   try {
     const decoded = jwt.verify(token, SECRET_KEY) as any;
+    const requiredPermission = `${method}:${route}`;
 
-    // Kullanıcı bilgilerini ctx.request'e bağlama
-    (ctx.request as any).user = {
-      username: decoded.username,
-      userId: decoded.userId,
-      isAdmin: decoded.isAdmin || false,
-      permissions: decoded.permissions || [],
-    };
+    // Admin kontrolü
+    if (decoded.isAdmin) {
+      return;
+    }
+
+    // İzin kontrolü
+    if (!decoded.permissions.includes(requiredPermission)) {
+      throw new AuthorizationError("Bu işlem için yetkiniz bulunmuyor", {
+        route,
+        method,
+        requiredPermission,
+        userPermissions: decoded.permissions,
+      });
+    }
   } catch (error) {
-    throw new Error("Unauthorized: Invalid or expired token.");
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new AuthenticationError("Token süresi dolmuş", {
+        error: "TOKEN_EXPIRED",
+        message: "Lütfen oturumunuzu yenileyin",
+      });
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      throw new AuthenticationError("Geçersiz token");
+    }
+    throw error;
   }
-});
-
-app.onRequest(async (ctx) => {
-  if (ctx.request.method === "OPTIONS") {
-    ctx.set.status = 204; // Preflight istekleri için 204 No Content döndür
-    return; // İleri işlem yapmadan middleware'den çık
-  }
-  const route = new URL(ctx.request.url).pathname; // Geçerli rota
-  const publicRoutes = [
-    "/auth/login",
-    "/auth/register",
-    "/webhook/order-created",
-    "/webhook/order-update",
-  ]; // Public rotalar
-
-  // Public rotalarda izin kontrolü yapılmaz
-  if (publicRoutes.includes(route)) {
-    console.log("Public route, skipping permission check.");
-    return;
-  }
-
-  const user = (ctx.request as any).user; // Kullanıcı bilgisi
-  if (!user) {
-    console.error("User not authenticated.");
-    throw new Error("Unauthorized: User not authenticated.");
-  }
-
-  // Admin kullanıcı kontrolü
-  if (user.isAdmin) {
-    console.log("Admin kullanıcı, tüm izinlere sahip.");
-    return; // Admin kullanıcılar tüm rotalara erişebilir
-  }
-
-  // Rota için gerekli izinleri al
-  const requiredPermissions = await prisma.permission.findMany({
-    where: { route }, // Route'a göre gerekli izinleri kontrol et
-    select: { permissionName: true },
-  });
-
-  if (!requiredPermissions.length) {
-    console.error(`Hata: '${route}' rotası için izinler bulunamadı.`);
-    throw new Error(
-      `Permission configuration is missing for the route '${route}'.`
-    );
-  }
-
-  // Kullanıcının iznini kontrol et
-  const hasPermission = requiredPermissions.every((p) =>
-    user.permissions.includes(p.permissionName)
-  );
-
-  console.log("Has Permission:", hasPermission);
-  if (!hasPermission) {
-    console.error("Kullanıcı gerekli izne sahip değil.");
-    throw new Error("Permission denied.");
-  }
-
-  console.log("Kullanıcı gerekli izne sahip.");
 });
 
 // Stok seviyesi kontrolü için cron job
@@ -210,45 +178,58 @@ app
 app.get("/", () => "Elysia is running!"); // Ana route tanımlanıyor
 
 app.onError(async ({ error, set, request }) => {
-  // Varsayılan hata yanıtı
   let statusCode = 500;
   let message = "Beklenmeyen bir hata oluştu.";
   let errorCode: string | undefined;
   let meta: any;
 
-  // Bilinen hata türlerini işleyin
-  if (error instanceof CustomError) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+
+  // JWT hataları için özel kontrol
+  if (error instanceof jwt.JsonWebTokenError) {
+    statusCode = 401;
+    message = "Geçersiz veya süresi dolmuş token.";
+    errorCode = "INVALID_TOKEN";
+  } else if (error instanceof jwt.TokenExpiredError) {
+    statusCode = 401;
+    message = "Token süresi dolmuş. Lütfen yeniden giriş yapın.";
+    errorCode = "TOKEN_EXPIRED";
+  } else if (error instanceof CustomError) {
     statusCode = error.statusCode;
-    message = error.message;
+    message = errorMessage;
     errorCode = error.errorCode;
     meta = error.meta;
   } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    statusCode = 400; // Bad Request
-    message = "Veritabanı hatası oluştu.";
+    statusCode = 400;
+    message = "Veritabanı işlemi sırasında bir hata oluştu.";
     errorCode = error.code;
     meta = error.meta;
   } else if (error instanceof Prisma.PrismaClientValidationError) {
     statusCode = 400;
-    message = "Doğrulama hatası oluştu.";
-    meta = error.message;
-  } else if (error instanceof Error) {
-    message = error.message;
+    message = "Veri doğrulama hatası oluştu.";
+    meta = errorMessage;
+  } else if (errorMessage.includes("Permission denied")) {
+    statusCode = 403;
+    message = "Bu işlem için yetkiniz bulunmuyor.";
+    errorCode = "PERMISSION_DENIED";
+  } else if (errorMessage.includes("Unauthorized")) {
+    statusCode = 401;
+    message = "Oturum açmanız gerekiyor.";
+    errorCode = "UNAUTHORIZED";
   }
 
-  // İstekten gelen body'yi alın
   const body = await request.json().catch(() => null);
 
-  // Hataları loglayın
   loggerWithCaller.error(
     {
       method: request.method,
       url: request.url,
       headers: request.headers,
       body: body,
-      message: error.message,
-      stack: error.stack,
-      code: (error as any).code,
-      meta: (error as any).meta,
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      code: errorCode,
+      meta: meta,
       prisma:
         error instanceof Prisma.PrismaClientKnownRequestError
           ? {
@@ -260,14 +241,15 @@ app.onError(async ({ error, set, request }) => {
     },
     "Hata oluştu"
   );
-  // Yanıtı ayarlayın ve gönderin
-  set.status = statusCode;
 
+  set.status = statusCode;
   return {
     error: {
       message,
       errorCode,
       meta,
+      statusCode,
+      timestamp: new Date().toISOString(),
     },
   };
 });
@@ -312,24 +294,14 @@ OrderInvoiceRoutes(app);
 
 routes.forEach((route) => app.use(route));
 
-// Dinamik izin ekleme
-syncPermissionsWithRoutes(app)
-  .then(() => {
-    console.log("Permission senkronizasyonu tamamlandı.");
-  })
-  .catch((err) => {
-    console.error("Permission senkronizasyon hatası:", err.message);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
-
-// Her gece saat 02:00'da yedekleme ve eski dosyaları temizleme işlemi
-//cron.schedule("*/30 * * * *", () => {
-//console.log("Günlük yedekleme başlıyor...");
-//  backupDatabase().then(cleanOldBackups);
-//});
-
-//console.log("Yedekleme zamanlayıcı çalışıyor...");
-
-export default app;
+// Uygulama başlatıldığında izinleri senkronize et
+app.listen(process.env.PORT || 3000, async () => {
+  try {
+    await syncPermissionsWithRoutes(app);
+    console.log(
+      `🦊 Server is running at ${app.server?.hostname}:${app.server?.port}`
+    );
+  } catch (error) {
+    console.error("İzin senkronizasyonu sırasında hata:", error);
+  }
+});

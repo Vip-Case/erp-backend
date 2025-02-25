@@ -193,23 +193,30 @@ model Role {
   updatedBy     String?
   createdByUser User?        @relation("RoleCreatedBy", fields: [createdBy], references: [username])
   updatedByUser User?        @relation("RoleUpdatedBy", fields: [updatedBy], references: [username])
-  permission    Permission[] @relation("PermissionToRole")
+  permissions   Permission[] @relation("PermissionToRole")
+  users         User[]
 
-  User User[]
+  @@index([roleName])
 }
 
 model Permission {
-  id             String           @id @default(cuid())
-  permissionName String           @unique @db.VarChar(50)
-  description    String           @db.VarChar(100)
+  id             String           @id @default(uuid())
+  permissionName String           @unique
+  description    String?
+  route          String?
+  method         String?
+  action         String?
+  resource       String?
+  groupId        String?
+  group          PermissionGroup? @relation(fields: [groupId], references: [id])
+  roles          Role[]           @relation("PermissionToRole")
+  users          User[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  groupId        String?
-  route          String?          @unique
-  group          PermissionGroup? @relation("PermissionToGroup", fields: [groupId], references: [id])
-  role           Role[]           @relation("PermissionToRole")
 
-  user User[]
+  @@index([route])
+  @@index([permissionName])
+  @@index([resource, action])
 }
 
 model PermissionGroup {
@@ -218,7 +225,7 @@ model PermissionGroup {
   description String?      @db.VarChar(100)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  permissions Permission[] @relation("PermissionToGroup")
+  permissions Permission[]
 }
 
 model StockCard {
@@ -232,6 +239,7 @@ model StockCard {
   branchCode              String?                   @db.VarChar(50)
   brandId                 String?                   @db.VarChar(100)
   productType             ProductType               @default(BasitUrun)
+  kdv                     Decimal?                  @db.Decimal(15, 4)
   gtip                    String?                   @db.VarChar(50)
   pluCode                 String?                   @db.VarChar(50)
   desi                    Decimal?                  @db.Decimal(15, 4)
@@ -271,6 +279,8 @@ model StockCard {
   Store                   Store[]                   @relation("StockCardToStore")
   ProductMatch            ProductMatch[]
   StockTakeDetail         StockTakeDetail[]
+
+  PrintQueue PrintQueue[]
 }
 
 model StockCardEFatura {
@@ -415,6 +425,7 @@ model StockMovement {
   invoiceType      InvoiceType?
   movementType     StokManagementType
   documentNo       String?
+  receiptNo        String?
   type             String?
   description      String?
   quantity         Decimal?            @db.Decimal(15, 4)
@@ -432,6 +443,7 @@ model StockMovement {
   createdByUser    User?               @relation("StockMovementCreatedBy", fields: [createdBy], references: [username])
   current          Current?            @relation(fields: [currentCode], references: [currentCode])
   invoice          Invoice?            @relation(fields: [documentNo], references: [invoiceNo])
+  receipt          Receipt?            @relation(fields: [receiptNo], references: [documentNo])
   outWarehouse     Warehouse?          @relation("StockMovementOutWarehouse", fields: [outWarehouseCode], references: [warehouseCode])
   priceList        StockCardPriceList? @relation(fields: [priceListId], references: [id])
   stockCard        StockCard           @relation(fields: [productCode], references: [productCode])
@@ -591,7 +603,7 @@ model Receipt {
   id                  String           @id @default(cuid())
   receiptType         ReceiptType
   receiptDate         DateTime         @default(now())
-  documentNo          String           @db.VarChar(50)
+  documentNo          String           @unique @db.VarChar(50)
   branchCode          String           @db.VarChar(50)
   isTransfer          Boolean          @default(false)
   outWarehouse        String?
@@ -613,6 +625,8 @@ model Receipt {
   updatedByUser       User?            @relation("ReceiptUpdatedBy", fields: [updatedBy], references: [username])
   receiptDetail       ReceiptDetail[]
   vaultMovement       VaultMovement[]
+
+  StockMovement StockMovement[]
 }
 
 model ReceiptDetail {
@@ -800,20 +814,23 @@ model CurrentCategoryItem {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  username    String   @unique @db.VarChar(50)
-  password    String   @db.VarChar(100)
-  email       String   @unique @db.VarChar(100)
-  firstName   String   @db.VarChar(50)
-  lastName    String   @db.VarChar(50)
-  phone       String   @db.VarChar(50)
-  address     String   @db.VarChar(250)
-  isActive    Boolean  @default(true)
-  companyCode String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String?
-  updatedBy   String?
+  id                  String    @id @default(cuid())
+  username            String    @unique @db.VarChar(50)
+  password            String    @db.VarChar(100)
+  email               String    @unique @db.VarChar(100)
+  firstName           String    @db.VarChar(50)
+  lastName            String    @db.VarChar(50)
+  phone               String    @db.VarChar(50)
+  address             String    @db.VarChar(250)
+  isActive            Boolean   @default(true)
+  companyCode         String?
+  failedLoginAttempts Int       @default(0)
+  lastFailedLoginAt   DateTime?
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  createdBy           String?
+  updatedBy           String?
 
   company Company? @relation(fields: [companyCode], references: [companyCode])
 
@@ -860,6 +877,37 @@ model User {
   updatedByOrderPrepareWarehouse OrderPrepareWarehouse[] @relation("OrderPrepareWarehouseUpdatedBy")
   createdByStockTake             StockTake[]             @relation("StockTakeCreatedBy")
   updatedByStockTake             StockTake[]             @relation("StockTakeUpdatedBy")
+
+  PrintQueue        PrintQueue[]  @relation("PrintQueuePrintedBy")
+  sessions          Session[]
+  securityLogs      SecurityLog[]
+  adminSecurityLogs SecurityLog[] @relation("AdminSecurityLogs")
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  refreshToken     String   @db.Text
+  deviceInfo       String?
+  ipAddress        String?
+  lastActivity     DateTime @default(now())
+  isActive         Boolean  @default(true)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  isSuspicious     Boolean  @default(false)
+  suspiciousReason String?
+  location         String?
+  userAgent        String?
+  browser          String?
+  os               String?
+  device           String?
+  rememberMe       Boolean  @default(false)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@index([isSuspicious])
 }
 
 model Invoice {
@@ -909,19 +957,22 @@ model Invoice {
 }
 
 model InvoiceDetail {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   invoiceId   String
-  productCode String
-  quantity    Decimal   @db.Decimal(15, 4)
-  unitPrice   Decimal   @db.Decimal(15, 4)
-  totalPrice  Decimal   @db.Decimal(15, 4)
-  vatRate     Decimal   @db.Decimal(15, 4)
-  discount    Decimal   @db.Decimal(15, 4)
-  netPrice    Decimal   @db.Decimal(15, 4)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
-  stockCard   StockCard @relation(fields: [productCode], references: [productCode])
+  productCode String?
+  costCode    String?
+  costName    String?
+  currency    String?
+  quantity    Decimal?   @db.Decimal(15, 4)
+  unitPrice   Decimal?   @db.Decimal(15, 4)
+  totalPrice  Decimal?   @db.Decimal(15, 4)
+  vatRate     Decimal?   @db.Decimal(15, 4)
+  discount    Decimal?   @db.Decimal(15, 4)
+  netPrice    Decimal?   @db.Decimal(15, 4)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  invoice     Invoice    @relation(fields: [invoiceId], references: [id])
+  stockCard   StockCard? @relation(fields: [productCode], references: [productCode])
 }
 
 model Vault {
@@ -1266,4 +1317,37 @@ model OrderPrepareWarehouse {
   updatedByUser     User?            @relation("OrderPrepareWarehouseUpdatedBy", fields: [updatedBy], references: [username])
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+}
+
+model PrintQueue {
+  id            String    @id @default(cuid())
+  productCode   String
+  stockCard     StockCard @relation(fields: [productCode], references: [productCode])
+  quantity      Int
+  status        String    @default("PENDING")
+  printedAt     DateTime?
+  printedBy     String?
+  printedByUser User?     @relation("PrintQueuePrintedBy", fields: [printedBy], references: [username])
+  printerName   String?
+  errorMessage  String?
+  retryCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model SecurityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  adminId     String?
+  admin       User?    @relation("AdminSecurityLogs", fields: [adminId], references: [id])
+  action      String
+  description String
+  timestamp   DateTime @default(now())
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([action])
 }

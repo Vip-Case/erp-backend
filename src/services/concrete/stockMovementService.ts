@@ -255,7 +255,11 @@ export class StockMovementService {
 
   async getAllStockMovements(): Promise<StockMovement[]> {
     try {
-      return await this.stockMovementRepository.findAll();
+      return await this.stockMovementRepository.findAll({
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
     } catch (error) {
       logger.error("Error fetching all stock movements", error);
       throw error;
