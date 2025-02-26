@@ -65,6 +65,13 @@ interface WebhookCreateRequest {
     subscribedStatuses?: string[];
 }
 
+interface TrendyolWebhookUpdateData {
+  name?: string;
+  url?: string;
+  eventType?: string;
+  status?: 'ACTIVE' | 'PASSIVE';
+}
+
 export class TrendyolAdapter {
   private readonly baseURL: string;
   private readonly headers: Headers;
@@ -80,6 +87,26 @@ export class TrendyolAdapter {
   private categoryListCache: { categories: TrendyolCategory[]; timestamp: number } | null = null;
 
   constructor(private readonly credentials: TrendyolCredentials) {
+    this.credentials = credentials;
+    
+    // Eğer baseUrl belirtilmemişse, varsayılan olarak yeni endpoint'i kullan
+    if (!this.credentials.baseUrl) {
+      this.credentials.baseUrl = "https://apigw.trendyol.com";
+    }
+    
+    // Eğer token belirtilmemişse, apiKey ve apiSecret kullanarak oluştur
+    if (!this.credentials.token && this.credentials.apiKey && this.credentials.apiSecret) {
+      this.credentials.token = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString('base64');
+    }
+    
+    console.log("Trendyol API Credentials:", {
+      baseUrl: this.credentials.baseUrl,
+      supplierId: this.credentials.supplierId,
+      apiKey: this.credentials.apiKey ? `${this.credentials.apiKey.substring(0, 3)}...` : undefined,
+      apiSecret: this.credentials.apiSecret ? `${this.credentials.apiSecret.substring(0, 3)}...` : undefined,
+      token: this.credentials.token ? `${this.credentials.token.substring(0, 10)}...` : undefined
+    });
+
     this.baseURL = credentials.baseUrl;
     const token = Buffer.from(`${credentials.apiKey}:${credentials.apiSecret}`).toString('base64');
     
@@ -102,27 +129,43 @@ export class TrendyolAdapter {
     this.lastRequestTime = Date.now(); // Son istek zamanını güncelle
   }
 
-  private async fetchWithTimeout(
-    url: string, 
-    options: RequestInit & { 
-      validateStatus?: (status: number) => boolean 
-    } = {}
-  ): Promise<Response> {
+  private async fetchWithTimeout(url: string, options: any = {}): Promise<Response> {
+    const timeout = options.timeout || 30000;
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), this.timeout);
-
+    const id = setTimeout(() => controller.abort(), timeout);
+    
     try {
-      const fullUrl = `${this.baseURL}${url}`;
-      console.log('Request:', fullUrl);
-
-      const response = await fetch(fullUrl, {
+      // Yetkilendirme header'ını oluştur
+      const token = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString('base64');
+      
+      // Headers'ı oluştur
+      const headers = {
+        'Authorization': `Basic ${token}`,
+        'Content-Type': 'application/json',
+        'User-Agent': `${this.credentials.supplierId} - Trendyolsoft`,
+        ...options.headers
+      };
+      
+      // Request URL'i ve header'ları logla
+      console.log(`Request: ${this.credentials.baseUrl}${url}`);
+      console.log(`Request Headers: Authorization: Basic ${token.substring(0, 10)}...`);
+      
+      const response = await fetch(`${this.credentials.baseUrl}${url}`, {
         ...options,
-        signal: controller.signal,
-        headers: this.headers
+        headers,
+        signal: controller.signal
       });
+      
       clearTimeout(id);
-
-      // Özel durum doğrulama fonksiyonu varsa kullan
+      
+      // Response status'ı ve body'yi logla
+      console.log(`Response Status: ${response.status}`);
+      
+      if (response.status === 401) {
+        const errorText = await response.text();
+        console.error(`401 Unauthorized Error Details:`, errorText);
+      }
+      
       if (options.validateStatus) {
         if (!options.validateStatus(response.status)) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -130,14 +173,10 @@ export class TrendyolAdapter {
       } else if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+      
       return response;
     } catch (error) {
       clearTimeout(id);
-      console.error('API Error:', {
-        url,
-        error: error
-      });
       throw error;
     }
   }
@@ -156,7 +195,7 @@ export class TrendyolAdapter {
 
     try {
         const response = await this.fetchWithTimeout('/integration/product/brands', {
-            validateStatus: (status) => status >= 200 && status < 500
+            validateStatus: (status: number) => status >= 200 && status < 500
         });
 
         const data = await response.json();
@@ -269,7 +308,7 @@ export class TrendyolAdapter {
         const response = await this.fetchWithTimeout(
             `/integration/product/product-categories/${categoryId}`,
             {
-                validateStatus: (status) => [200, 404].includes(status)
+                validateStatus: (status: number) => [200, 404].includes(status)
             }
         );
 
@@ -356,7 +395,7 @@ export class TrendyolAdapter {
       const response = await this.fetchWithTimeout(
         `/integration/product/sellers/${this.credentials.supplierId}/products/${productMainId}/variations`,
         {
-          validateStatus: (status) => status === 200 || status === 404
+          validateStatus: (status: number) => status === 200 || status === 404
         }
       );
 
@@ -385,7 +424,7 @@ export class TrendyolAdapter {
       const response = await this.fetchWithTimeout(
         `/integration/product/sellers/${this.credentials.supplierId}/products/${barcode}`,
         {
-          validateStatus: (status) => status === 200 || status === 404
+          validateStatus: (status: number) => status === 200 || status === 404
         }
       );
 
@@ -432,7 +471,7 @@ export class TrendyolAdapter {
         `/integration/product/sellers/${this.credentials.supplierId}/products?${params}`,
         {
           method: 'GET',
-          validateStatus: (status) => status === 200 || status === 404
+          validateStatus: (status: number) => status === 200 || status === 404
         }
       );
   
@@ -517,7 +556,7 @@ export class TrendyolAdapter {
       const response = await this.fetchWithTimeout(
         `/integration/product/sellers/${this.credentials.supplierId}/products/${barcode}/stocks`,
         {
-          validateStatus: (status) => status === 200 || status === 404
+          validateStatus: (status: number) => status === 200 || status === 404
         }
       );
 
@@ -545,7 +584,7 @@ export class TrendyolAdapter {
         `/integration/webhook/sellers/${sellerId}/webhooks`,
         {
           method: 'GET',
-          validateStatus: (status) => [200, 404].includes(status)
+          validateStatus: (status: number) => [200, 404].includes(status)
         }
       );
 
@@ -588,16 +627,42 @@ export class TrendyolAdapter {
     return response.json();
   }
 
-  async updateWebhook(id: string, data: {
-    name?: string;
-    url?: string;
-    eventType?: string;
-    status?: 'ACTIVE' | 'PASSIVE';
-  }) {
-    return await this.fetchWithTimeout(`/webhooks/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
+  /**
+   * Webhook'u günceller
+   * @param webhookId Güncellenecek webhook ID'si
+   * @param updateData Güncellenecek veriler
+   * @returns Başarılı olup olmadığı bilgisi
+   */
+  async updateWebhook(webhookId: string, updateData: TrendyolWebhookUpdateData): Promise<boolean> {
+    try {
+      // API isteği için Basic Auth token oluştur
+      const token = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString('base64');
+      
+      // Webhook güncelleme isteği gönder
+      const response = await fetch(
+        `${this.credentials.baseUrl}/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Basic ${token}`,
+            'Content-Type': 'application/json',
+            'User-Agent': `${this.credentials.supplierId} - Trendyolsoft`
+          },
+          body: JSON.stringify(updateData)
+        }
+      );
+      
+      console.log(`Webhook güncelleme yanıtı: ${response.status}`);
+      
+      // 200 OK yanıtı başarılı güncelleme anlamına gelir
+      return response.status === 200;
+    } catch (error) {
+      console.error(`Webhook güncelleme hatası: {
+        url: "/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}",
+        error: ${error},
+      }`);
+      return false;
+    }
   }
 
   async deleteWebhook(webhookId: string, timeout = 30000): Promise<void> {
@@ -632,29 +697,117 @@ export class TrendyolAdapter {
     }
   }
 
-  async activateWebhook(sellerId: string, webhookId: string, username: string, password: string) {
-    const endpoint = `${this.baseURL}/integration/webhook/sellers/${sellerId}/webhooks/${webhookId}/activate`;
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-    };
-
+  async activateWebhook(webhookId: string): Promise<boolean> {
     try {
-      const response = await fetch(endpoint, {
-        method: 'PUT', // PUT isteği gönderiyoruz
-        headers: headers
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text(); // Hata mesajını al
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      return await response.json(); // Başarılı yanıtı döndür
+      // API isteği için Basic Auth token oluştur
+      const token = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString('base64');
+      
+      // Webhook aktivasyon isteği gönder
+      const response = await fetch(
+        `${this.credentials.baseUrl}/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}/activate`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Basic ${token}`,
+            'Content-Type': 'application/json',
+            'User-Agent': `${this.credentials.supplierId} - Trendyolsoft`
+          }
+        }
+      );
+      
+      console.log(`Webhook aktivasyon yanıtı: ${response.status}`);
+      
+      // 200 OK yanıtı başarılı aktivasyon anlamına gelir
+      return response.status === 200;
     } catch (error) {
-      console.error('Activate webhook error:', error);
-      throw error;
+      console.error(`Webhook aktivasyon hatası: {
+        url: "/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}/activate",
+        error: ${error},
+      }`);
+      return false;
+    }
+  }
+
+  async deactivateWebhook(webhookId: string): Promise<boolean> {
+    try {
+      // API isteği için Basic Auth token oluştur
+      const token = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString('base64');
+      
+      // Webhook deaktivasyon isteği gönder
+      const response = await fetch(
+        `${this.credentials.baseUrl}/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}/deactivate`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Basic ${token}`,
+            'Content-Type': 'application/json',
+            'User-Agent': `${this.credentials.supplierId} - Trendyolsoft`
+          }
+        }
+      );
+      
+      console.log(`Webhook deaktivasyon yanıtı: ${response.status}`);
+      
+      // 200 OK yanıtı başarılı deaktivasyon anlamına gelir
+      return response.status === 200;
+    } catch (error) {
+      console.error(`Webhook deaktivasyon hatası: {
+        url: "/integration/webhook/sellers/${this.credentials.supplierId}/webhooks/${webhookId}/deactivate",
+        error: ${error},
+      }`);
+      return false;
+    }
+  }
+
+  async getOrderById(orderNumber: string): Promise<TrendyolOrder | null> {
+    try {
+      // API isteği için Basic Auth token oluştur
+      const token = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString('base64');
+      
+      // Sipariş listesini al ve içinden istenen siparişi bul
+      const response = await fetch(
+        `${this.credentials.baseUrl}/integration/order/sellers/${this.credentials.supplierId}/orders?orderNumber=${orderNumber}&size=1`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Basic ${token}`,
+            'Content-Type': 'application/json',
+            'User-Agent': `${this.credentials.supplierId} - Trendyolsoft`
+          }
+        }
+      );
+      
+      console.log(`Response Status for order list: ${response.status}`);
+      
+      if (response.status === 200) {
+        const data = await response.json();
+        
+        // Sipariş listesinden istenen siparişi bul
+        if (data.content && data.content.length > 0) {
+          // Tam eşleşme kontrolü yap
+          const order = data.content.find((order: any) => order.orderNumber === orderNumber);
+          if (order) {
+            return order;
+          }
+        }
+        
+        return null;
+      }
+      
+      // Hata durumlarını işle
+      if (response.status === 401) {
+        const errorText = await response.text();
+        console.error(`401 Unauthorized Error Details:`, errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`API Error: {
+        url: "/integration/order/sellers/${this.credentials.supplierId}/orders?orderNumber=${orderNumber}",
+        error: ${error},
+      }`);
+      return null;
     }
   }
 
@@ -665,10 +818,11 @@ export class TrendyolAdapter {
     orderByField: string = 'PackageLastModifiedDate',
     orderByDirection: string = 'DESC'
   ): Promise<TrendyolOrderResponse> {
-    // Stage için 5 saniye çok kısa olabilir
-    await this.delay(10000); // 10 saniye bekle
-
     try {
+      // Rate limiting için daha kısa bir bekleme süresi
+      await this.delay(2000);
+
+      // Endpoint'i doğru formatta kullan
       const response = await this.fetchWithTimeout(
         `/integration/order/sellers/${this.credentials.supplierId}/orders?${new URLSearchParams({
           status,
@@ -678,7 +832,7 @@ export class TrendyolAdapter {
           orderByDirection
         })}`,
         {
-          validateStatus: (status) => status === 200 || status === 429
+          validateStatus: (status: number) => status === 200 || status === 429
         }
       );
 
@@ -691,7 +845,6 @@ export class TrendyolAdapter {
       }
 
       return data;
-
     } catch (error) {
       console.error('Sipariş listesi alınamadı:', error);
       throw error;
@@ -700,24 +853,5 @@ export class TrendyolAdapter {
 
   private async delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  async getOrderById(orderNumber: string): Promise<TrendyolOrder | null> {
-    try {
-      const response = await this.fetchWithTimeout(
-        `/integration/order/sellers/${this.credentials.supplierId}/orders/${orderNumber}`
-      );
-      
-      if (response.status === 404) {
-        return null;
-      }
-      
-      return response.json();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('404')) {
-        return null;
-      }
-      throw error;
-    }
   }
 }

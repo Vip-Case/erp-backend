@@ -69,4 +69,12 @@ export interface TrendyolOrder {
   grossAmount?: number;
   totalDiscount?: number;
   fastDelivery?: boolean;
+}
+
+export interface TrendyolWebhookUpdateData {
+  url?: string;
+  username?: string;
+  password?: string;
+  authenticationType?: 'BASIC_AUTHENTICATION' | 'NO_AUTHENTICATION';
+  subscribedStatuses?: string[];
 } 

@@ -2,7 +2,7 @@
 import { Context } from "elysia";
 import { TrendyolService } from "../../services/concrete/trendyolService";
 import prisma from "../../config/prisma";
-import { TrendyolOrder } from "../../types/trendyolTypes";
+import { TrendyolOrder, TrendyolWebhookUpdateData } from "../../types/trendyolTypes";
 
 export class TrendyolController {
   private trendyolService: TrendyolService;
@@ -784,9 +784,10 @@ export class TrendyolController {
 
   static async handleWebhookEvent(ctx: Context) {
     try {
-      console.log('Webhook headers:', ctx.headers);
+      console.log('Webhook request received');
+      console.log('Headers:', ctx.headers);
       const payload = ctx.body as any;
-      console.log('Webhook payload:', JSON.stringify(payload, null, 2));
+      console.log('Body:', payload);
 
       // Sipariş bilgilerini çıkar
       const { orderNumber, status, shipmentPackageStatus } = payload;
@@ -801,7 +802,6 @@ export class TrendyolController {
 
       console.log(`Sipariş durumu güncellendi: ${orderNumber} - ${status || shipmentPackageStatus}`);
 
-      // Sipariş işleme
       try {
         // Tüm mağazaları çek ve JavaScript ile filtrele
         const stores = await prisma.store.findMany({
@@ -827,12 +827,12 @@ export class TrendyolController {
           });
 
           if (existingOrder) {
-            // Mevcut siparişi güncelle
-            await trendyolService.updateOrderStatus(orderNumber);
+            // Mevcut siparişi güncelle - webhook verilerini geçir
+            await trendyolService.updateOrderStatus(orderNumber, payload);
             console.log(`Webhook: Mevcut sipariş güncellendi: ${orderNumber}`);
           } else {
-            // Yeni sipariş oluştur
-            await trendyolService.syncOrderById(orderNumber);
+            // Yeni sipariş oluştur - webhook verilerini geçir
+            await trendyolService.syncOrderById(orderNumber, payload);
             console.log(`Webhook: Yeni sipariş oluşturuldu: ${orderNumber}`);
           }
         } else {
@@ -852,6 +852,123 @@ export class TrendyolController {
       return {
         status: 200, // Hata olsa bile 200 dönün
         body: { success: true }
+      };
+    }
+  }
+
+  /**
+   * Webhook'u aktifleştirir
+   * @route PUT /api/trendyol/webhooks/:id/activate
+   */
+  static async activateWebhook(ctx: Context) {
+    try {
+      const { id } = ctx.params;
+      const { storeId } = ctx.body as { storeId: string };
+      
+      if (!id) {
+        return {
+          status: 400,
+          body: { success: false, message: 'Webhook ID gereklidir' }
+        };
+      }
+      
+      const trendyolService = new TrendyolService(storeId);
+      const result = await trendyolService.activateWebhook(id);
+      
+      if (result) {
+        return {
+          status: 200,
+          body: { success: true, message: 'Webhook başarıyla aktifleştirildi' }
+        };
+      } else {
+        return {
+          status: 500,
+          body: { success: false, message: 'Webhook aktifleştirilemedi' }
+        };
+      }
+    } catch (error) {
+      console.error('Webhook aktivasyon hatası:', error);
+      return {
+        status: 500,
+        body: { success: false, message: 'Webhook aktivasyon işlemi sırasında bir hata oluştu' }
+      };
+    }
+  }
+
+  /**
+   * Webhook'u pasifleştirir
+   * @route PUT /api/trendyol/webhooks/:id/deactivate
+   */
+  static async deactivateWebhook(ctx: Context) {
+    try {
+      const { id } = ctx.params;
+      const { storeId } = ctx.body as { storeId: string };
+      
+      if (!id) {
+        return {
+          status: 400,
+          body: { success: false, message: 'Webhook ID gereklidir' }
+        };
+      }
+      
+      const trendyolService = new TrendyolService(storeId);
+      const result = await trendyolService.deactivateWebhook(id);
+      
+      if (result) {
+        return {
+          status: 200,
+          body: { success: true, message: 'Webhook başarıyla pasifleştirildi' }
+        };
+      } else {
+        return {
+          status: 500,
+          body: { success: false, message: 'Webhook pasifleştirilemedi' }
+        };
+      }
+    } catch (error) {
+      console.error('Webhook deaktivasyon hatası:', error);
+      return {
+        status: 500,
+        body: { success: false, message: 'Webhook pasifleştirme işlemi sırasında bir hata oluştu' }
+      };
+    }
+  }
+
+  /**
+   * Webhook'u günceller
+   * @route PUT /api/trendyol/webhooks/:id
+   */
+  static async updateWebhook(ctx: Context) {
+    try {
+      const { id } = ctx.params;
+      const { storeId, ...updateData } = ctx.body as { storeId: string } & TrendyolWebhookUpdateData;
+      
+      if (!id) {
+        return {
+          status: 400,
+          body: { success: false, message: 'Webhook ID gereklidir' }
+        };
+      }
+      
+      const trendyolService = new TrendyolService(storeId);
+      const result = await trendyolService.updateWebhook(id, updateData);
+      
+      if (result) {
+        return {
+          status: 200,
+          body: { success: true, message: 'Webhook başarıyla güncellendi' }
+        };
+      } else {
+        return {
+          status: 500,
+          body: { success: false, message: 'Webhook güncellenemedi' }
+        };
+      }
+    } catch (error) {
+      console.error('Webhook güncelleme hatası:', error);
+      return {
+        status: 500,
+        body: { success: false, message: 'Webhook güncelleme işlemi sırasında bir hata oluştu' }
       };
     }
   }

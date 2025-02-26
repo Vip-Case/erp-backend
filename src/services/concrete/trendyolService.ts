@@ -2,6 +2,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { TrendyolAdapter } from "../../adapters/trendyolAdapter";
 import { PrismaClient, Prisma, MarketPlaceCategories, MarketPlaceProducts, StockUnits, ProductType } from "@prisma/client";
 import { TrendyolOrder, TrendyolOrderLine } from "../../adapters/types";
+import { TrendyolWebhookUpdateData } from '../../types/trendyolTypes';
 
 const prisma = new PrismaClient();
 
@@ -1204,19 +1205,19 @@ export class TrendyolService {
     }
   }
 
-  async updateWebhook(id: string, data: {
-    name?: string;
-    url?: string;
-    eventType?: string;
-    status?: 'ACTIVE' | 'PASSIVE';
-  }) {
+  /**
+   * Webhook'u günceller
+   * @param webhookId Güncellenecek webhook ID'si
+   * @param updateData Güncellenecek veriler
+   * @returns Başarılı olup olmadığı bilgisi
+   */
+  async updateWebhook(webhookId: string, updateData: TrendyolWebhookUpdateData): Promise<boolean> {
     try {
       await this.initialize();
-      const result = await this.trendyol.updateWebhook(id, data);
-      return result;
+      return await this.trendyol.updateWebhook(webhookId, updateData);
     } catch (error) {
-      console.error('Update webhook error:', error);
-      throw error;
+      console.error('Webhook güncelleme hatası:', error);
+      return false;
     }
   }
 
@@ -1550,76 +1551,18 @@ export class TrendyolService {
     }
   }
 
-  async updateOrderStatus(orderNumber: string): Promise<void> {
+  async syncOrderById(orderNumber: string, webhookData?: any): Promise<void> {
     await this.initialize();
     
     try {
-      const orderDetails = await this.trendyol.getOrderById(orderNumber);
+      // Önce API'den sipariş detaylarını almayı dene
+      let orderDetails = await this.trendyol.getOrderById(orderNumber);
       
-      if (!orderDetails) {
-        throw new Error(`Sipariş bulunamadı: ${orderNumber}`);
+      // API'den veri alınamazsa ve webhook verileri varsa, onları kullan
+      if (!orderDetails && webhookData) {
+        console.log(`API'den sipariş detayları alınamadı, webhook verilerini kullanıyoruz: ${orderNumber}`);
+        orderDetails = webhookData;
       }
-      
-      // Siparişi veritabanında bul
-      const order = await prisma.order.findFirst({
-        where: {
-          platformOrderId: orderNumber,
-          platform: 'Trendyol'
-        }
-      });
-      
-      if (!order) {
-        // Sipariş yoksa, yeni sipariş oluştur
-        await this.syncOrderById(orderNumber);
-        return;
-      }
-      
-      // Sipariş durumunu güncelle
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: orderDetails.status,
-          updatedAt: new Date()
-        }
-      });
-      
-      // Kargo bilgisi varsa güncelle
-      if (orderDetails.cargoTrackingNumber) {
-        const existingCargo = await prisma.orderCargo.findFirst({
-          where: { orderId: order.id }
-        });
-        
-        if (existingCargo) {
-          await prisma.orderCargo.update({
-            where: { id: existingCargo.id },
-            data: {
-              trackingNumber: orderDetails.cargoTrackingNumber.toString()
-            }
-          });
-        } else {
-          await prisma.orderCargo.create({
-            data: {
-              orderId: order.id,
-              name: orderDetails.cargoProviderName || 'Trendyol Kargo',
-              shortName: orderDetails.cargoProviderName?.split(' ')[0] || 'TY',
-              trackingNumber: orderDetails.cargoTrackingNumber.toString()
-            }
-          });
-        }
-      }
-      
-      console.log(`Sipariş durumu güncellendi: ${orderNumber}, Yeni durum: ${orderDetails.status}`);
-    } catch (error) {
-      console.error(`Sipariş durum güncelleme hatası (${orderNumber}):`, error);
-      throw error;
-    }
-  }
-
-  async syncOrderById(orderNumber: string): Promise<void> {
-    await this.initialize();
-    
-    try {
-      const orderDetails = await this.trendyol.getOrderById(orderNumber);
       
       if (!orderDetails) {
         throw new Error(`Sipariş bulunamadı: ${orderNumber}`);
@@ -1638,12 +1581,12 @@ export class TrendyolService {
         await prisma.order.update({
           where: { id: existingOrder.id },
           data: {
-            status: orderDetails.status,
+            status: (orderDetails as any).status || (orderDetails as any).shipmentPackageStatus || existingOrder.status,
             updatedAt: new Date()
           }
         });
         
-        console.log(`Sipariş güncellendi: ${orderNumber}, Durum: ${orderDetails.status}`);
+        console.log(`Sipariş güncellendi: ${orderNumber}, Durum: ${(orderDetails as any).status || (orderDetails as any).shipmentPackageStatus}`);
       } else {
         // Sipariş yoksa, yeni sipariş oluştur
         await prisma.$transaction(async (tx) => {
@@ -1659,109 +1602,193 @@ export class TrendyolService {
     }
   }
 
-  private async processOrderInTransaction(
-    tx: Prisma.TransactionClient,
-    orderData: TrendyolOrder,
-    storeId: string
-  ): Promise<void> {
-    // Önce siparişi oluştur
-    const order = await tx.order.create({
-      data: {
-        platformOrderId: orderData.orderNumber,
-        platform: 'Trendyol',
-        customerId: orderData.customerId.toString(),
-        status: orderData.status,
-        currency: orderData.currencyCode || 'TRY',
-        orderDate: new Date(Number(orderData.orderDate)),
-        totalPrice: Number(orderData.totalPrice),
-        deliveryType: orderData.deliveryAddressType,
-        cargoCompany: orderData.cargoProviderName,
-        storeId: storeId,
+  async updateOrderStatus(orderNumber: string, webhookData?: any): Promise<void> {
+    await this.initialize();
+    
+    try {
+      // Önce API'den sipariş detaylarını almayı dene
+      let orderDetails = await this.trendyol.getOrderById(orderNumber);
+      
+      // API'den veri alınamazsa ve webhook verileri varsa, onları kullan
+      if (!orderDetails && webhookData) {
+        console.log(`API'den sipariş detayları alınamadı, webhook verilerini kullanıyoruz: ${orderNumber}`);
+        orderDetails = webhookData;
       }
-    });
-
-    // Fatura ve teslimat adresleri
-    const [billingAddress, shippingAddress] = await Promise.all([
-      tx.orderInvoiceAddress.create({
-        data: {
-          orderId: order.id,
-          address: orderData.invoiceAddress.address1,
-          city: orderData.invoiceAddress.city,
-          district: orderData.invoiceAddress.district,
-          postalCode: orderData.invoiceAddress.postalCode,
-          country: orderData.invoiceAddress.countryCode,
-          fullName: orderData.invoiceAddress.fullName,
-          email: orderData.invoiceAddress.email || null,
-          paymentMethod: 'Individual'
-        }
-      }),
-      tx.orderInvoiceAddress.create({
-        data: {
-          orderId: order.id,
-          address: orderData.shipmentAddress.address1,
-          city: orderData.shipmentAddress.city,
-          district: orderData.shipmentAddress.district,
-          postalCode: orderData.shipmentAddress.postalCode,
-          country: orderData.shipmentAddress.countryCode,
-          fullName: orderData.shipmentAddress.fullName,
-          email: orderData.shipmentAddress.email || null,
-          paymentMethod: 'Individual'
-        }
-      })
-    ]);
-
-    // Sipariş adres ilişkilerini güncelle
-    await tx.order.update({
-      where: { id: order.id },
-      data: {
-        billingAddressId: billingAddress.id,
-        shippingAddressId: shippingAddress.id
+      
+      if (!orderDetails) {
+        throw new Error(`Sipariş bulunamadı: ${orderNumber}`);
       }
-    });
-
-    // Sipariş kalemlerini oluştur
-    for (const line of orderData.lines) {
-      await tx.orderItem.create({
-        data: {
-          orderId: order.id,
-          quantity: line.quantity,
-          unitPrice: new Prisma.Decimal(line.price),
-          totalPrice: new Prisma.Decimal(line.price * line.quantity),
-          stockCardId: null,
-          productName: line.productName,
-          productCode: BigInt(line.productCode.toString()),
-          barcode: line.barcode || null,
-          merchantSku: line.merchantSku || null,
-          productSize: line.productSize || null,
-          productColor: line.productColor || null,
-          productOrigin: line.productOrigin || null,
-          salesCampaignId: line.salesCampaignId ? BigInt(line.salesCampaignId.toString()) : null,
-          merchantId: line.merchantId ? BigInt(line.merchantId.toString()) : null,
-          amount: line.amount ? new Prisma.Decimal(line.amount) : null,
-          discount: line.discount ? new Prisma.Decimal(line.discount) : null,
-          tyDiscount: line.tyDiscount ? new Prisma.Decimal(line.tyDiscount) : null,
-          vatBaseAmount: line.vatBaseAmount ? new Prisma.Decimal(line.vatBaseAmount) : null,
-          currencyCode: line.currencyCode || 'TRY',
-          sku: line.sku || null,
-          orderLineId: line.id ? BigInt(line.id.toString()) : null,
-          orderLineItemStatusName: line.orderLineItemStatusName || null
+      
+      // Siparişi bul
+      const order = await prisma.order.findFirst({
+        where: {
+          platformOrderId: orderNumber,
+          platform: 'Trendyol'
         }
       });
-    }
-
-    // Kargo bilgisi varsa ekle
-    if (orderData.cargoTrackingNumber) {
-      await tx.orderCargo.create({
+      
+      if (!order) {
+        throw new Error(`Sipariş bulunamadı: ${orderNumber}`);
+      }
+      
+      // Sipariş durumunu güncelle
+      await prisma.order.update({
+        where: { id: order.id },
         data: {
-          orderId: order.id,
-          name: orderData.cargoProviderName || 'Trendyol Kargo',
-          shortName: orderData.cargoProviderName?.split(' ')[0] || 'TY',
-          trackingNumber: orderData.cargoTrackingNumber.toString()
+          status: (orderDetails as any).status || (orderDetails as any).shipmentPackageStatus || order.status,
+          updatedAt: new Date()
         }
       });
+      
+      // Kargo bilgilerini güncelle
+      if (orderDetails.cargoTrackingNumber) {
+        const existingCargo = await prisma.orderCargo.findFirst({
+          where: { orderId: order.id }
+        });
+        
+        if (existingCargo) {
+          await prisma.orderCargo.update({
+            where: { id: existingCargo.id },
+            data: {
+              trackingNumber: orderDetails.cargoTrackingNumber.toString(),
+              name: orderDetails.cargoProviderName || existingCargo.name
+            }
+          });
+        } else {
+          await prisma.orderCargo.create({
+            data: {
+              orderId: order.id,
+              name: orderDetails.cargoProviderName || 'Trendyol Kargo',
+              shortName: orderDetails.cargoProviderName?.split(' ')[0] || 'TY',
+              trackingNumber: orderDetails.cargoTrackingNumber.toString()
+            }
+          });
+        }
+      }
+      
+      console.log(`Sipariş durumu güncellendi: ${orderNumber} - ${(orderDetails as any).status || (orderDetails as any).shipmentPackageStatus}`);
+    } catch (error) {
+      console.error(`Sipariş durumu güncelleme hatası (${orderNumber}):`, error);
+      throw error;
     }
+  }
 
-    console.log(`Sipariş oluşturuldu: ${order.platformOrderId}`);
+  private async processOrderInTransaction(tx: any, orderData: any, storeId: string): Promise<void> {
+    try {
+      // Sipariş tarihini doğru formata çevir
+      const orderDate = new Date(parseInt(orderData.orderDate));
+      
+      // Sipariş oluştur
+      const order = await tx.order.create({
+        data: {
+          platformOrderId: orderData.orderNumber,
+          platform: 'Trendyol',
+          customerId: orderData.customerId?.toString() || '0',
+          status: orderData.status || orderData.shipmentPackageStatus || 'Created',
+          currency: orderData.currencyCode || 'TRY',
+          orderDate: isNaN(orderDate.getTime()) ? new Date() : orderDate,
+          totalPrice: orderData.totalPrice || 0,
+          deliveryType: orderData.deliveryType || null,
+          cargoCompany: orderData.cargoProviderName || null,
+          storeId: storeId
+        }
+      });
+      
+      // Sipariş kalemleri oluştur
+      if (orderData.lines && Array.isArray(orderData.lines)) {
+        for (const line of orderData.lines) {
+          await tx.orderItem.create({
+            data: {
+              orderId: order.id,
+              quantity: line.quantity || 1,
+              unitPrice: new Prisma.Decimal(line.price || 0),
+              totalPrice: new Prisma.Decimal((line.price || 0) * (line.quantity || 1)),
+              productName: line.productName || 'Ürün',
+              productCode: BigInt(line.productCode?.toString() || '0'),
+              barcode: line.barcode || null,
+              merchantSku: line.merchantSku || null,
+              productSize: line.productSize || null,
+              productColor: line.productColor || null,
+              productOrigin: line.productOrigin || null,
+              salesCampaignId: line.salesCampaignId ? BigInt(line.salesCampaignId.toString()) : null,
+              merchantId: line.merchantId ? BigInt(line.merchantId.toString()) : null,
+              amount: line.amount ? new Prisma.Decimal(line.amount) : null,
+              discount: line.discount ? new Prisma.Decimal(line.discount) : null,
+              tyDiscount: line.tyDiscount ? new Prisma.Decimal(line.tyDiscount) : null,
+              vatBaseAmount: line.vatBaseAmount ? new Prisma.Decimal(line.vatBaseAmount) : null,
+              currencyCode: line.currencyCode || 'TRY',
+              sku: line.sku || null,
+              orderLineId: line.id ? BigInt(line.id.toString()) : null,
+              orderLineItemStatusName: line.orderLineItemStatusName || null
+            }
+          });
+        }
+      }
+      
+      // Adres bilgilerini oluştur
+      if (orderData.shipmentAddress) {
+        const shippingAddress = await tx.orderInvoiceAddress.create({
+          data: {
+            orderId: order.id,
+            address: orderData.shipmentAddress.address1 || '',
+            city: orderData.shipmentAddress.city || '',
+            district: orderData.shipmentAddress.district || '',
+            postalCode: orderData.shipmentAddress.postalCode || '',
+            country: orderData.shipmentAddress.countryCode || 'TR',
+            fullName: orderData.shipmentAddress.fullName || '',
+            email: orderData.customerEmail || '',
+            paymentMethod: 'Individual'
+          }
+        });
+        
+        // Sipariş adres ilişkisini güncelle
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            shippingAddressId: shippingAddress.id
+          }
+        });
+      }
+      
+      if (orderData.invoiceAddress) {
+        const billingAddress = await tx.orderInvoiceAddress.create({
+          data: {
+            orderId: order.id,
+            address: orderData.invoiceAddress.address1 || '',
+            city: orderData.invoiceAddress.city || '',
+            district: orderData.invoiceAddress.district || '',
+            postalCode: orderData.invoiceAddress.postalCode || '',
+            country: orderData.invoiceAddress.countryCode || 'TR',
+            fullName: orderData.invoiceAddress.fullName || '',
+            email: orderData.customerEmail || '',
+            paymentMethod: 'Individual'
+          }
+        });
+        
+        // Sipariş adres ilişkisini güncelle
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            billingAddressId: billingAddress.id
+          }
+        });
+      }
+      
+      // Kargo bilgisi varsa ekle
+      if (orderData.cargoTrackingNumber) {
+        await tx.orderCargo.create({
+          data: {
+            orderId: order.id,
+            name: orderData.cargoProviderName || 'Trendyol Kargo',
+            shortName: orderData.cargoProviderName?.split(' ')[0] || 'TY',
+            trackingNumber: orderData.cargoTrackingNumber.toString()
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Sipariş işleme hatası:', error);
+      throw error;
+    }
   }
 
   async updateRecentOrders(hours: number = 24): Promise<void> {
@@ -1798,4 +1825,35 @@ export class TrendyolService {
       throw error;
     }
   }
+
+  /**
+   * Webhook'u aktifleştirir
+   * @param webhookId Aktifleştirilecek webhook ID'si
+   * @returns Başarılı olup olmadığı bilgisi
+   */
+  async activateWebhook(webhookId: string): Promise<boolean> {
+    try {
+      await this.initialize();
+      return await this.trendyol.activateWebhook(webhookId);
+    } catch (error) {
+      console.error('Webhook aktivasyon hatası:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Webhook'u pasifleştirir
+   * @param webhookId Pasifleştirilecek webhook ID'si
+   * @returns Başarılı olup olmadığı bilgisi
+   */
+  async deactivateWebhook(webhookId: string): Promise<boolean> {
+    try {
+      await this.initialize();
+      return await this.trendyol.deactivateWebhook(webhookId);
+    } catch (error) {
+      console.error('Webhook deaktivasyon hatası:', error);
+      return false;
+    }
+  }
+
 }

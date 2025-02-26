@@ -50,31 +50,46 @@ const TrendyolRoutes = (app: Elysia) => {
     return await TrendyolController.checkMatchStatus(ctx);
   });
 
-  // Webhook routes
-  app.post("/api/trendyol/webhooks/create", async (ctx) => {
-    return await TrendyolController.createWebhook(ctx);
-  });
 
-  app.get("/api/trendyol/webhooks", async (ctx) => {
-    return await TrendyolController.listWebhooks(ctx);
-  });
-
-  // Webhook silme endpoint'i
-  app.delete("/api/trendyol/webhooks/:webhookId", async (ctx) => {
-    return await TrendyolController.deleteWebhook(ctx);
-  });
-
-  app.post("/api/trendyol/sync/orders", async (ctx) => {
+  app.post("/api/sync/orders", async (ctx) => {
     return await TrendyolController.syncOrders(ctx);
   });
 
   // Yeni eklenen sipariş güncelleme route'ları
-  app.put("/api/trendyol/orders/:orderNumber", async (ctx) => {
+  app.put("/api/orders/:orderNumber", async (ctx) => {
     return await TrendyolController.updateOrder(ctx);
   });
 
-  app.post("/api/trendyol/orders/update-recent", async (ctx) => {
+  app.post("/api/orders/update-recent", async (ctx) => {
     return await TrendyolController.updateRecentOrders(ctx);
+  });
+
+  // Webhook routes
+  app.post("/api/webhooks/create", async (ctx) => {
+    return await TrendyolController.createWebhook(ctx);
+  });
+
+  app.get("/api/webhooks/list", async (ctx) => {
+    return await TrendyolController.listWebhooks(ctx);
+  });
+
+  // Webhook aktivasyon/deaktivasyon endpoint'leri
+  app.put("/api/webhooks/:id/activate", async (ctx) => {
+    return await TrendyolController.activateWebhook(ctx);
+  });
+  
+  app.put("/api/webhooks/:id/deactivate", async (ctx) => {
+    return await TrendyolController.deactivateWebhook(ctx);
+  });
+
+  // Webhook güncelleme endpoint'i
+  app.put("/api/webhooks/update/:id", async (ctx) => {
+    return await TrendyolController.updateWebhook(ctx);
+  });
+  
+  // Webhook silme endpoint'i
+  app.delete("/api/webhooks/delete/:webhookId", async (ctx) => {
+    return await TrendyolController.deleteWebhook(ctx);
   });
 
   // Webhook handler endpoint'i
@@ -96,6 +111,7 @@ const TrendyolRoutes = (app: Elysia) => {
     
     return await TrendyolController.handleWebhookEvent(ctx);
   });
+
 
   return app;
 };
