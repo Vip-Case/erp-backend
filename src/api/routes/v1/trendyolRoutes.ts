@@ -4,91 +4,63 @@ import { TrendyolController } from "../../controllers/trendyolController";
 
 const TrendyolRoutes = (app: Elysia) => {
   // Bağlantı testi endpoint'i
-  app.post("/api/trendyol/test-connection", async (ctx) => {
+  app.post("/api/test-connection", async (ctx) => {
     return await TrendyolController.testConnection(ctx);
   });
 
-  app.post("/api/trendyol/sync/all", async (ctx) => {
+  app.post("/api/sync/all", async (ctx) => {
     return await TrendyolController.syncAll(ctx);
   });
 
-  app.post("/api/trendyol/sync/brands", async (ctx) => {
+  app.post("/api/sync/brands", async (ctx) => {
     return await TrendyolController.syncBrands(ctx);
   });
 
-  app.post("/api/trendyol/sync/categories", async (ctx) => {
+  app.post("/api/sync/categories", async (ctx) => {
     return await TrendyolController.syncCategories(ctx);
   });
 
-  app.post("/api/trendyol/sync/products", async (ctx) => {
+  app.post("/api/sync/products", async (ctx) => {
     return await TrendyolController.syncProducts(ctx);
   });
 
   // Eşleştirme route'ları
-  app.post("/api/trendyol/match-stockcard", async (ctx) => {
+  app.post("/api/match-stockcard", async (ctx) => {
     return await TrendyolController.matchAndCreateStockCard(ctx);
   });
 
-  app.post("/api/trendyol/sync-and-match-all", async (ctx) => {
+  app.post("/api/sync-and-match-all", async (ctx) => {
     return await TrendyolController.syncAndMatchAll(ctx);
   });
 
-  app.post("/api/trendyol/add-to-warehouse", async (ctx) => {
+  app.post("/api/add-to-warehouse", async (ctx) => {
     return await TrendyolController.addToStockCardWarehouse(ctx);
   });
   
-  app.post("/api/trendyol/add-all-to-warehouse", async (ctx) => {
+  app.post("/api/add-all-to-warehouse", async (ctx) => {
     return await TrendyolController.addAllToStockCardWarehouse(ctx);
   });
 
-  app.post("/api/trendyol/update-stock", async (ctx) => {
+  app.post("/api/update-stock", async (ctx) => {
     return await TrendyolController.updateStockInTrendyol(ctx);
   });
 
   // Durum kontrolü route'u
-  app.get("/api/trendyol/match-status", async (ctx) => {
+  app.get("/api/match-status", async (ctx) => {
     return await TrendyolController.checkMatchStatus(ctx);
-  });
-
-
-  app.post("/api/sync/orders", async (ctx) => {
-    return await TrendyolController.syncOrders(ctx);
-  });
-
-  // Yeni eklenen sipariş güncelleme route'ları
-  app.put("/api/orders/:orderNumber", async (ctx) => {
-    return await TrendyolController.updateOrder(ctx);
-  });
-
-  app.post("/api/orders/update-recent", async (ctx) => {
-    return await TrendyolController.updateRecentOrders(ctx);
   });
 
   // Webhook routes
   app.post("/api/webhooks/create", async (ctx) => {
     return await TrendyolController.createWebhook(ctx);
   });
-
+  
   app.get("/api/webhooks/list", async (ctx) => {
     return await TrendyolController.listWebhooks(ctx);
   });
 
-  // Webhook aktivasyon/deaktivasyon endpoint'leri
-  app.put("/api/webhooks/:id/activate", async (ctx) => {
-    return await TrendyolController.activateWebhook(ctx);
-  });
-  
-  app.put("/api/webhooks/:id/deactivate", async (ctx) => {
-    return await TrendyolController.deactivateWebhook(ctx);
-  });
-
-  // Webhook güncelleme endpoint'i
-  app.put("/api/webhooks/update/:id", async (ctx) => {
-    return await TrendyolController.updateWebhook(ctx);
-  });
-  
   // Webhook silme endpoint'i
-  app.delete("/api/webhooks/delete/:webhookId", async (ctx) => {
+  app.delete("/api/webhooks/:webhookId/delete", async (ctx) => {
     return await TrendyolController.deleteWebhook(ctx);
   });
 
@@ -112,6 +84,32 @@ const TrendyolRoutes = (app: Elysia) => {
     return await TrendyolController.handleWebhookEvent(ctx);
   });
 
+  // Webhook aktivasyon/deaktivasyon endpoint'leri
+  app.put("/api/webhooks/:id/activate", async (ctx) => {
+    return await TrendyolController.activateWebhook(ctx);
+  });
+  
+  app.put("/api/webhooks/:id/deactivate", async (ctx) => {
+    return await TrendyolController.deactivateWebhook(ctx);
+  });
+
+  // Webhook güncelleme endpoint'i
+  app.put("/api/webhooks/:id/update", async (ctx) => {
+    return await TrendyolController.updateWebhook(ctx);
+  });
+  
+  app.post("/api/sync/orders", async (ctx) => {
+    return await TrendyolController.syncOrders(ctx);
+  });
+
+  // Yeni eklenen sipariş güncelleme route'ları
+  app.put("/api/orders/:orderNumber", async (ctx) => {
+    return await TrendyolController.updateOrder(ctx);
+  });
+
+  app.post("/api/orders/update-recent", async (ctx) => {
+    return await TrendyolController.updateRecentOrders(ctx);
+  });
 
   return app;
 };
