@@ -64,9 +64,9 @@ jobs:
             rm "/tmp/${BACKUP_FILE}.gz"
 
             # Yeni kodu çek
-            git fetch origin production
-            git checkout production
-            git pull origin production
+            git fetch origin master
+            git checkout master
+            git pull origin master
 
             # Prisma migration kontrolü
             if ! docker-compose exec -T app bunx prisma migrate deploy; then
