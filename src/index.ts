@@ -36,24 +36,16 @@ import UserRoutes from "./api/routes/v1/userRoutes";
 import RoleRoutes from "./api/routes/v1/roleRoutes";
 import PosRoutes from "./api/routes/v1/posRoutes";
 import { PrismaClient } from "@prisma/client";
-import { appConfig } from "./config/app";
 import jwt from "jsonwebtoken";
 import cron from "node-cron";
-import { backupDatabase, cleanOldBackups } from "./utils/backup";
 import NotificationRoutes from "./api/routes/v1/notificationRoutes";
 import { NotificationService } from "./services/concrete/NotificationService";
 import logger from "./utils/logger";
-import InvoiceService from "./services/concrete/invoiceService";
 import OrderInvoiceRoutes from "./api/routes/v1/orderInvoiceRoutes";
-import DynamicRoutes from "./api/routes/v1/dynamicRoutes";
 import MarketPlaceRoutes from "./api/routes/v1/marketPlaceRoutes";
 import StoreRoutes from "./api/routes/v1/storeRoutes";
 import PrintQueueRoutes from "./api/routes/v1/printQueueRoutes";
-import {
-  AuthenticationError,
-  AuthorizationError,
-  ValidationError,
-} from "./utils/CustomError";
+import { AuthenticationError, AuthorizationError } from "./utils/CustomError";
 dotenv.config();
 
 if (!process.env.JWT_SECRET) {
@@ -233,10 +225,10 @@ app.onError(async ({ error, set, request }) => {
       prisma:
         error instanceof Prisma.PrismaClientKnownRequestError
           ? {
-            clientVersion: error.clientVersion,
-            errorCode: error.code,
-            meta: error.meta,
-          }
+              clientVersion: error.clientVersion,
+              errorCode: error.code,
+              meta: error.meta,
+            }
           : undefined,
     },
     "Hata oluştu"
