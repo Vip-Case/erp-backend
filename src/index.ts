@@ -49,6 +49,7 @@ import DynamicRoutes from './api/routes/v1/dynamicRoutes';
 import MarketPlaceRoutes from './api/routes/v1/marketPlaceRoutes';
 import StoreRoutes from './api/routes/v1/storeRoutes';
 import TrendyolRoutes from './api/routes/v1/trendyolRoutes';
+import HepsiburadaRoutes from './api/routes/v1/hepsiburadaRoutes';
 
 dotenv.config();
 
@@ -294,7 +295,7 @@ app.use(NotificationRoutes(app));
 wooCommerceRoutes(app);
 OrderInvoiceRoutes(app);
 TrendyolRoutes(app);
-
+HepsiburadaRoutes(app);
 routes.forEach((route) => app.use(route));
 
 // Dinamik izin ekleme
