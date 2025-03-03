@@ -69,12 +69,12 @@ const app = new Elysia();
 
 app.use(
   cors({
-    origin: [`${process.env.CORS_URL}`], // İzin verilen frontend kökeni
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // İzin verilen HTTP yöntemleri
-    allowedHeaders: ["Content-Type", "Authorization"], // İzin verilen başlıklar
-    credentials: true, // Çerez ve yetkilendirme bilgilerini paylaş
-    preflight: true, // Preflight isteğini otomatik yanıtlZa
-    maxAge: 86400, // Preflight yanıtının önbellek süresi
+    origin: ["https://erp.novent.com.tr"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    credentials: true,
+    preflight: true,
+    maxAge: 86400,
   })
 );
 
@@ -233,10 +233,10 @@ app.onError(async ({ error, set, request }) => {
       prisma:
         error instanceof Prisma.PrismaClientKnownRequestError
           ? {
-              clientVersion: error.clientVersion,
-              errorCode: error.code,
-              meta: error.meta,
-            }
+            clientVersion: error.clientVersion,
+            errorCode: error.code,
+            meta: error.meta,
+          }
           : undefined,
     },
     "Hata oluştu"
