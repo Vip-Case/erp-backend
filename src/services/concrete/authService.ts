@@ -132,9 +132,9 @@ export const registerUser = async (
 // Token süreleri için sabitler
 const TOKEN_DURATIONS = {
   DEFAULT: {
-    ACCESS_TOKEN: "6h",
-    REFRESH_TOKEN: "24h",
-    REFRESH_TOKEN_MS: 24 * 60 * 60 * 1000, // 24 saat
+    ACCESS_TOKEN: "1d",
+    REFRESH_TOKEN: "2d",
+    REFRESH_TOKEN_MS: 2 * 24 * 60 * 60 * 1000, // 2 gün
   },
   REMEMBER_ME: {
     ACCESS_TOKEN: "1d",
