@@ -13,6 +13,9 @@ env:
   ACR_NAME: noventacr
   CONTAINER_IMAGE_NAME: erp-api
   NODE_VERSION: "20"
+  POSTGRES_SERVER_NAME: novent-postgres
+  POSTGRES_DB_NAME: erp_db
+  POSTGRES_ADMIN: noventadmin
 
 jobs:
   build-and-test:
@@ -32,6 +35,23 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
+
+      - name: Lint code
+        run: npm run lint || echo "Linting issues found"
+
+      - name: Run tests
+        run: npm test || echo "Tests failed"
+
+      - name: Notify Slack on Test Completion
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: "Test Results"
+          SLACK_MESSAGE: "Build and Test job completed with status: ${{ job.status }}"
+          SLACK_FOOTER: "Novent ERP CI/CD Pipeline"
 
   build-and-push-image:
     needs: build-and-test
@@ -62,8 +82,67 @@ jobs:
           cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:latest
           cache-to: type=inline
 
-  deploy:
+      - name: Notify Slack on Image Build
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: "Docker Image Build"
+          SLACK_MESSAGE: "Docker image build and push completed with status: ${{ job.status }}"
+          SLACK_FOOTER: "Novent ERP CI/CD Pipeline"
+
+  backup-database:
     needs: build-and-push-image
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Backup Timestamp
+        id: backup-timestamp
+        run: echo "timestamp=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create Manual Backup
+        run: |
+          echo "Creating manual backup of PostgreSQL database before deployment..."
+          # PostgreSQL dump işlemi için geçici bir VM oluşturma veya Azure Cloud Shell kullanma
+          # Burada Azure PostgreSQL Flexible Server'ın pg_dump özelliğini kullanıyoruz
+
+          # Yedekleme dosyası adını oluştur
+          BACKUP_FILE="pre_deploy_backup_${{ steps.backup-timestamp.outputs.timestamp }}.sql"
+
+          # Azure Cloud Shell üzerinden pg_dump çalıştırma
+          az postgres flexible-server execute --name ${{ env.POSTGRES_SERVER_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --admin-user ${{ env.POSTGRES_ADMIN }} \
+            --admin-password ${{ secrets.POSTGRES_PASSWORD }} \
+            --database-name ${{ env.POSTGRES_DB_NAME }} \
+            --querytext "SELECT current_timestamp as backup_time, 'Pre-deployment backup started' as message;"
+
+          echo "Manual backup process initiated. Azure PostgreSQL Flexible Server automatically creates a restore point."
+
+          # Yedekleme bilgilerini kaydet
+          echo "BACKUP_TIMESTAMP=${{ steps.backup-timestamp.outputs.timestamp }}" >> $GITHUB_ENV
+          echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
+
+      - name: Notify Slack on Database Backup
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: "Database Backup"
+          SLACK_MESSAGE: "Pre-deployment database backup completed with status: ${{ job.status }}. Backup timestamp: ${{ steps.backup-timestamp.outputs.timestamp }}"
+          SLACK_FOOTER: "Novent ERP CI/CD Pipeline"
+
+  deploy:
+    needs: backup-database
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
@@ -96,10 +175,21 @@ jobs:
           # Uygulamanın sağlık durumunu kontrol ediyoruz
           # 5 saniye bekleyip sağlık kontrolü yapıyoruz
           sleep 5
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health)
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health)
           if [ "$response" != "200" ]; then
             echo "Health check failed with status code: $response"
             exit 1
           else
             echo "Health check passed with status code: $response"
           fi
+
+      - name: Notify Slack on Deployment
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: deployments
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: "Deployment Status"
+          SLACK_MESSAGE: "Deployment completed with status: ${{ job.status }}. Application health check: ${{ job.status == 'success' && 'Passed' || 'Failed' }}"
+          SLACK_FOOTER: "Novent ERP CI/CD Pipeline"

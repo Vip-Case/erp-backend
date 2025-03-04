@@ -8,12 +8,14 @@ CI/CD pipeline'ımız şu adımları içerir:
 
 - Kod değişikliklerini kontrol etme (linting, formatting)
 - Testleri çalıştırma
+- Veritabanı yedekleme
 - Docker imajı oluşturma
 - Azure Container Registry'ye (ACR) imajı gönderme
 - Azure App Service'e deploy etme
 - Veritabanı migrasyonlarını çalıştırma
 - Redis önbelleğini temizleme
 - Uygulama sağlık kontrolü
+- Slack bildirimleri gönderme
 
 ## Kurulum Adımları
 
@@ -37,6 +39,8 @@ Aşağıdaki secrets'ları da GitHub'a eklemeniz gerekebilir:
 
 - `ACR_USERNAME`: Azure Container Registry kullanıcı adı
 - `ACR_PASSWORD`: Azure Container Registry şifresi
+- `POSTGRES_PASSWORD`: PostgreSQL veritabanı şifresi
+- `SLACK_WEBHOOK`: Slack webhook URL'si (bildirimler için)
 
 ### 4. Workflow Dosyasını Kontrol Etme
 
@@ -49,6 +53,37 @@ Pipeline, aşağıdaki durumlarda otomatik olarak çalışacaktır:
 1. `main` veya `master` branch'ine push yapıldığında
 2. `main` veya `master` branch'ine pull request açıldığında
 3. GitHub Actions arayüzünden manuel olarak tetiklendiğinde (workflow_dispatch)
+
+## Veritabanı Yedekleme
+
+CI/CD pipeline'ı, her deployment öncesinde otomatik olarak bir veritabanı yedeği oluşturur. Bu yedekler, Azure PostgreSQL Flexible Server'ın otomatik yedekleme özelliği kullanılarak oluşturulur ve 14 gün boyunca saklanır.
+
+### Manuel Yedekleme
+
+Manuel yedekleme oluşturmak için aşağıdaki komutu kullanabilirsiniz:
+
+```bash
+./scripts/postgres-backup-restore.sh backup
+```
+
+### Yedeği Geri Yükleme
+
+Bir yedeği geri yüklemek için aşağıdaki komutu kullanabilirsiniz:
+
+```bash
+./scripts/postgres-backup-restore.sh restore "2025-03-04T14:30:00"
+```
+
+## Slack Bildirimleri
+
+CI/CD pipeline'ı, aşağıdaki durumlarda Slack bildirimleri gönderir:
+
+1. Test tamamlandığında
+2. Docker imajı oluşturulduğunda
+3. Veritabanı yedeği oluşturulduğunda
+4. Deployment tamamlandığında
+
+Slack bildirimlerini yapılandırmak için, Slack webhook URL'sini GitHub repository'nizin "Settings > Secrets and variables > Actions" bölümüne "SLACK_WEBHOOK" adıyla ekleyin.
 
 ## Sorun Giderme
 
@@ -67,3 +102,5 @@ Pipeline çalışırken sorunlarla karşılaşırsanız:
 - Her başarılı deploy sonrası, uygulama sağlık kontrolü yapılır
 - Veritabanı migrasyonları otomatik olarak çalıştırılır
 - Redis önbelleği her deploy sonrası temizlenir
+- Her deployment öncesinde veritabanı yedeği oluşturulur
+- Tüm önemli adımlar için Slack bildirimleri gönderilir

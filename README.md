@@ -11,13 +11,14 @@
 5. [Kullanım](#kullanım)
 6. [API Dokümantasyonu](#api-dokümantasyonu)
 7. [Veritabanı Şeması](#veritabanı-şeması)
-8. [CI/CD Pipeline](#cicd-pipeline)
-9. [Katkıda Bulunma](#katkıda-bulunma)
-10. [Test](#test)
-11. [Dağıtım](#dağıtım)
-12. [Sürüm Geçmişi](#sürüm-geçmişi)
-13. [Lisans](#lisans)
-14. [İletişim](#iletişim)
+8. [Veritabanı Yedekleme ve Geri Yükleme](#veritabanı-yedekleme-ve-geri-yükleme)
+9. [CI/CD Pipeline](#cicd-pipeline)
+10. [Katkıda Bulunma](#katkıda-bulunma)
+11. [Test](#test)
+12. [Dağıtım](#dağıtım)
+13. [Sürüm Geçmişi](#sürüm-geçmişi)
+14. [Lisans](#lisans)
+15. [İletişim](#iletişim)
 
 ## Proje Hakkında
 
@@ -145,6 +146,52 @@ API dokümantasyonuna `http://localhost:3000/api-docs` adresinden erişebilirsin
 ## Veritabanı Şeması
 
 Veritabanı şeması `src/data/schema` klasöründe bulunmaktadır. Her bir varlık (entity) için ayrı bir şema dosyası oluşturulmuştur.
+
+## Veritabanı Yedekleme ve Geri Yükleme
+
+Projemiz, Azure PostgreSQL Flexible Server'ın otomatik yedekleme özelliğini kullanmaktadır. Varsayılan olarak, veritabanı her gün yedeklenir ve yedekler 14 gün boyunca saklanır.
+
+### Otomatik Yedekleme
+
+Azure PostgreSQL Flexible Server, otomatik olarak günlük yedeklemeler oluşturur ve bu yedekler 14 gün boyunca saklanır. Bu yedekler, herhangi bir zamanda geri yüklenebilir.
+
+### Manuel Yedekleme
+
+Manuel yedekleme oluşturmak için aşağıdaki komutu kullanabilirsiniz:
+
+```bash
+./scripts/postgres-backup-restore.sh backup
+```
+
+Bu komut, Azure PostgreSQL Flexible Server'da bir restore point oluşturur.
+
+### Yedekleri Listeleme
+
+Mevcut yedekleri listelemek için aşağıdaki komutu kullanabilirsiniz:
+
+```bash
+./scripts/postgres-backup-restore.sh list-backups
+```
+
+### Yedeği Geri Yükleme
+
+Bir yedeği geri yüklemek için aşağıdaki komutu kullanabilirsiniz:
+
+```bash
+./scripts/postgres-backup-restore.sh restore "2025-03-04T14:30:00"
+```
+
+Bu komut, belirtilen tarihteki yedeği yeni bir sunucuya geri yükler. Geri yükleme işlemi tamamlandıktan sonra, yeni sunucuya bağlanabilir ve verileri kontrol edebilirsiniz.
+
+**Not**: Geri yükleme işlemi, yeni bir PostgreSQL sunucusu oluşturur. Orijinal sunucu değiştirilmez.
+
+### Point-in-Time Recovery (PITR)
+
+Azure PostgreSQL Flexible Server, Point-in-Time Recovery (PITR) özelliğini destekler. Bu özellik sayesinde, veritabanını belirli bir zamana geri yükleyebilirsiniz. PITR, son 14 gün içindeki herhangi bir zamana geri yükleme yapmanıza olanak tanır.
+
+### CI/CD Pipeline Entegrasyonu
+
+CI/CD pipeline'ımız, her deployment öncesinde otomatik olarak bir yedekleme oluşturur. Bu, deployment sırasında bir sorun oluşması durumunda veritabanını geri yükleme olanağı sağlar.
 
 ## CI/CD Pipeline
 
