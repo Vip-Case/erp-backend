@@ -110,21 +110,18 @@ jobs:
       - name: Create Manual Backup
         run: |
           echo "Creating manual backup of PostgreSQL database before deployment..."
-          # PostgreSQL dump işlemi için geçici bir VM oluşturma veya Azure Cloud Shell kullanma
-          # Burada Azure PostgreSQL Flexible Server'ın pg_dump özelliğini kullanıyoruz
 
           # Yedekleme dosyası adını oluştur
-          BACKUP_FILE="pre_deploy_backup_${{ steps.backup-timestamp.outputs.timestamp }}.sql"
+          BACKUP_FILE="pre_deploy_backup_${{ steps.backup-timestamp.outputs.timestamp }}"
 
-          # Azure Cloud Shell üzerinden pg_dump çalıştırma
-          az postgres flexible-server execute --name ${{ env.POSTGRES_SERVER_NAME }} \
+          # Azure PostgreSQL Flexible Server için manuel yedek oluştur
+          echo "Creating manual backup for PostgreSQL Flexible Server..."
+          az postgres flexible-server backup create \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --admin-user ${{ env.POSTGRES_ADMIN }} \
-            --admin-password ${{ secrets.POSTGRES_PASSWORD }} \
-            --database-name ${{ env.POSTGRES_DB_NAME }} \
-            --querytext "SELECT current_timestamp as backup_time, 'Pre-deployment backup started' as message;"
+            --server-name ${{ env.POSTGRES_SERVER_NAME }} \
+            --name "$BACKUP_FILE"
 
-          echo "Manual backup process initiated. Azure PostgreSQL Flexible Server automatically creates a restore point."
+          echo "Manual backup process initiated with name: $BACKUP_FILE"
 
           # Yedekleme bilgilerini kaydet
           echo "BACKUP_TIMESTAMP=${{ steps.backup-timestamp.outputs.timestamp }}" >> $GITHUB_ENV
@@ -138,7 +135,7 @@ jobs:
           SLACK_CHANNEL: deployments
           SLACK_COLOR: ${{ job.status }}
           SLACK_TITLE: "Database Backup"
-          SLACK_MESSAGE: "Pre-deployment database backup completed with status: ${{ job.status }}. Backup timestamp: ${{ steps.backup-timestamp.outputs.timestamp }}"
+          SLACK_MESSAGE: "Pre-deployment database backup completed with status: ${{ job.status }}. Backup name: ${{ env.BACKUP_FILE }}"
           SLACK_FOOTER: "Novent ERP CI/CD Pipeline"
 
   deploy:

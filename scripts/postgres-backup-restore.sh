@@ -36,29 +36,28 @@ function create_backup {
     # Yedekleme dizinini oluştur
     mkdir -p $BACKUP_DIR
     
-    # Azure PostgreSQL Flexible Server'da restore point oluştur
-    echo "Azure PostgreSQL Flexible Server'da restore point oluşturuluyor..."
-    az postgres flexible-server execute \
-        --name $POSTGRES_SERVER_NAME \
-        --resource-group $RESOURCE_GROUP \
-        --admin-user $POSTGRES_ADMIN \
-        --admin-password $POSTGRES_PASSWORD \
-        --database-name $POSTGRES_DB_NAME \
-        --querytext "SELECT current_timestamp as backup_time, 'Manual backup started' as message;"
+    # Yedekleme adını oluştur
+    BACKUP_NAME="manual_backup_${TIMESTAMP}"
     
-    echo "Restore point oluşturuldu. Timestamp: $TIMESTAMP"
-    echo "Not: Azure PostgreSQL Flexible Server otomatik olarak bir restore point oluşturur."
-    echo "Bu restore point'i daha sonra geri yüklemek için kullanabilirsiniz."
+    # Azure PostgreSQL Flexible Server'da manuel yedek oluştur
+    echo "Azure PostgreSQL Flexible Server'da manuel yedek oluşturuluyor..."
+    az postgres flexible-server backup create \
+        --resource-group $RESOURCE_GROUP \
+        --server-name $POSTGRES_SERVER_NAME \
+        --name $BACKUP_NAME
+    
+    echo "Manuel yedek oluşturuldu. Yedek adı: $BACKUP_NAME"
+    echo "Bu yedeği daha sonra geri yüklemek için kullanabilirsiniz."
 }
 
 function list_backups {
     echo "Mevcut yedekleri listeleme..."
     
-    # Azure PostgreSQL Flexible Server'daki restore point'leri listele
-    echo "Azure PostgreSQL Flexible Server'daki restore point'ler:"
-    az postgres flexible-server restore-point list \
-        --name $POSTGRES_SERVER_NAME \
-        --resource-group $RESOURCE_GROUP
+    # Azure PostgreSQL Flexible Server'daki yedekleri listele
+    echo "Azure PostgreSQL Flexible Server'daki yedekler:"
+    az postgres flexible-server backup list \
+        --resource-group $RESOURCE_GROUP \
+        --server-name $POSTGRES_SERVER_NAME
 }
 
 function restore_backup {

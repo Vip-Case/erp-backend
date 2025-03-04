@@ -75,7 +75,11 @@ Pipeline, aşağıdaki durumlarda otomatik olarak çalışacaktır:
 
 ## Veritabanı Yedekleme
 
-CI/CD pipeline'ı, her deployment öncesinde otomatik olarak bir veritabanı yedeği oluşturur. Bu yedekler, Azure PostgreSQL Flexible Server'ın otomatik yedekleme özelliği kullanılarak oluşturulur ve 14 gün boyunca saklanır.
+CI/CD pipeline'ı, her deployment öncesinde otomatik olarak bir veritabanı yedeği oluşturur. Bu yedekler, Azure PostgreSQL Flexible Server'ın yedekleme özelliği kullanılarak oluşturulur.
+
+### Otomatik Yedekleme
+
+Azure PostgreSQL Flexible Server, otomatik olarak günlük yedeklemeler oluşturur ve bu yedekler 14 gün boyunca saklanır. Bu yedekler, herhangi bir zamanda geri yüklenebilir.
 
 ### Manuel Yedekleme
 
@@ -85,6 +89,16 @@ Manuel yedekleme oluşturmak için aşağıdaki komutu kullanabilirsiniz:
 ./scripts/postgres-backup-restore.sh backup
 ```
 
+Bu komut, Azure PostgreSQL Flexible Server'da bir manuel yedek oluşturur. Yedek adı "manual_backup_TIMESTAMP" formatında olacaktır.
+
+### Yedekleri Listeleme
+
+Mevcut yedekleri listelemek için aşağıdaki komutu kullanabilirsiniz:
+
+```bash
+./scripts/postgres-backup-restore.sh list-backups
+```
+
 ### Yedeği Geri Yükleme
 
 Bir yedeği geri yüklemek için aşağıdaki komutu kullanabilirsiniz:
@@ -92,6 +106,14 @@ Bir yedeği geri yüklemek için aşağıdaki komutu kullanabilirsiniz:
 ```bash
 ./scripts/postgres-backup-restore.sh restore "2025-03-04T14:30:00"
 ```
+
+Bu komut, belirtilen tarihteki yedeği yeni bir sunucuya geri yükler. Geri yükleme işlemi tamamlandıktan sonra, yeni sunucuya bağlanabilir ve verileri kontrol edebilirsiniz.
+
+**Not**: Geri yükleme işlemi, yeni bir PostgreSQL sunucusu oluşturur. Orijinal sunucu değiştirilmez.
+
+### CI/CD Pipeline Entegrasyonu
+
+CI/CD pipeline'ımız, her deployment öncesinde otomatik olarak bir yedekleme oluşturur. Bu, deployment sırasında bir sorun oluşması durumunda veritabanını geri yükleme olanağı sağlar. Yedekleme işlemi, `az postgres flexible-server backup create` komutu kullanılarak gerçekleştirilir.
 
 ## Slack Bildirimleri
 

@@ -42,7 +42,7 @@ Aşağıdaki secrets'ları GitHub repository'nize eklemeniz gerekir:
 
 2. **Veritabanı Yedekleme**:
 
-   - Deployment öncesi veritabanı yedeği oluşturma
+   - Deployment öncesi veritabanı yedeği oluşturma (`az postgres flexible-server backup create` komutu ile)
    - Slack bildirimi gönderme
 
 3. **Docker İmajı Oluşturma ve Gönderme**:
@@ -60,7 +60,14 @@ Aşağıdaki secrets'ları GitHub repository'nize eklemeniz gerekir:
 
 ## Veritabanı Yedekleme
 
-CI/CD pipeline'ı, her deployment öncesinde otomatik olarak bir veritabanı yedeği oluşturur. Bu yedekler, Azure PostgreSQL Flexible Server'ın otomatik yedekleme özelliği kullanılarak oluşturulur ve 14 gün boyunca saklanır.
+CI/CD pipeline'ı, her deployment öncesinde otomatik olarak bir veritabanı yedeği oluşturur. Bu yedekler, Azure PostgreSQL Flexible Server'ın yedekleme özelliği kullanılarak oluşturulur ve 14 gün boyunca saklanır.
+
+### Yedekleme Özellikleri
+
+- **Otomatik Yedekleme**: Azure PostgreSQL Flexible Server, günlük otomatik yedeklemeler oluşturur
+- **Manuel Yedekleme**: CI/CD pipeline'ı veya `scripts/postgres-backup-restore.sh backup` komutu ile manuel yedekler oluşturulabilir
+- **Yedekleri Listeleme**: `scripts/postgres-backup-restore.sh list-backups` komutu ile mevcut yedekler listelenebilir
+- **Geri Yükleme**: `scripts/postgres-backup-restore.sh restore "2025-03-04T14:30:00"` komutu ile belirli bir tarihteki yedek geri yüklenebilir
 
 ## Slack Bildirimleri
 
