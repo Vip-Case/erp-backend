@@ -43,8 +43,8 @@ function create_backup {
     echo "Azure PostgreSQL Flexible Server'da manuel yedek oluşturuluyor..."
     az postgres flexible-server backup create \
         --resource-group $RESOURCE_GROUP \
-        --server-name $POSTGRES_SERVER_NAME \
-        --name $BACKUP_NAME
+        --name $POSTGRES_SERVER_NAME \
+        --backup-name $BACKUP_NAME
     
     echo "Manuel yedek oluşturuldu. Yedek adı: $BACKUP_NAME"
     echo "Bu yedeği daha sonra geri yüklemek için kullanabilirsiniz."
@@ -57,7 +57,7 @@ function list_backups {
     echo "Azure PostgreSQL Flexible Server'daki yedekler:"
     az postgres flexible-server backup list \
         --resource-group $RESOURCE_GROUP \
-        --server-name $POSTGRES_SERVER_NAME
+        --name $POSTGRES_SERVER_NAME
 }
 
 function restore_backup {

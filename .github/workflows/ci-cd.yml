@@ -118,8 +118,8 @@ jobs:
           echo "Creating manual backup for PostgreSQL Flexible Server..."
           az postgres flexible-server backup create \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --server-name ${{ env.POSTGRES_SERVER_NAME }} \
-            --name "$BACKUP_FILE"
+            --name ${{ env.POSTGRES_SERVER_NAME }} \
+            --backup-name "$BACKUP_FILE"
 
           echo "Manual backup process initiated with name: $BACKUP_FILE"
 
