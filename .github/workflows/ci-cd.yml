@@ -174,19 +174,13 @@ jobs:
           echo "Waiting for migrations to complete..."
           sleep 10
 
-      - name: Purge Redis Cache
-        run: |
-          echo "Purging Redis Cache..."
-          # Redis önbelleğini temizliyoruz
-          az redis command invoke --command "FLUSHALL" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name novent-redis
-
       - name: Post-deployment health check
         run: |
           echo "Checking application health..."
           # Uygulamanın sağlık durumunu kontrol ediyoruz
           # 5 saniye bekleyip sağlık kontrolü yapıyoruz
           sleep 5
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health)
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health)
           if [ "$response" != "200" ]; then
             echo "Health check failed with status code: $response"
             exit 1
