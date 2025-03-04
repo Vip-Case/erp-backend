@@ -69,15 +69,30 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Log in to ACR
+      - name: Get ACR Credentials
+        id: get-acr-credentials
         run: |
-          az acr login --name ${{ env.ACR_NAME }}
+          ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query passwords[0].value -o tsv)
+          echo "::set-output name=username::$ACR_USERNAME"
+          echo "::set-output name=password::$ACR_PASSWORD"
+          # GitHub Actions yeni sözdizimi için
+          echo "username=$ACR_USERNAME" >> $GITHUB_OUTPUT
+          echo "password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
+
+      - name: Log in to ACR with Docker
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ steps.get-acr-credentials.outputs.username }}
+          password: ${{ steps.get-acr-credentials.outputs.password }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          platforms: linux/amd64
           tags: ${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:latest
           cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:latest
           cache-to: type=inline
@@ -173,6 +188,16 @@ jobs:
           # Migrasyonların tamamlanması için biraz bekliyoruz
           echo "Waiting for migrations to complete..."
           sleep 10
+
+      - name: Purge Redis Cache
+        run: |
+          echo "Purging Redis Cache..."
+          # Redis önbelleğini temizliyoruz
+          az redis command invoke --command "FLUSHALL" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name novent-redis
+
+          # Redis önbelleğinin temizlenmesi için biraz bekliyoruz
+          echo "Waiting for Redis cache to be purged..."
+          sleep 5
 
       - name: Restart App Service
         run: |
