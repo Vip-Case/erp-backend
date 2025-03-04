@@ -1,53 +1,59 @@
-name: erp-backend
+version: "3.8"
 
 services:
-  app:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: erp-backend
+    container_name: erp-api
+    restart: unless-stopped
     ports:
       - "1303:1303"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - PORT=1303
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=xderensa3
+      - DB_PASSWORD=postgres
       - DB_NAME=erp_db
-      - DATABASE_URL=postgresql://postgres:xderensa3@postgres:5432/erp_db?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/erp_db?schema=public
+      - JWT_SECRET=your_jwt_secret
+      - REFRESH_TOKEN_SECRET=your_refresh_token_secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - CORS_URL=http://localhost:3000
+      - CRITICAL_STOCK_LEVEL=20
+      - WARNING_STOCK_LEVEL=50
+    volumes:
+      - ./logs:/app/logs
     depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
-    develop:
-      watch:
-        - action: sync
-          path: .
-          target: /app
-          ignore:
-            - node_modules/
-            - .git/
-            - .gitignore
-        - action: rebuild
-          path: package.json
+      - postgres
+      - redis
 
   postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: erp_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: xderensa3
+    image: postgres:14-alpine
+    container_name: erp-postgres
+    restart: unless-stopped
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=erp_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: erp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:
+  redis_data:

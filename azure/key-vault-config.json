@@ -1,0 +1,76 @@
+{
+    "name": "novent-kv",
+    "location": "westeurope",
+    "resourceGroup": "novent-erp-rg",
+    "sku": "standard",
+    "secrets": [
+        {
+            "name": "DB-HOST",
+            "value": "novent-postgres.postgres.database.azure.com"
+        },
+        {
+            "name": "DB-PORT",
+            "value": "5432"
+        },
+        {
+            "name": "DB-USER",
+            "value": "noventadmin"
+        },
+        {
+            "name": "DB-PASSWORD",
+            "value": "REPLACE_WITH_SECURE_PASSWORD"
+        },
+        {
+            "name": "DB-NAME",
+            "value": "erp_db"
+        },
+        {
+            "name": "DATABASE-URL",
+            "value": "postgresql://noventadmin:REPLACE_WITH_SECURE_PASSWORD@novent-postgres.postgres.database.azure.com:5432/erp_db?schema=public"
+        },
+        {
+            "name": "JWT-SECRET",
+            "value": "REPLACE_WITH_SECURE_JWT_SECRET"
+        },
+        {
+            "name": "REFRESH-TOKEN-SECRET",
+            "value": "REPLACE_WITH_SECURE_REFRESH_TOKEN_SECRET"
+        },
+        {
+            "name": "REDIS-HOST",
+            "value": "novent-redis.redis.cache.windows.net"
+        },
+        {
+            "name": "REDIS-PORT",
+            "value": "6380"
+        },
+        {
+            "name": "REDIS-PASSWORD",
+            "value": "REPLACE_WITH_SECURE_REDIS_PASSWORD"
+        },
+        {
+            "name": "RESEND-API-KEY",
+            "value": "REPLACE_WITH_RESEND_API_KEY"
+        },
+        {
+            "name": "ELASTIC-PASSWORD",
+            "value": "REPLACE_WITH_SECURE_ELASTIC_PASSWORD"
+        },
+        {
+            "name": "KIBANA-PASSWORD",
+            "value": "REPLACE_WITH_SECURE_KIBANA_PASSWORD"
+        }
+    ],
+    "accessPolicies": [
+        {
+            "tenantId": "REPLACE_WITH_TENANT_ID",
+            "objectId": "REPLACE_WITH_APP_SERVICE_MANAGED_IDENTITY_OBJECT_ID",
+            "permissions": {
+                "secrets": [
+                    "get",
+                    "list"
+                ]
+            }
+        }
+    ]
+}

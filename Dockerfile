@@ -1,27 +1,47 @@
-FROM oven/bun:debian as builder
+FROM ubuntu:22.04
 
+# Temel paketleri yükle ve zaman dilimini ayarla
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    ca-certificates \
+    unzip \
+    git \
+    tzdata \
+    && ln -fs /usr/share/zoneinfo/Europe/Istanbul /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata
+
+# Node.js kurulumu
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Bun kurulumu
+RUN curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
+
+# Çalışma dizinini ayarla
 WORKDIR /app
 
-# Sadece package.json ve prisma dosyalarını kopyala
+# Bağımlılık dosyalarını kopyala
 COPY package.json bun.lockb ./
-COPY prisma ./prisma/
 
 # Bağımlılıkları yükle
-RUN bun install
-RUN bun add prisma --global
+RUN bun install --frozen-lockfile
 
-# Prisma client'ı oluştur
-RUN bunx prisma generate
-
-FROM oven/bun:debian
-
-WORKDIR /app
-
-# Builder aşamasından gerekli dosyaları kopyala
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Geri kalan dosyaları kopyala
+# Kaynak kodları kopyala
 COPY . .
 
-CMD ["bun", "dev"]
+# Prisma client'ı NPX ile oluştur
+RUN npx prisma generate
+
+# Uygulama portunu belirt
+EXPOSE 1303
+
+# Timeout süresini artır
+ENV NODE_OPTIONS="--max-http-header-size=16384 --http-parser=legacy --max-http-request-timeout=300000"
+
+# Uygulamayı başlat
+CMD ["bun", "start"]

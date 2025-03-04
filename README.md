@@ -1,6 +1,7 @@
 # ERP, IMS ve Entegrasyon Yazılımı Projesi
 
 ## İçindekiler
+
 1. [Proje Hakkında](#proje-hakkında)
 2. [Özellikler](#özellikler)
 3. [Teknoloji Yığını](#teknoloji-yığını)
@@ -10,12 +11,13 @@
 5. [Kullanım](#kullanım)
 6. [API Dokümantasyonu](#api-dokümantasyonu)
 7. [Veritabanı Şeması](#veritabanı-şeması)
-8. [Katkıda Bulunma](#katkıda-bulunma)
-9. [Test](#test)
-10. [Dağıtım](#dağıtım)
-11. [Sürüm Geçmişi](#sürüm-geçmişi)
-12. [Lisans](#lisans)
-13. [İletişim](#iletişim)
+8. [CI/CD Pipeline](#cicd-pipeline)
+9. [Katkıda Bulunma](#katkıda-bulunma)
+10. [Test](#test)
+11. [Dağıtım](#dağıtım)
+12. [Sürüm Geçmişi](#sürüm-geçmişi)
+13. [Lisans](#lisans)
+14. [İletişim](#iletişim)
 
 ## Proje Hakkında
 
@@ -41,7 +43,7 @@ Bu proje, işletmelerin iş süreçlerini optimize etmelerine, envanterlerini et
 - **Konteynerizasyon**: Docker, Docker Swarm
 - **API Dokümantasyonu**: Swagger
 - **Test**: (Planlanan) Jest
-- **CI/CD**: (Planlanan) GitHub Actions
+- **CI/CD**: GitHub Actions, Azure DevOps
 
 ## Başlangıç
 
@@ -57,22 +59,26 @@ Bu proje, işletmelerin iş süreçlerini optimize etmelerine, envanterlerini et
 #### 1. Yöntem: Yerel Kurulum
 
 1. Repoyu klonlayın:
+
    ```
    git clone https://github.com/vip-case/backend.git
    cd backend
    ```
 
 2. Gerekli bağımlılıkları yükleyin:
+
    ```
    bun install
    ```
 
 3. `.env.example` dosyasını `.env` olarak kopyalayın ve gerekli çevresel değişkenleri ayarlayın:
+
    ```
    cp .env.example .env
    ```
 
 4. Veritabanını ve tabloları oluşturun:
+
    ```
    bun run migrate
    ```
@@ -85,17 +91,20 @@ Bu proje, işletmelerin iş süreçlerini optimize etmelerine, envanterlerini et
 #### 2. Yöntem: Docker Compose ile Kurulum
 
 1. Repoyu klonlayın:
+
    ```
    git clone https://github.com/vip-case/backend.git
    cd backend
    ```
 
 2. `.env.example` dosyasını `.env` olarak kopyalayın ve gerekli çevresel değişkenleri ayarlayın:
+
    ```
    cp .env.example .env
    ```
 
 3. Docker Compose ile servisleri başlatın:
+
    ```
    docker-compose up -d
    ```
@@ -103,6 +112,7 @@ Bu proje, işletmelerin iş süreçlerini optimize etmelerine, envanterlerini et
    Bu komut, uygulamanızı, PostgreSQL veritabanını ve Redis'i ayrı konteynerler içinde başlatacaktır.
 
 4. Migrasyon işlemini çalıştırın:
+
    ```
    docker-compose exec app bun run migrate
    ```
@@ -113,11 +123,13 @@ Bu proje, işletmelerin iş süreçlerini optimize etmelerine, envanterlerini et
    Uygulama varsayılan olarak `http://localhost:3000` adresinde çalışacaktır.
 
 6. Servisleri durdurmak için:
+
    ```
    docker-compose down
    ```
 
    Eğer veritabanı ve Redis verilerini de silmek isterseniz:
+
    ```
    docker-compose down -v
    ```
@@ -134,6 +146,37 @@ API dokümantasyonuna `http://localhost:3000/api-docs` adresinden erişebilirsin
 
 Veritabanı şeması `src/data/schema` klasöründe bulunmaktadır. Her bir varlık (entity) için ayrı bir şema dosyası oluşturulmuştur.
 
+## CI/CD Pipeline
+
+Projemiz, GitHub Actions kullanarak otomatik CI/CD pipeline'ına sahiptir. Bu pipeline, kod değişikliklerini test eder, Docker imajı oluşturur ve Azure App Service'e deploy eder.
+
+### CI/CD Pipeline Bileşenleri
+
+1. **GitHub Actions Workflow**: `.github/workflows/ci-cd.yml`
+2. **Azure Kimlik Bilgileri Oluşturma Script'i**: `scripts/setup-github-actions.sh`
+3. **CI/CD Test Script'i**: `scripts/test-ci-cd.sh`
+
+### Pipeline Adımları
+
+1. **Build ve Test**:
+
+   - Kod kalitesi kontrolü
+   - Unit testlerin çalıştırılması
+
+2. **Docker İmajı Oluşturma ve Gönderme**:
+
+   - Docker imajı oluşturma
+   - Azure Container Registry'ye gönderme
+
+3. **Deploy**:
+   - Azure App Service'e deploy etme
+   - Veritabanı migrasyonlarını çalıştırma
+   - Redis önbelleğini temizleme
+   - Sağlık kontrolü yapma
+
+### CI/CD Kurulumu
+
+CI/CD pipeline'ının kurulumu ve kullanımı hakkında detaylı bilgi için [CI-CD-README.md](CI-CD-README.md) dosyasına bakın.
 
 ## Katkıda Bulunma
 
@@ -158,8 +201,8 @@ Dağıtım adımları için `DEPLOYMENT.md` dosyasına bakın.
 ## Sürüm Geçmişi
 
 - 0.1.0
-    - İlk sürüm
-    - Temel ERP ve IMS özellikleri eklendi
+  - İlk sürüm
+  - Temel ERP ve IMS özellikleri eklendi
 
 Tüm değişiklikler için [CHANGELOG.md](CHANGELOG.md) dosyasına bakın.
 
@@ -169,6 +212,6 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 ## İletişim
 
- info@alirizaselcuk.com
+info@alirizaselcuk.com
 
 Proje Linki: [https://github.com/vipcase/backend](https://github.com/vip-case/backend)

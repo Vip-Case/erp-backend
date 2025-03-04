@@ -1,0 +1,105 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: novent-erp-api
+  AZURE_RESOURCE_GROUP: novent-erp-rg
+  ACR_NAME: noventacr
+  CONTAINER_IMAGE_NAME: erp-api
+  NODE_VERSION: "20"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+  build-and-push-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:latest
+          cache-to: type=inline
+
+  deploy:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          # App Service'e SSH ile bağlanıp Prisma migrasyonlarını çalıştırıyoruz
+          az webapp ssh --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --command "cd /home/site/wwwroot && npx prisma migrate deploy"
+
+      - name: Purge Redis Cache
+        run: |
+          echo "Purging Redis Cache..."
+          # Redis önbelleğini temizliyoruz
+          az redis command invoke --command "FLUSHALL" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name novent-redis
+
+      - name: Post-deployment health check
+        run: |
+          echo "Checking application health..."
+          # Uygulamanın sağlık durumunu kontrol ediyoruz
+          # 5 saniye bekleyip sağlık kontrolü yapıyoruz
+          sleep 5
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health)
+          if [ "$response" != "200" ]; then
+            echo "Health check failed with status code: $response"
+            exit 1
+          else
+            echo "Health check passed with status code: $response"
+          fi

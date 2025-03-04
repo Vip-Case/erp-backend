@@ -1,0 +1,63 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "westeurope"
+        },
+        "adminUsername": {
+            "value": "noventadmin"
+        },
+        "adminPassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/novent-erp-rg/providers/Microsoft.KeyVault/vaults/novent-kv"
+                },
+                "secretName": "DB-PASSWORD"
+            }
+        },
+        "elasticPassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/novent-erp-rg/providers/Microsoft.KeyVault/vaults/novent-kv"
+                },
+                "secretName": "ELASTIC-PASSWORD"
+            }
+        },
+        "kibanaPassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/novent-erp-rg/providers/Microsoft.KeyVault/vaults/novent-kv"
+                },
+                "secretName": "KIBANA-PASSWORD"
+            }
+        },
+        "jwtSecret": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/novent-erp-rg/providers/Microsoft.KeyVault/vaults/novent-kv"
+                },
+                "secretName": "JWT-SECRET"
+            }
+        },
+        "refreshTokenSecret": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/novent-erp-rg/providers/Microsoft.KeyVault/vaults/novent-kv"
+                },
+                "secretName": "REFRESH-TOKEN-SECRET"
+            }
+        },
+        "resendApiKey": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/novent-erp-rg/providers/Microsoft.KeyVault/vaults/novent-kv"
+                },
+                "secretName": "RESEND-API-KEY"
+            }
+        },
+        "sshPublicKey": {
+            "value": "REPLACE_WITH_YOUR_SSH_PUBLIC_KEY"
+        }
+    }
+}

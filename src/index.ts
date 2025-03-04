@@ -61,7 +61,7 @@ const app = new Elysia();
 
 app.use(
   cors({
-    origin: ["https://erp.novent.com.tr"],
+    origin: [`${process.env.CORS_URL}`],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     credentials: true,
@@ -81,6 +81,7 @@ app.onRequest(async (ctx) => {
     "/auth/register",
     "/auth/refresh-token",
     "/docs",
+    "/health",
   ];
   const route = new URL(ctx.request.url).pathname;
   const method = ctx.request.method;

@@ -1,0 +1,525 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "westeurope",
+            "metadata": {
+                "description": "Kaynakların oluşturulacağı Azure bölgesi"
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Veritabanı ve diğer servisler için yönetici kullanıcı adı"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Veritabanı ve diğer servisler için yönetici parolası"
+            }
+        },
+        "elasticPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Elasticsearch için parola"
+            }
+        },
+        "kibanaPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Kibana için parola"
+            }
+        },
+        "jwtSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": "JWT için gizli anahtar"
+            }
+        },
+        "refreshTokenSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Refresh token için gizli anahtar"
+            }
+        },
+        "resendApiKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Resend API anahtarı"
+            }
+        },
+        "sshPublicKey": {
+            "type": "string",
+            "metadata": {
+                "description": "ELK Stack VM için SSH public key"
+            }
+        }
+    },
+    "variables": {
+        "resourceGroupName": "novent-erp-rg",
+        "keyVaultName": "novent-kv",
+        "acrName": "noventacr",
+        "appServicePlanName": "novent-erp-plan",
+        "appServiceName": "novent-erp-api",
+        "postgresServerName": "novent-postgres",
+        "postgresDatabaseName": "erp_db",
+        "redisName": "novent-redis",
+        "elkVmName": "novent-elk-vm",
+        "elkVmNicName": "novent-elk-nic",
+        "elkVmNsgName": "novent-elk-nsg",
+        "elkVmPublicIpName": "novent-elk-ip",
+        "vnetName": "novent-vnet",
+        "subnetName": "default"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2019-09-01",
+            "name": "[variables('keyVaultName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "enabledForDeployment": true,
+                "enabledForTemplateDeployment": true,
+                "enabledForDiskEncryption": true,
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [],
+                "sku": {
+                    "name": "standard",
+                    "family": "A"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.ContainerRegistry/registries",
+            "apiVersion": "2019-05-01",
+            "name": "[variables('acrName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Basic"
+            },
+            "properties": {
+                "adminUserEnabled": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('appServicePlanName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "P1v2",
+                "tier": "PremiumV2",
+                "size": "P1v2",
+                "family": "Pv2",
+                "capacity": 1
+            },
+            "kind": "linux",
+            "properties": {
+                "reserved": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('appServiceName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+            ],
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "siteConfig": {
+                    "linuxFxVersion": "DOCKER|noventacr.azurecr.io/erp-api:latest",
+                    "appSettings": [
+                        {
+                            "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                            "value": "false"
+                        },
+                        {
+                            "name": "WEBSITES_PORT",
+                            "value": "1303"
+                        },
+                        {
+                            "name": "NODE_ENV",
+                            "value": "production"
+                        },
+                        {
+                            "name": "PORT",
+                            "value": "1303"
+                        },
+                        {
+                            "name": "DB_HOST",
+                            "value": "[concat(variables('postgresServerName'), '.postgres.database.azure.com')]"
+                        },
+                        {
+                            "name": "DB_PORT",
+                            "value": "5432"
+                        },
+                        {
+                            "name": "DB_USER",
+                            "value": "[concat(parameters('adminUsername'), '@', variables('postgresServerName'))]"
+                        },
+                        {
+                            "name": "DB_PASSWORD",
+                            "value": "[parameters('adminPassword')]"
+                        },
+                        {
+                            "name": "DB_NAME",
+                            "value": "[variables('postgresDatabaseName')]"
+                        },
+                        {
+                            "name": "DATABASE_URL",
+                            "value": "[concat('postgresql://', parameters('adminUsername'), '@', variables('postgresServerName'), ':', parameters('adminPassword'), '@', variables('postgresServerName'), '.postgres.database.azure.com:5432/', variables('postgresDatabaseName'), '?schema=public')]"
+                        },
+                        {
+                            "name": "JWT_SECRET",
+                            "value": "[parameters('jwtSecret')]"
+                        },
+                        {
+                            "name": "REFRESH_TOKEN_SECRET",
+                            "value": "[parameters('refreshTokenSecret')]"
+                        },
+                        {
+                            "name": "REDIS_HOST",
+                            "value": "[concat(variables('redisName'), '.redis.cache.windows.net')]"
+                        },
+                        {
+                            "name": "REDIS_PORT",
+                            "value": "6380"
+                        },
+                        {
+                            "name": "REDIS_PASSWORD",
+                            "value": "[listKeys(resourceId('Microsoft.Cache/Redis', variables('redisName')), '2020-06-01').primaryKey]"
+                        },
+                        {
+                            "name": "CORS_URL",
+                            "value": "https://erp.novent.com.tr"
+                        },
+                        {
+                            "name": "CRITICAL_STOCK_LEVEL",
+                            "value": "20"
+                        },
+                        {
+                            "name": "WARNING_STOCK_LEVEL",
+                            "value": "50"
+                        },
+                        {
+                            "name": "RESEND_API_KEY",
+                            "value": "[parameters('resendApiKey')]"
+                        }
+                    ]
+                }
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            }
+        },
+        {
+            "type": "Microsoft.DBforPostgreSQL/servers",
+            "apiVersion": "2017-12-01",
+            "name": "[variables('postgresServerName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "GP_Gen5_2",
+                "tier": "GeneralPurpose",
+                "family": "Gen5",
+                "capacity": 2
+            },
+            "properties": {
+                "version": "14",
+                "administratorLogin": "[parameters('adminUsername')]",
+                "administratorLoginPassword": "[parameters('adminPassword')]",
+                "sslEnforcement": "Enabled",
+                "minimalTlsVersion": "TLS1_2",
+                "storageProfile": {
+                    "storageMB": 102400,
+                    "backupRetentionDays": 7,
+                    "geoRedundantBackup": "Disabled"
+                }
+            },
+            "resources": [
+                {
+                    "type": "firewallRules",
+                    "apiVersion": "2017-12-01",
+                    "name": "AllowAzureServices",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.DBforPostgreSQL/servers', variables('postgresServerName'))]"
+                    ],
+                    "properties": {
+                        "startIpAddress": "0.0.0.0",
+                        "endIpAddress": "0.0.0.0"
+                    }
+                },
+                {
+                    "type": "databases",
+                    "apiVersion": "2017-12-01",
+                    "name": "[variables('postgresDatabaseName')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.DBforPostgreSQL/servers', variables('postgresServerName'))]"
+                    ],
+                    "properties": {
+                        "charset": "UTF8",
+                        "collation": "en_US.UTF8"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Cache/Redis",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('redisName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "sku": {
+                    "name": "Basic",
+                    "family": "C",
+                    "capacity": 1
+                },
+                "enableNonSslPort": false,
+                "minimumTlsVersion": "1.2",
+                "redisConfiguration": {
+                    "maxmemory-policy": "volatile-lru",
+                    "maxfragmentationmemory-reserved": "50",
+                    "maxmemory-reserved": "50"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('vnetName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('elkVmNsgName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "SSH",
+                        "properties": {
+                            "priority": 1000,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "22"
+                        }
+                    },
+                    {
+                        "name": "HTTP",
+                        "properties": {
+                            "priority": 1010,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "80"
+                        }
+                    },
+                    {
+                        "name": "HTTPS",
+                        "properties": {
+                            "priority": 1020,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443"
+                        }
+                    },
+                    {
+                        "name": "Kibana",
+                        "properties": {
+                            "priority": 1030,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "5601"
+                        }
+                    },
+                    {
+                        "name": "Elasticsearch",
+                        "properties": {
+                            "priority": 1040,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "9200"
+                        }
+                    },
+                    {
+                        "name": "Logstash",
+                        "properties": {
+                            "priority": 1050,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "5044"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('elkVmPublicIpName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "Static",
+                "dnsSettings": {
+                    "domainNameLabel": "[toLower(variables('elkVmName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('elkVmNicName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('elkVmPublicIpName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('elkVmNsgName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('elkVmPublicIpName'))]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('elkVmNsgName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('elkVmName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('elkVmNicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D2s_v3"
+                },
+                "osProfile": {
+                    "computerName": "[variables('elkVmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                                    "keyData": "[parameters('sshPublicKey')]"
+                                }
+                            ]
+                        }
+                    },
+                    "customData": "[base64(replace(replace(loadTextContent('cloud-init-elk.yml'), 'REPLACE_WITH_SECURE_ELASTIC_PASSWORD', parameters('elasticPassword')), 'REPLACE_WITH_SECURE_KIBANA_PASSWORD', parameters('kibanaPassword')))]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "20.04-LTS",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        },
+                        "diskSizeGB": 64
+                    },
+                    "dataDisks": [
+                        {
+                            "lun": 0,
+                            "createOption": "Empty",
+                            "managedDisk": {
+                                "storageAccountType": "Premium_LRS"
+                            },
+                            "diskSizeGB": 256
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('elkVmNicName'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "appServiceUrl": {
+            "type": "string",
+            "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('appServiceName'))).defaultHostName)]"
+        },
+        "elkVmIp": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('elkVmPublicIpName'))).ipAddress]"
+        },
+        "elkVmFqdn": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('elkVmPublicIpName'))).dnsSettings.fqdn]"
+        }
+    }
+}
