@@ -58,7 +58,7 @@ const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia();
-
+app.get("/health", () => ({ status: "ok" }));
 app.use(
   cors({
     origin: [`${process.env.CORS_URL}`],
@@ -149,7 +149,6 @@ cron.schedule("*/30 * * * *", async () => {
   }
 });
 console.log("Bildirimler kontrol ediliyor...");
-app.get("/health", () => ({ status: "ok" }));
 app
   .get("/secure/data", () => {
     return { message: "Secure data accessed." };
