@@ -87,7 +87,16 @@ app.onRequest(async (ctx) => {
   const method = ctx.request.method;
 
   // Public route kontrolü
-  if (publicRoutes.some((r) => route.startsWith(r))) {
+  if (
+    publicRoutes.some((r) => {
+      // /health için tam eşleşme kontrolü
+      if (r === "/health" && route === "/health") {
+        return true;
+      }
+      // Diğer rotalar için startsWith kontrolü
+      return route.startsWith(r) && r !== "/health";
+    })
+  ) {
     return;
   }
 
