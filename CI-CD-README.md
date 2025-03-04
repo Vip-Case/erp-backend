@@ -33,6 +33,25 @@ Bu script, Azure CLI kullanarak bir Service Principal oluşturacak ve gerekli ki
 
 Script'in çıktısındaki JSON'u GitHub repository'nizin "Settings > Secrets and variables > Actions" bölümüne "AZURE_CREDENTIALS" adıyla ekleyin.
 
+**Önemli Not**: JSON formatındaki kimlik bilgilerini GitHub Secrets'a eklerken, JSON içindeki tüm boşlukları ve yeni satır karakterlerini kaldırın. JSON'un tek bir satır halinde olması gerekir. Örneğin:
+
+```json
+{
+  "clientId": "",
+  "clientSecret": "",
+  "subscriptionId": "",
+  "tenantId": "",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+  "galleryEndpointUrl": "https://gallery.azure.com/",
+  "managementEndpointUrl": "https://management.core.windows.net/"
+}
+```
+
+JSON içinde kontrol karakterleri (örneğin tab, yeni satır) veya hatalı karakterler olmamalıdır. Bu tür karakterler, GitHub Actions'ın Azure'a bağlanırken "Bad control character in string literal in JSON" hatası almasına neden olabilir.
+
 ### 3. Diğer Gerekli Secrets
 
 Aşağıdaki secrets'ları da GitHub'a eklemeniz gerekebilir:

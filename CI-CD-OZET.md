@@ -17,6 +17,9 @@ Bu CI/CD pipeline'ı, GitHub Actions kullanarak otomatik olarak kod değişiklik
 1. GitHub repository'nize bu dosyaları ekleyin
 2. `./scripts/setup-github-actions.sh` script'ini çalıştırarak Azure kimlik bilgilerini oluşturun
 3. Oluşturulan kimlik bilgilerini GitHub repository secrets olarak ekleyin
+   - **Önemli**: JSON formatındaki kimlik bilgilerini eklerken, tüm boşlukları ve yeni satır karakterlerini kaldırın
+   - JSON'un tek bir satır halinde olması gerekir ve kontrol karakterleri içermemelidir
+   - Aksi takdirde "Bad control character in string literal in JSON" hatası alabilirsiniz
 4. İlk commit'i yaparak pipeline'ı tetikleyin
 
 ## GitHub Secrets
