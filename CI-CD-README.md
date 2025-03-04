@@ -8,7 +8,7 @@ CI/CD pipeline'ımız şu adımları içerir:
 
 - Kod değişikliklerini kontrol etme (linting, formatting)
 - Testleri çalıştırma
-- Veritabanı yedekleme
+- Veritabanı yedekleme durumunu kontrol etme
 - Docker imajı oluşturma
 - Azure Container Registry'ye (ACR) imajı gönderme
 - Azure App Service'e deploy etme
@@ -75,21 +75,23 @@ Pipeline, aşağıdaki durumlarda otomatik olarak çalışacaktır:
 
 ## Veritabanı Yedekleme
 
-CI/CD pipeline'ı, her deployment öncesinde otomatik olarak bir veritabanı yedeği oluşturur. Bu yedekler, Azure PostgreSQL Flexible Server'ın yedekleme özelliği kullanılarak oluşturulur.
+CI/CD pipeline'ı, deployment öncesinde veritabanı yedekleme durumunu kontrol eder. Azure PostgreSQL Flexible Server, otomatik olarak günlük yedeklemeler oluşturur ve bu yedekler yapılandırılmış yedekleme saklama süresine göre saklanır.
 
 ### Otomatik Yedekleme
 
-Azure PostgreSQL Flexible Server, otomatik olarak günlük yedeklemeler oluşturur ve bu yedekler 14 gün boyunca saklanır. Bu yedekler, herhangi bir zamanda geri yüklenebilir.
+Azure PostgreSQL Flexible Server, otomatik olarak günlük yedeklemeler oluşturur ve bu yedekler varsayılan olarak 7 gün boyunca saklanır (bu süre 35 güne kadar yapılandırılabilir). Bu yedekler, herhangi bir zamana geri yükleme (Point-in-Time Restore) için kullanılabilir.
 
 ### Manuel Yedekleme
 
-Manuel yedekleme oluşturmak için aşağıdaki komutu kullanabilirsiniz:
+**Önemli Not**: Manuel yedekleme (on-demand backup) özelliği, Burstable tier PostgreSQL sunucularda desteklenmemektedir. Bu nedenle, Burstable tier kullanıyorsanız, otomatik yedeklemelere güvenmeniz gerekir.
+
+Eğer General Purpose veya Memory Optimized tier kullanıyorsanız, manuel yedekleme oluşturmak için aşağıdaki komutu kullanabilirsiniz:
 
 ```bash
 ./scripts/postgres-backup-restore.sh backup
 ```
 
-Bu komut, Azure PostgreSQL Flexible Server'da bir manuel yedek oluşturur. Yedek adı "manual_backup_TIMESTAMP" formatında olacaktır.
+Bu komut, önce sunucunun tier'ını kontrol eder ve eğer uygunsa Azure PostgreSQL Flexible Server'da bir manuel yedek oluşturur. Yedek adı "manual_backup_TIMESTAMP" formatında olacaktır.
 
 ### Yedekleri Listeleme
 
@@ -113,7 +115,7 @@ Bu komut, belirtilen tarihteki yedeği yeni bir sunucuya geri yükler. Geri yük
 
 ### CI/CD Pipeline Entegrasyonu
 
-CI/CD pipeline'ımız, her deployment öncesinde otomatik olarak bir yedekleme oluşturur. Bu, deployment sırasında bir sorun oluşması durumunda veritabanını geri yükleme olanağı sağlar. Yedekleme işlemi, `az postgres flexible-server backup create` komutu kullanılarak gerçekleştirilir.
+CI/CD pipeline'ımız, her deployment öncesinde veritabanı yedekleme durumunu kontrol eder. Burstable tier kullanıldığı için, manuel yedekleme yerine otomatik yedeklemelere güvenir. Bu, deployment sırasında bir sorun oluşması durumunda veritabanını geri yükleme olanağı sağlar.
 
 ## Slack Bildirimleri
 
@@ -121,7 +123,7 @@ CI/CD pipeline'ı, aşağıdaki durumlarda Slack bildirimleri gönderir:
 
 1. Test tamamlandığında
 2. Docker imajı oluşturulduğunda
-3. Veritabanı yedeği oluşturulduğunda
+3. Veritabanı yedekleme durumu kontrol edildiğinde
 4. Deployment tamamlandığında
 
 Slack bildirimlerini yapılandırmak için, Slack webhook URL'sini GitHub repository'nizin "Settings > Secrets and variables > Actions" bölümüne "SLACK_WEBHOOK" adıyla ekleyin.
@@ -143,5 +145,5 @@ Pipeline çalışırken sorunlarla karşılaşırsanız:
 - Her başarılı deploy sonrası, uygulama sağlık kontrolü yapılır
 - Veritabanı migrasyonları otomatik olarak çalıştırılır
 - Redis önbelleği her deploy sonrası temizlenir
-- Her deployment öncesinde veritabanı yedeği oluşturulur
+- Her deployment öncesinde veritabanı yedekleme durumu kontrol edilir
 - Tüm önemli adımlar için Slack bildirimleri gönderilir

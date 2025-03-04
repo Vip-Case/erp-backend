@@ -107,25 +107,25 @@ jobs:
         id: backup-timestamp
         run: echo "timestamp=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
-      - name: Create Manual Backup
+      - name: Check Automatic Backups
         run: |
-          echo "Creating manual backup of PostgreSQL database before deployment..."
+          echo "Checking PostgreSQL database automatic backups before deployment..."
 
-          # Yedekleme dosyası adını oluştur
-          BACKUP_FILE="pre_deploy_backup_${{ steps.backup-timestamp.outputs.timestamp }}"
+          # Burstable tier sunucularda manuel yedekleme desteklenmediği için otomatik yedekleri kullanıyoruz
+          echo "NOTE: Manual on-demand backups are not supported on Burstable tier PostgreSQL servers."
+          echo "The system is using automatic daily backups provided by Azure PostgreSQL Flexible Server."
+          echo "These backups are retained according to the configured backup retention period (default: 7 days)."
 
-          # Azure PostgreSQL Flexible Server için manuel yedek oluştur
-          echo "Creating manual backup for PostgreSQL Flexible Server..."
-          az postgres flexible-server backup create \
+          # PostgreSQL sunucusunun yedekleme bilgilerini kontrol et
+          echo "Checking backup configuration for PostgreSQL server..."
+          az postgres flexible-server show \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.POSTGRES_SERVER_NAME }} \
-            --backup-name "$BACKUP_FILE"
-
-          echo "Manual backup process initiated with name: $BACKUP_FILE"
+            --query "backup"
 
           # Yedekleme bilgilerini kaydet
           echo "BACKUP_TIMESTAMP=${{ steps.backup-timestamp.outputs.timestamp }}" >> $GITHUB_ENV
-          echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
+          echo "BACKUP_INFO=Automatic backups are used (Burstable tier)" >> $GITHUB_ENV
 
       - name: Notify Slack on Database Backup
         if: always()
@@ -135,7 +135,7 @@ jobs:
           SLACK_CHANNEL: deployments
           SLACK_COLOR: ${{ job.status }}
           SLACK_TITLE: "Database Backup"
-          SLACK_MESSAGE: "Pre-deployment database backup completed with status: ${{ job.status }}. Backup name: ${{ env.BACKUP_FILE }}"
+          SLACK_MESSAGE: "Pre-deployment database backup check completed with status: ${{ job.status }}. Using automatic backups (Burstable tier)."
           SLACK_FOOTER: "Novent ERP CI/CD Pipeline"
 
   deploy:

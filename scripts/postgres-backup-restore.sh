@@ -19,7 +19,7 @@ function show_help {
     echo "  $0 [komut]"
     echo ""
     echo "Komutlar:"
-    echo "  backup              Manuel yedekleme oluşturur"
+    echo "  backup              Manuel yedekleme oluşturur (Burstable tier sunucularda desteklenmez)"
     echo "  list-backups        Mevcut yedekleri listeler"
     echo "  restore [tarih]     Belirtilen tarihteki yedeği geri yükler (YYYY-MM-DDThh:mm:ss formatında)"
     echo "  help                Bu yardım mesajını gösterir"
@@ -30,8 +30,37 @@ function show_help {
     echo "  $0 restore 2025-03-04T14:30:00"
 }
 
+function check_server_tier {
+    echo "PostgreSQL sunucusunun tier bilgisi kontrol ediliyor..."
+    
+    # PostgreSQL sunucusunun tier bilgisini al
+    SERVER_TIER=$(az postgres flexible-server show \
+        --resource-group $RESOURCE_GROUP \
+        --name $POSTGRES_SERVER_NAME \
+        --query "sku.tier" -o tsv)
+    
+    echo "Sunucu tier: $SERVER_TIER"
+    
+    # Burstable tier kontrolü
+    if [ "$SERVER_TIER" == "Burstable" ]; then
+        echo "UYARI: Burstable tier sunucularda manuel yedekleme (on-demand backup) desteklenmemektedir."
+        echo "Azure PostgreSQL Flexible Server, otomatik olarak günlük yedeklemeler oluşturur ve bu yedekler yapılandırılmış yedekleme saklama süresine göre saklanır (varsayılan: 7 gün)."
+        echo "Daha fazla bilgi için: https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-backup-restore"
+        return 1
+    fi
+    
+    return 0
+}
+
 function create_backup {
     echo "PostgreSQL veritabanı için manuel yedekleme oluşturuluyor..."
+    
+    # Sunucu tier kontrolü
+    check_server_tier
+    if [ $? -ne 0 ]; then
+        echo "Manuel yedekleme işlemi iptal edildi."
+        return 1
+    fi
     
     # Yedekleme dizinini oluştur
     mkdir -p $BACKUP_DIR
@@ -46,8 +75,15 @@ function create_backup {
         --name $POSTGRES_SERVER_NAME \
         --backup-name $BACKUP_NAME
     
-    echo "Manuel yedek oluşturuldu. Yedek adı: $BACKUP_NAME"
-    echo "Bu yedeği daha sonra geri yüklemek için kullanabilirsiniz."
+    if [ $? -eq 0 ]; then
+        echo "Manuel yedek oluşturuldu. Yedek adı: $BACKUP_NAME"
+        echo "Bu yedeği daha sonra geri yüklemek için kullanabilirsiniz."
+    else
+        echo "Manuel yedek oluşturma işlemi başarısız oldu."
+        return 1
+    fi
+    
+    return 0
 }
 
 function list_backups {
@@ -80,10 +116,17 @@ function restore_backup {
         --restore-time $RESTORE_TIMESTAMP \
         --target-server-name $NEW_SERVER_NAME
     
-    echo "Geri yükleme işlemi başlatıldı."
-    echo "Yeni sunucu oluşturuluyor: $NEW_SERVER_NAME"
-    echo "Bu işlem birkaç dakika sürebilir."
-    echo "İşlem tamamlandığında, yeni sunucuya bağlanabilir ve verileri kontrol edebilirsiniz."
+    if [ $? -eq 0 ]; then
+        echo "Geri yükleme işlemi başlatıldı."
+        echo "Yeni sunucu oluşturuluyor: $NEW_SERVER_NAME"
+        echo "Bu işlem birkaç dakika sürebilir."
+        echo "İşlem tamamlandığında, yeni sunucuya bağlanabilir ve verileri kontrol edebilirsiniz."
+    else
+        echo "Geri yükleme işlemi başarısız oldu."
+        return 1
+    fi
+    
+    return 0
 }
 
 # Ana script
