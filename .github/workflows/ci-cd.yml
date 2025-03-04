@@ -157,8 +157,22 @@ jobs:
       - name: Run database migrations
         run: |
           echo "Running database migrations..."
-          # App Service'e SSH ile bağlanıp Prisma migrasyonlarını çalıştırıyoruz
-          az webapp ssh --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --command "cd /home/site/wwwroot && npx prisma migrate deploy"
+
+          # App Service'de Prisma migrasyonlarını çalıştırmak için Kudu REST API kullanıyoruz
+          # Önce publishing credentials alıyoruz
+          echo "Getting publishing credentials..."
+          PUBLISH_PROFILE_PASSWORD=$(az webapp deployment list-publishing-profiles --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --query "[?publishMethod=='MSDeploy'].userPWD" -o tsv)
+
+          # Kudu REST API ile komut çalıştırıyoruz
+          echo "Running Prisma migrations via Kudu REST API..."
+          curl -X POST -u "${{ env.AZURE_WEBAPP_NAME }}:$PUBLISH_PROFILE_PASSWORD" \
+            "https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net/api/command" \
+            -d "{'command': 'cd /home/site/wwwroot && npx prisma migrate deploy'}" \
+            -H "Content-Type: application/json"
+
+          # Migrasyonların tamamlanması için biraz bekliyoruz
+          echo "Waiting for migrations to complete..."
+          sleep 10
 
       - name: Purge Redis Cache
         run: |
