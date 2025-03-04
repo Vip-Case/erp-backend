@@ -174,12 +174,6 @@ jobs:
           echo "Waiting for migrations to complete..."
           sleep 10
 
-      - name: Purge Redis Cache
-        run: |
-          echo "Purging Redis Cache..."
-          # Redis önbelleğini temizliyoruz
-          az redis command invoke --command "FLUSHALL" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name novent-redis
-
       - name: Restart App Service
         run: |
           echo "Restarting App Service..."
