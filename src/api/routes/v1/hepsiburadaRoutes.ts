@@ -38,7 +38,7 @@ const HepsiburadaRoutes = (app: Elysia) => {
   });
 
   // Listing güncelleme endpoint'i
-  app.post("/api/hepsiburada/listings/update", async (ctx) => {
+  app.put("/api/hepsiburada/listings/update", async (ctx) => {
     return await HepsiburadaController.updateListing(ctx);
   });
 
@@ -48,7 +48,7 @@ const HepsiburadaRoutes = (app: Elysia) => {
   });
 
   // Listing satışa açma/kapatma endpoint'i
-  app.post("/api/hepsiburada/listings/toggle-status", async (ctx) => {
+  app.patch("/api/hepsiburada/listings/status", async (ctx) => {
     return await HepsiburadaController.toggleListingStatus(ctx);
   });
 
@@ -65,6 +65,21 @@ const HepsiburadaRoutes = (app: Elysia) => {
   // Listingleri senkronize etme endpoint'i
   app.post("/api/hepsiburada/listings/sync", async (ctx) => {
     return await HepsiburadaController.syncListings(ctx);
+  });
+
+  // Listing envanter güncelleme endpoint'i
+  app.post("/api/hepsiburada/listings/inventory", async (ctx) => {
+    return await HepsiburadaController.updateListingInventory(ctx);
+  });
+
+  // Listing stok güncelleme endpoint'i
+  app.post("/api/hepsiburada/listings/stock", async (ctx) => {
+    return await HepsiburadaController.updateListingStock(ctx);
+  });
+
+  // Listing fiyat güncelleme endpoint'i
+  app.post("/api/hepsiburada/listings/price", async (ctx) => {
+    return await HepsiburadaController.updateListingPrice(ctx);
   });
 
   return app;

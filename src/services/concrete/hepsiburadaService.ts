@@ -379,6 +379,7 @@ export class HepsiburadaService {
   // Listing'leri senkronize etme
   async syncListings(): Promise<any> {
     try {
+      const startTime = Date.now();
       await this.initialize();
       
       // MarketPlace ID'sini al
@@ -422,64 +423,6 @@ export class HepsiburadaService {
         // Veritabanına kaydet
         for (const listing of listings) {
           try {
-            // Listing detaylarını çek
-            let listingDetail;
-            try {
-              listingDetail = await this.hepsiburada.getListing(listing.hepsiburadaSku, listing.merchantSku);
-            } catch (detailError) {
-              console.warn(`Listing detayları alınamadı: ${listing.hepsiburadaSku}`, detailError);
-              // Detay alınamazsa listing verisiyle devam et
-              listingDetail = { data: listing };
-            }
-            
-            const detail = listingDetail.data || listing;
-            
-            // Kategori bilgisini bul veya oluştur
-            let categoryId = null;
-            if (detail.categoryId) {
-              const category = await prisma.marketPlaceCategories.findFirst({
-                where: {
-                  marketPlaceCategoryId: detail.categoryId.toString()
-                }
-              });
-              
-              if (category) {
-                categoryId = category.id;
-              } else if (detail.categoryName) {
-                // Kategori yoksa oluştur
-                const newCategory = await prisma.marketPlaceCategories.create({
-                  data: {
-                    categoryName: detail.categoryName,
-                    marketPlaceCategoryId: detail.categoryId.toString()
-                  }
-                });
-                categoryId = newCategory.id;
-              }
-            }
-            
-            // Marka bilgisini bul veya oluştur
-            let brandId = null;
-            if (detail.brand) {
-              const brand = await prisma.marketPlaceBrands.findFirst({
-                where: {
-                  brandName: detail.brand
-                }
-              });
-              
-              if (brand) {
-                brandId = brand.id;
-              } else {
-                // Marka yoksa oluştur
-                const newBrand = await prisma.marketPlaceBrands.create({
-                  data: {
-                    brandName: detail.brand,
-                    marketPlaceBrandId: detail.brandId?.toString() || null
-                  }
-                });
-                brandId = newBrand.id;
-              }
-            }
-            
             // Önce ürünü bul
             const existingProduct = await prisma.marketPlaceProducts.findFirst({
               where: {
@@ -488,34 +431,39 @@ export class HepsiburadaService {
               include: {
                 marketPlaceAttributes: true,
                 MarketPlaceProductImages: true,
-                MarketPlaceCategories: true
+                MarketPlaceCategories: true,
+                marketPlaceBrands: true
               }
             });
             
+            // Listing detaylarını çekmeye çalış
+            let listingDetail = null;
+            try {
+              if (listing.listingId) {
+                listingDetail = await this.hepsiburada.getListingDetail(listing.listingId);
+                console.log(`Listing detayı alındı: ${listing.hepsiburadaSku}`);
+              }
+            } catch (detailError) {
+              console.warn(`Listing detayı alınamadı: ${listing.hepsiburadaSku}`, detailError);
+            }
+            
             // Ürün verilerini hazırla
             const productData: any = {
-              productName: detail.productName || listing.hepsiburadaSku,
+              productName: listingDetail?.productName || listing.hepsiburadaSku,
               productSku: listing.hepsiburadaSku,
-              description: detail.description || "",
-              shortDescription: detail.shortDescription || "",
+              productId: listing.merchantSku,
+              description: listingDetail?.description || existingProduct?.description || "",
+              shortDescription: listingDetail?.shortDescription || existingProduct?.shortDescription || "",
               listPrice: listing.price || 0,
               salePrice: listing.price || 0,
-              storeId: this.storeId,
-              productId: listing.merchantSku,
-              productType: "Listing"
+              productType: "LISTING"
             };
             
-            // Opsiyonel alanları ekle
-            if (detail.barcode) {
-              productData.barcode = detail.barcode;
-            }
-            
-            if (brandId) {
-              productData.marketPlaceBrandsId = brandId;
-            }
-            
-            if (categoryId) {
-              productData.marketPlaceCategoriesId = categoryId;
+            // İlişkisel alanları doğru şekilde ayarla
+            if (this.storeId) {
+              productData.store = {
+                connect: { id: this.storeId }
+              };
             }
             
             let savedProduct;
@@ -535,98 +483,188 @@ export class HepsiburadaService {
               });
             }
             
-            // Ürün resimlerini kaydet
-            if (detail.images && Array.isArray(detail.images) && detail.images.length > 0) {
-              // Önce mevcut resimleri temizle
-              if (existingProduct) {
-                await prisma.marketPlaceProductImages.deleteMany({
-                  where: { marketPlaceProductId: savedProduct.id }
-                });
-              }
-              
-              // Yeni resimleri ekle
-              for (const image of detail.images) {
-                const imageUrl = typeof image === 'string' ? image : image.url || '';
-                if (imageUrl) {
-                  await prisma.marketPlaceProductImages.create({
-                    data: {
-                      imageUrl,
-                      marketPlaceProductId: savedProduct.id
-                    }
+            // Ürün özelliklerini kaydet
+            const attributes = [];
+            
+            // Temel özellikleri ekle
+            if (listing.price !== undefined) {
+              attributes.push({
+                name: "Price",
+                value: listing.price.toString()
+              });
+            }
+            
+            if (listing.availableStock !== undefined) {
+              attributes.push({
+                name: "AvailableStock",
+                value: listing.availableStock.toString()
+              });
+            }
+            
+            if (listing.dispatchTime !== undefined) {
+              attributes.push({
+                name: "DispatchTime",
+                value: listing.dispatchTime.toString()
+              });
+            }
+            
+            if (listing.cargoCompany1) {
+              attributes.push({
+                name: "CargoCompany1",
+                value: listing.cargoCompany1
+              });
+            }
+            
+            if (listing.cargoCompany2) {
+              attributes.push({
+                name: "CargoCompany2",
+                value: listing.cargoCompany2
+              });
+            }
+            
+            if (listing.cargoCompany3) {
+              attributes.push({
+                name: "CargoCompany3",
+                value: listing.cargoCompany3
+              });
+            }
+            
+            if (listing.shippingAddressLabel) {
+              attributes.push({
+                name: "ShippingAddressLabel",
+                value: listing.shippingAddressLabel
+              });
+            }
+            
+            if (listing.shippingProfileName) {
+              attributes.push({
+                name: "ShippingProfileName",
+                value: listing.shippingProfileName
+              });
+            }
+            
+            if (listing.claimAddressLabel) {
+              attributes.push({
+                name: "ClaimAddressLabel",
+                value: listing.claimAddressLabel
+              });
+            }
+            
+            if (listing.maximumPurchasableQuantity !== undefined) {
+              attributes.push({
+                name: "MaximumPurchasableQuantity",
+                value: listing.maximumPurchasableQuantity.toString()
+              });
+            }
+            
+            if (listing.isSalable !== undefined) {
+              attributes.push({
+                name: "IsSalable",
+                value: listing.isSalable.toString()
+              });
+            }
+            
+            if (listing.commissionRate !== undefined) {
+              attributes.push({
+                name: "CommissionRate",
+                value: listing.commissionRate.toString()
+              });
+            }
+            
+            if (listing.listingId) {
+              attributes.push({
+                name: "ListingId",
+                value: listing.listingId
+              });
+            }
+            
+            // Deaktivasyon nedenlerini ekle
+            if (listing.deactivationReasons && listing.deactivationReasons.length > 0) {
+              attributes.push({
+                name: "DeactivationReasons",
+                value: listing.deactivationReasons.join(", ")
+              });
+            }
+            
+            // Özelleştirilebilir özellikleri ekle
+            if (listing.customizableProperties && listing.customizableProperties.length > 0) {
+              for (const prop of listing.customizableProperties) {
+                if (prop.name && prop.value) {
+                  attributes.push({
+                    name: prop.name,
+                    value: prop.value.toString()
                   });
                 }
               }
             }
             
             // Ürün özelliklerini kaydet
-            if (detail.attributes && typeof detail.attributes === 'object') {
-              try {
-                // Önce mevcut özellikleri temizle
-                if (existingProduct && existingProduct.marketPlaceAttributes && existingProduct.marketPlaceAttributes.length > 0) {
-                  // Her bir özelliği ayrı ayrı ayır
-                  for (const attr of existingProduct.marketPlaceAttributes) {
-                    await prisma.marketPlaceProducts.update({
-                      where: { id: savedProduct.id },
-                      data: {
-                        marketPlaceAttributes: {
-                          disconnect: { id: attr.id }
-                        }
-                      }
-                    });
-                  }
-                }
-                
-                // Yeni özellikleri ekle
-                for (const [key, value] of Object.entries(detail.attributes)) {
-                  if (value === null || value === undefined) continue;
-                  
-                  // Özelliği bul veya oluştur
-                  let attribute = await prisma.marketPlaceAttributes.findFirst({
-                    where: {
-                      attributeName: key,
-                      marketPlaceId: marketPlace.id
-                    }
-                  });
-                  
-                  if (!attribute) {
-                    attribute = await prisma.marketPlaceAttributes.create({
-                      data: {
-                        attributeName: key,
-                        valueName: String(value),
-                        marketPlaceId: marketPlace.id,
-                        MarketPlaceCategoriesId: categoryId
-                      }
-                    });
-                  }
-                  
-                  // Ürün ile özelliği ilişkilendir
-                  await prisma.marketPlaceProducts.update({
-                    where: { id: savedProduct.id },
-                    data: {
-                      marketPlaceAttributes: {
-                        connect: { id: attribute.id }
-                      }
-                    }
-                  });
-                }
-              } catch (attrError) {
-                console.error(`Özellikler kaydedilirken hata: ${listing.hepsiburadaSku}`, attrError);
-              }
-            }
-            
-            // Kategori ile ürünü ilişkilendir
-            if (categoryId && (!existingProduct || !existingProduct.MarketPlaceCategories.some(cat => cat.id === categoryId))) {
-              try {
+            if (attributes.length > 0) {
+              // Önce mevcut özellikleri temizle
+              if (existingProduct && existingProduct.marketPlaceAttributes && existingProduct.marketPlaceAttributes.length > 0) {
                 await prisma.marketPlaceProducts.update({
                   where: { id: savedProduct.id },
                   data: {
-                    MarketPlaceCategories: {
-                      connect: { id: categoryId }
+                    marketPlaceAttributes: {
+                      disconnect: existingProduct.marketPlaceAttributes.map(attr => ({ id: attr.id }))
                     }
                   }
                 });
-              } catch (catError) {
-                console.error(`Kategori ilişkilendirme hatası: ${listing.hepsiburadaSku}`, catError);
+              }
+              
+              // Yeni özellikleri ekle
+              for (const attr of attributes) {
+                // Özelliği bul veya oluştur
+                let attribute = await prisma.marketPlaceAttributes.findFirst({
+                  where: {
+                    attributeName: attr.name,
+                    marketPlaceId: marketPlace.id
+                  }
+                });
+                
+                if (!attribute) {
+                  attribute = await prisma.marketPlaceAttributes.create({
+                    data: {
+                      attributeName: attr.name,
+                      valueName: attr.value,
+                      marketPlaceId: marketPlace.id
+                    }
+                  });
+                } else {
+                  // Özellik varsa güncelle
+                  attribute = await prisma.marketPlaceAttributes.update({
+                    where: { id: attribute.id },
+                    data: { valueName: attr.value }
+                  });
+                }
+                
+                // Ürün ile özelliği ilişkilendir
+                await prisma.marketPlaceProducts.update({
+                  where: { id: savedProduct.id },
+                  data: {
+                    marketPlaceAttributes: {
+                      connect: { id: attribute.id }
+                    }
+                  }
+                });
+              }
+            }
+            
+            // Ürün resimlerini ekle (eğer detay bilgisinde varsa)
+            if (listingDetail && listingDetail.images && listingDetail.images.length > 0) {
+              // Önce mevcut resimleri temizle
+              await prisma.marketPlaceProductImages.deleteMany({
+                where: { marketPlaceProductId: savedProduct.id }
+              });
+              
+              // Yeni resimleri ekle
+              for (const image of listingDetail.images) {
+                await prisma.marketPlaceProductImages.create({
+                  data: {
+                    imageUrl: image.url,
+                    marketPlaceProductId: savedProduct.id
+                  }
+                });
               }
             }
             
@@ -645,12 +683,14 @@ export class HepsiburadaService {
         await this.delay(500);
       }
       
-      console.log(`Toplam ${totalSaved} adet listing başarıyla kaydedildi.`);
+      const duration = (Date.now() - startTime) / 1000;
+      console.log(`Toplam ${totalSaved} adet listing başarıyla kaydedildi. İşlem süresi: ${duration.toFixed(2)} saniye`);
       
       return { 
         success: true, 
         message: `${totalSaved} listing başarıyla senkronize edildi`, 
-        totalSaved 
+        totalSaved,
+        duration: `${duration.toFixed(2)} saniye`
       };
     } catch (error) {
       console.error("Listing senkronizasyonu hatası:", error);
@@ -976,4 +1016,24 @@ export class HepsiburadaService {
     await this.initialize();
     return await this.hepsiburada.toggleListingStatus(hepsiburadaSku, isSalable);
   }
+
+  // Listing envanter güncelleme
+  async updateListingInventory(listingData: any): Promise<any> {
+    await this.initialize();
+    return await this.hepsiburada.updateListingInventory(listingData);
+  }
+
+  // Listing stok güncelleme
+  async updateListingStock(stockData: any): Promise<any> {
+    await this.initialize();
+    return await this.hepsiburada.updateListingStock(stockData);
+  }
+
+  // Listing fiyat güncelleme
+  async updateListingPrice(priceData: any): Promise<any> {
+    await this.initialize();
+    return await this.hepsiburada.updateListingPrice(priceData);
+  }
+
+
 } 

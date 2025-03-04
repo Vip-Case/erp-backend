@@ -220,36 +220,110 @@ export class HepsiburadaAdapter {
     }
   }
 
-  // Listing güncelleme
-  async updateListing(listingData: any): Promise<any> {
+  // Listing envanter güncelleme (stok, fiyat, kargolama süresi, teslimat profili)
+  async updateListingInventory(listingData: any): Promise<any> {
     try {
       const listingBaseUrl = 'https://listing-external-sit.hepsiburada.com';
-      const path = `/listings/merchantid/${this.credentials.merchantId}`;
+      const path = `/listings/merchantid/${this.credentials.merchantId}/inventory-uploads`;
       
-      console.log(`Request: ${listingBaseUrl}${path}`);
+      console.log(`Listing envanter güncelleme isteği: ${listingBaseUrl}${path}`);
       
-      // AbortController ile timeout oluştur
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-      
-      // Özel bir fetch isteği oluştur
       const response = await fetch(`${listingBaseUrl}${path}`, {
         method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify(listingData),
-        signal: controller.signal
+        headers: {
+          ...this.headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(listingData)
       });
-      
-      // Timeout'u temizle
-      clearTimeout(timeoutId);
       
       console.log(`Response Status: ${response.status}`);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
       }
       
       return await response.json();
+    } catch (error) {
+      console.error('Listing envanter güncellenemedi:', error);
+      throw error;
+    }
+  }
+
+  // Listing stok güncelleme
+  async updateListingStock(stockData: any): Promise<any> {
+    try {
+      const listingBaseUrl = 'https://listing-external-sit.hepsiburada.com';
+      const path = `/listings/merchantid/${this.credentials.merchantId}/stock-uploads`;
+      
+      console.log(`Listing stok güncelleme isteği: ${listingBaseUrl}${path}`);
+      
+      const response = await fetch(`${listingBaseUrl}${path}`, {
+        method: 'POST',
+        headers: {
+          ...this.headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(stockData)
+      });
+      
+      console.log(`Response Status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Listing stok güncellenemedi:', error);
+      throw error;
+    }
+  }
+
+  // Listing fiyat güncelleme
+  async updateListingPrice(priceData: any): Promise<any> {
+    try {
+      const listingBaseUrl = 'https://listing-external-sit.hepsiburada.com';
+      const path = `/listings/merchantid/${this.credentials.merchantId}/price-uploads`;
+      
+      console.log(`Listing fiyat güncelleme isteği: ${listingBaseUrl}${path}`);
+      
+      const response = await fetch(`${listingBaseUrl}${path}`, {
+        method: 'POST',
+        headers: {
+          ...this.headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(priceData)
+      });
+      
+      console.log(`Response Status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Listing fiyat güncellenemedi:', error);
+      throw error;
+    }
+  }
+
+  // Genel listing güncelleme (eski metodu koruyalım, içeriğe göre doğru endpoint'i çağırsın)
+  async updateListing(listingData: any): Promise<any> {
+    try {
+      // Gelen veriye göre hangi güncelleme türünü kullanacağımızı belirleyelim
+      if (listingData.onlyUpdatePrice === true) {
+        // Sadece fiyat güncellemesi
+        return await this.updateListingPrice(listingData);
+      } else if (listingData.onlyUpdateStock === true) {
+        // Sadece stok güncellemesi
+        return await this.updateListingStock(listingData);
+      } else {
+        // Genel envanter güncellemesi
+        return await this.updateListingInventory(listingData);
+      }
     } catch (error) {
       console.error('Listing güncellenemedi:', error);
       throw error;
@@ -392,23 +466,25 @@ export class HepsiburadaAdapter {
   async getListingDetail(listingId: string): Promise<any> {
     try {
       const url = `${this.baseURL}/listings/${listingId}`;
-      console.log(`Request: ${url}`);
+      console.log(`Listing detay isteği: ${url}`);
       
       const response = await fetch(url, {
         method: 'GET',
         headers: this.headers
       });
       
-      console.log(`Response Status: ${response.status}`);
-      
       if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`Listing bulunamadı (ID: ${listingId}). Bu, test ortamında normal olabilir.`);
+          return null;
+        }
         throw new Error(`Listing detayları alınamadı: ${response.status} ${response.statusText}`);
       }
       
       return await response.json();
     } catch (error) {
       console.error(`Listing detayları alınamadı (listingId: ${listingId}):`, error);
-      throw error;
+      return null; // null döndürerek hata durumunda da devam etmesini sağlayalım
     }
   }
 } 

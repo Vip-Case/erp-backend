@@ -284,29 +284,16 @@ export class HepsiburadaController {
     }
   }
 
-  // Listing güncelleme
+  // Genel listing güncelleme
   static async updateListing(ctx: Context) {
     try {
       const { storeId } = ctx.query as { storeId: string };
-      const listingData = ctx.body as any;
+      const listingData = ctx.body;
 
       if (!storeId) {
         return {
           status: 400,
-          body: { 
-            success: false,
-            error: "storeId zorunludur" 
-          }
-        };
-      }
-
-      if (!listingData) {
-        return {
-          status: 400,
-          body: { 
-            success: false,
-            error: "Listing verisi zorunludur" 
-          }
+          body: { success: false, error: "storeId parametresi gereklidir" }
         };
       }
 
@@ -315,20 +302,100 @@ export class HepsiburadaController {
 
       return {
         status: 200,
-        body: {
-          success: true,
-          message: "Listing başarıyla güncellendi",
-          data: result
-        }
+        body: { success: true, data: result }
       };
     } catch (error: any) {
       console.error("Listing güncellenemedi:", error);
       return {
         status: 500,
-        body: {
-          success: false,
-          error: error.message || 'Listing güncellenemedi'
-        }
+        body: { success: false, error: error.message || 'Listing güncellenemedi' }
+      };
+    }
+  }
+
+  // Listing envanter güncelleme
+  static async updateListingInventory(ctx: Context) {
+    try {
+      const { storeId } = ctx.query as { storeId: string };
+      const listingData = ctx.body;
+
+      if (!storeId) {
+        return {
+          status: 400,
+          body: { success: false, error: "storeId parametresi gereklidir" }
+        };
+      }
+
+      const hepsiburadaService = new HepsiburadaService(storeId);
+      const result = await hepsiburadaService.updateListingInventory(listingData);
+
+      return {
+        status: 200,
+        body: { success: true, data: result }
+      };
+    } catch (error: any) {
+      console.error("Listing envanter güncellenemedi:", error);
+      return {
+        status: 500,
+        body: { success: false, error: error.message || 'Listing envanter güncellenemedi' }
+      };
+    }
+  }
+
+  // Listing stok güncelleme
+  static async updateListingStock(ctx: Context) {
+    try {
+      const { storeId } = ctx.query as { storeId: string };
+      const stockData = ctx.body;
+
+      if (!storeId) {
+        return {
+          status: 400,
+          body: { success: false, error: "storeId parametresi gereklidir" }
+        };
+      }
+
+      const hepsiburadaService = new HepsiburadaService(storeId);
+      const result = await hepsiburadaService.updateListingStock(stockData);
+
+      return {
+        status: 200,
+        body: { success: true, data: result }
+      };
+    } catch (error: any) {
+      console.error("Listing stok güncellenemedi:", error);
+      return {
+        status: 500,
+        body: { success: false, error: error.message || 'Listing stok güncellenemedi' }
+      };
+    }
+  }
+
+  // Listing fiyat güncelleme
+  static async updateListingPrice(ctx: Context) {
+    try {
+      const { storeId } = ctx.query as { storeId: string };
+      const priceData = ctx.body;
+
+      if (!storeId) {
+        return {
+          status: 400,
+          body: { success: false, error: "storeId parametresi gereklidir" }
+        };
+      }
+
+      const hepsiburadaService = new HepsiburadaService(storeId);
+      const result = await hepsiburadaService.updateListingPrice(priceData);
+
+      return {
+        status: 200,
+        body: { success: true, data: result }
+      };
+    } catch (error: any) {
+      console.error("Listing fiyat güncellenemedi:", error);
+      return {
+        status: 500,
+        body: { success: false, error: error.message || 'Listing fiyat güncellenemedi' }
       };
     }
   }
