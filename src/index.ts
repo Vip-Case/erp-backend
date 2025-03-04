@@ -76,27 +76,22 @@ app.onRequest(async (ctx) => {
     return;
   }
 
+  // Health endpoint kontrolü
+  const route = new URL(ctx.request.url).pathname;
+  if (route === "/health") {
+    return;
+  }
+
   const publicRoutes = [
     "/auth/login",
     "/auth/register",
     "/auth/refresh-token",
     "/docs",
-    "/health",
   ];
-  const route = new URL(ctx.request.url).pathname;
   const method = ctx.request.method;
 
   // Public route kontrolü
-  if (
-    publicRoutes.some((r) => {
-      // /health için tam eşleşme kontrolü
-      if (r === "/health" && route === "/health") {
-        return true;
-      }
-      // Diğer rotalar için startsWith kontrolü
-      return route.startsWith(r) && r !== "/health";
-    })
-  ) {
+  if (publicRoutes.some((r) => route.startsWith(r))) {
     return;
   }
 
