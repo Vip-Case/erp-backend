@@ -59,6 +59,9 @@ const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia();
 
+// Health endpoint'i tanımlıyoruz - yetkilendirme gerektirmeyen bir route
+app.get("/health", () => ({ status: "ok" }));
+
 app.use(
   cors({
     origin: [`${process.env.CORS_URL}`],
@@ -295,9 +298,6 @@ routes.forEach((route) => app.use(route));
 // Uygulama başlatıldığında izinleri senkronize et
 app.listen(process.env.PORT || 3000, async () => {
   try {
-    // Health endpoint'ini izin senkronizasyonundan sonra tanımlıyoruz
-    app.get("/health", () => ({ status: "ok" }));
-
     await syncPermissionsWithRoutes(app);
     console.log(
       `🦊 Server is running at ${app.server?.hostname}:${app.server?.port}`

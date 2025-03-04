@@ -5,7 +5,10 @@ const prisma = new PrismaClient();
 export async function syncPermissionsWithRoutes(app: any) {
   try {
     const routes = app.routes
-      .filter((route: any) => !route.path.startsWith("/docs"))
+      .filter(
+        (route: any) =>
+          !route.path.startsWith("/docs") && route.path !== "/health"
+      )
       .map((route: any) => ({
         path: `${route.path}`,
         method: route.method,
