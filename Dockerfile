@@ -26,7 +26,7 @@ RUN curl -fsSL https://bun.sh/install | bash \
 WORKDIR /app
 
 # Bağımlılık dosyalarını kopyala
-COPY package.json bun.lockb ./
+COPY package.json bun.lockb package-lock.json ./
 
 # Bağımlılıkları yükle
 RUN bun install --frozen-lockfile
