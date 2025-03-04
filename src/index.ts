@@ -58,7 +58,12 @@ const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
 
 // Uygulama instance'ı oluşturuluyor
 const app = new Elysia();
-app.get("/health", () => ({ status: "ok" }));
+
+// Health endpoint'i ayrı bir instance olarak tanımlayıp, ana uygulamaya bağlıyoruz
+const healthCheck = new Elysia().get("/health", () => ({ status: "ok" }));
+
+app.use(healthCheck);
+
 app.use(
   cors({
     origin: [`${process.env.CORS_URL}`],
@@ -76,19 +81,19 @@ app.onRequest(async (ctx) => {
     return;
   }
 
-  // Health endpoint kontrolü
-  const route = new URL(ctx.request.url).pathname;
-  if (route === "/health") {
-    return;
-  }
-
   const publicRoutes = [
     "/auth/login",
     "/auth/register",
     "/auth/refresh-token",
     "/docs",
   ];
+  const route = new URL(ctx.request.url).pathname;
   const method = ctx.request.method;
+
+  // Health endpoint kontrolü
+  if (route === "/health") {
+    return;
+  }
 
   // Public route kontrolü
   if (publicRoutes.some((r) => route.startsWith(r))) {
