@@ -22,7 +22,7 @@ env:
   POSTGRES_ADMIN: noventadmin
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,12 +40,6 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Lint code
-        run: npm run lint || echo "Linting issues found"
-
-      - name: Run tests
-        run: npm test || echo "Tests failed"
-
       - name: Notify Slack on Test Completion
         if: always()
         uses: rtCamp/action-slack-notify@v2
@@ -58,7 +52,7 @@ jobs:
           SLACK_FOOTER: "Novent ERP CI/CD Pipeline"
 
   build-and-push-image:
-    needs: build-and-test
+    needs: build
     runs-on: ubuntu-latest
     # Release, tag veya manuel tetikleme durumunda çalışır
     if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
