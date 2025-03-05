@@ -208,12 +208,11 @@ model Permission {
   action         String?
   resource       String?
   groupId        String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-
   group          PermissionGroup? @relation(fields: [groupId], references: [id])
   roles          Role[]           @relation("PermissionToRole")
   users          User[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([route])
   @@index([permissionName])
@@ -270,7 +269,7 @@ model StockCard {
   stockCardAttributeItems StockCardAttributeItems[]
   barcodes                StockCardBarcode[]
   stockCardCategoryItem   StockCardCategoryItem[]
-  stockCardEFatura        StockCardEFatura[]
+  stockCardEFatura        StockCardEFatura?
   stockCardManufacturer   StockCardManufacturer[]
   stockCardMarketNames    StockCardMarketNames[]
   stockCardPriceLists     StockCardPriceListItems[]
@@ -286,12 +285,12 @@ model StockCard {
 }
 
 model StockCardEFatura {
-  id          String   @id @default(cuid())
-  productCode String   @unique @db.VarChar(100)
-  productName String   @db.VarChar(150)
-  stockCardId String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          String    @id @default(cuid())
+  productCode String    @unique @db.VarChar(100)
+  productName String    @db.VarChar(150)
+  stockCardId String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   stockCard   StockCard @relation(fields: [stockCardId], references: [id])
 
   @@index([stockCardId])
@@ -608,7 +607,7 @@ model Receipt {
   id                  String           @id @default(cuid())
   receiptType         ReceiptType
   receiptDate         DateTime         @default(now())
-  documentNo          String           @db.VarChar(50) @unique
+  documentNo          String           @unique @db.VarChar(50)
   branchCode          String           @db.VarChar(50)
   isTransfer          Boolean          @default(false)
   outWarehouse        String?
@@ -819,21 +818,21 @@ model CurrentCategoryItem {
 }
 
 model User {
-  id                  String   @id @default(cuid())
-  username            String   @unique @db.VarChar(50)
-  password            String   @db.VarChar(100)
-  email               String   @unique @db.VarChar(100)
-  firstName           String   @db.VarChar(50)
-  lastName            String   @db.VarChar(50)
-  phone               String   @db.VarChar(50)
-  address             String   @db.VarChar(250)
-  isActive            Boolean  @default(true)
+  id                  String    @id @default(cuid())
+  username            String    @unique @db.VarChar(50)
+  password            String    @db.VarChar(100)
+  email               String    @unique @db.VarChar(100)
+  firstName           String    @db.VarChar(50)
+  lastName            String    @db.VarChar(50)
+  phone               String    @db.VarChar(50)
+  address             String    @db.VarChar(250)
+  isActive            Boolean   @default(true)
   companyCode         String?
   failedLoginAttempts Int       @default(0)
   lastFailedLoginAt   DateTime?
   lockedUntil         DateTime?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
   createdBy           String?
   updatedBy           String?
 
@@ -882,7 +881,7 @@ model User {
   updatedByOrderPrepareWarehouse OrderPrepareWarehouse[] @relation("OrderPrepareWarehouseUpdatedBy")
   createdByStockTake             StockTake[]             @relation("StockTakeCreatedBy")
   updatedByStockTake             StockTake[]             @relation("StockTakeUpdatedBy")
-  
+
   PrintQueue        PrintQueue[]  @relation("PrintQueuePrintedBy")
   sessions          Session[]
   securityLogs      SecurityLog[]
@@ -962,22 +961,22 @@ model Invoice {
 }
 
 model InvoiceDetail {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   invoiceId   String
-  productCode String
+  productCode String?
   costCode    String?
   costName    String?
   currency    String?
-  quantity    Decimal   @db.Decimal(15, 4)
-  unitPrice   Decimal   @db.Decimal(15, 4)
-  totalPrice  Decimal   @db.Decimal(15, 4)
-  vatRate     Decimal   @db.Decimal(15, 4)
-  discount    Decimal   @db.Decimal(15, 4)
-  netPrice    Decimal   @db.Decimal(15, 4)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
-  stockCard   StockCard @relation(fields: [productCode], references: [productCode])
+  quantity    Decimal?   @db.Decimal(15, 4)
+  unitPrice   Decimal?   @db.Decimal(15, 4)
+  totalPrice  Decimal?   @db.Decimal(15, 4)
+  vatRate     Decimal?   @db.Decimal(15, 4)
+  discount    Decimal?   @db.Decimal(15, 4)
+  netPrice    Decimal?   @db.Decimal(15, 4)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  invoice     Invoice    @relation(fields: [invoiceId], references: [id])
+  stockCard   StockCard? @relation(fields: [productCode], references: [productCode])
 }
 
 model Vault {
@@ -1090,28 +1089,28 @@ model PosMovement {
 }
 
 model Order {
-  id                String               @id @default(cuid())
-  platformOrderId   String
-  platform          String
-  customerId        String
-  status            String
-  currency          String
-  orderDate         DateTime
-  deliveryType      String?
-  cargoCompany      String?
-  shippingAddressId String?
-  timeSlot          DateTime?
-  totalPrice        Float
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  billingAddressId  String?
-  isInvoiceCreated  Boolean              @default(false)
-  storeId           String
-  billingAddress    OrderInvoiceAddress? @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  shippingAddress   OrderInvoiceAddress? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
-  store             Store                @relation(fields: [storeId], references: [id])
-  cargos            OrderCargo[]
-  items             OrderItem[]
+  id                  String                @id @default(cuid())
+  platformOrderId     String
+  platform            String
+  customerId          String
+  status              String
+  currency            String
+  orderDate           DateTime
+  deliveryType        String?
+  cargoCompany        String?
+  shippingAddressId   String?
+  timeSlot            DateTime?
+  totalPrice          Float
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  billingAddressId    String?
+  isInvoiceCreated    Boolean               @default(false)
+  storeId             String
+  billingAddress      OrderInvoiceAddress?  @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  shippingAddress     OrderInvoiceAddress?  @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  store               Store                 @relation(fields: [storeId], references: [id])
+  cargos              OrderCargo[]
+  items               OrderItem[]
   orderInvoiceAddress OrderInvoiceAddress[]
 }
 
@@ -1148,48 +1147,47 @@ model OrderCargo {
 }
 
 model OrderItem {
-  id                      String              @id @default(cuid())
+  id                      String   @id @default(cuid())
   orderId                 String
   stockCardId             String?
   quantity                Int
-  unitPrice              Decimal             @db.Decimal(15, 4)
-  totalPrice             Decimal             @db.Decimal(15, 4)
-  productName            String
-  productCode            BigInt              // Int yerine BigInt kullanıyoruz
-  barcode               String?
-  merchantSku            String?             // Opsiyonel yaptık
-  productSize           String?
-  productColor          String?
-  productOrigin         String?
-  salesCampaignId       BigInt?             // Bunu da BigInt yapalım
-  merchantId            BigInt?              // Bunu da BigInt yapalım
-  amount                Decimal?             @db.Decimal(15, 2)
-  discount              Decimal?             @db.Decimal(15, 2)
-  tyDiscount            Decimal?             @db.Decimal(15, 2)
-  vatBaseAmount         Decimal?             @db.Decimal(15, 2)
-  currencyCode          String?
-  sku                   String?
-  orderLineId           BigInt?              // Bunu da BigInt yapalım
+  unitPrice               Decimal  @db.Decimal(15, 4)
+  totalPrice              Decimal  @db.Decimal(15, 4)
+  productName             String
+  productCode             BigInt // Int yerine BigInt kullanıyoruz
+  barcode                 String?
+  merchantSku             String? // Opsiyonel yaptık
+  productSize             String?
+  productColor            String?
+  productOrigin           String?
+  salesCampaignId         BigInt? // Bunu da BigInt yapalım
+  merchantId              BigInt? // Bunu da BigInt yapalım
+  amount                  Decimal? @db.Decimal(15, 2)
+  discount                Decimal? @db.Decimal(15, 2)
+  tyDiscount              Decimal? @db.Decimal(15, 2)
+  vatBaseAmount           Decimal? @db.Decimal(15, 2)
+  currencyCode            String?
+  sku                     String?
+  orderLineId             BigInt? // Bunu da BigInt yapalım
   orderLineItemStatusName String?
-  
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  order                 Order               @relation(fields: [orderId], references: [id])
-  stockCard             StockCard?          @relation(fields: [stockCardId], references: [id])
-  discountDetails       OrderItemDiscount[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  order           Order               @relation(fields: [orderId], references: [id])
+  stockCard       StockCard?          @relation(fields: [stockCardId], references: [id])
+  discountDetails OrderItemDiscount[]
 }
 
 model OrderItemDiscount {
-  id                String    @id @default(cuid())
-  orderItemId       String
-  lineItemPrice     Decimal   @db.Decimal(15, 2)
-  lineItemDiscount  Decimal   @db.Decimal(15, 2)
+  id                 String   @id @default(cuid())
+  orderItemId        String
+  lineItemPrice      Decimal  @db.Decimal(15, 2)
+  lineItemDiscount   Decimal  @db.Decimal(15, 2)
   lineItemTyDiscount Decimal  @db.Decimal(15, 2)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  orderItem         OrderItem @relation(fields: [orderItemId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
 }
 
 model MarketPlace {
@@ -1319,11 +1317,11 @@ model Notification {
 }
 
 model ProductMatch {
-  id          String  @id @default(cuid())
-  productCode String?
-  barcode     String? @unique
-  tempQuantity            Int?                      
-  isTempQuantity          Boolean?                   @default(false)
+  id             String   @id @default(cuid())
+  productCode    String?
+  barcode        String?  @unique
+  tempQuantity   Int?
+  isTempQuantity Boolean? @default(false)
 
   product StockCard? @relation(fields: [productCode], references: [productCode])
 }
