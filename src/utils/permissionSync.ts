@@ -7,7 +7,7 @@ export async function syncPermissionsWithRoutes(app: any) {
     const routes = app.routes
       .filter(
         (route: any) =>
-          !route.path.startsWith("/docs") && route.path !== "/health"
+          !route.path.startsWith("/docs") && !route.path.startsWith("/health")
       )
       .map((route: any) => ({
         path: `${route.path}`,

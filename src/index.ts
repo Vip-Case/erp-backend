@@ -289,15 +289,13 @@ const routes = [
 app.use(NotificationRoutes(app));
 wooCommerceRoutes(app);
 OrderInvoiceRoutes(app);
-
+// Health endpoint'ini izin senkronizasyonundan sonra tanımlıyoruz
+app.get("/health", () => ({ status: "ok" }));
 routes.forEach((route) => app.use(route));
 
 // Uygulama başlatıldığında izinleri senkronize et
 app.listen(process.env.PORT || 3000, async () => {
   try {
-    // Health endpoint'ini izin senkronizasyonundan sonra tanımlıyoruz
-    app.get("/health", () => ({ status: "ok" }));
-
     await syncPermissionsWithRoutes(app);
     console.log(
       `🦊 Server is running at ${app.server?.hostname}:${app.server?.port}`
