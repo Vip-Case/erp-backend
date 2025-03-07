@@ -43,6 +43,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.5.1",
     "@types/bcrypt": "^5.0.2",
     "@types/busboy": "^1.5.4",
     "@types/jsonwebtoken": "^9.0.8",
@@ -51,7 +52,8 @@
     "@types/supertest": "^6.0.2",
     "@types/woocommerce__woocommerce-rest-api": "^1.0.5",
     "bun-types": "latest",
-    "supertest": "^7.0.0"
+    "supertest": "^7.0.0",
+    "vitest": "^3.0.7"
   },
   "type": "module"
 }
