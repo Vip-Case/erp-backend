@@ -135,6 +135,9 @@ const OrderService = {
         email: addressData.email || null,
         paymentMethod: addressData.paymentMethod || null,
         transactionId: addressData.transactionId || null,
+        order: {
+          connect: { id: addressData.orderId }
+        }
       },
     });
   },

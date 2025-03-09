@@ -3,6 +3,26 @@ import * as xlsx from 'xlsx';
 import { z } from 'zod';
 import currentService from './currentService';
 
+// CurrentData tipini burada tanımlayalım
+interface CurrentData {
+    priceListId: string;
+    currentCode: string;
+    currentName: string;
+    currentType: any;
+    institution: any;
+    identityNo?: string | null;
+    taxNumber?: string | null;
+    taxOffice?: string | null;
+    title?: string | null;
+    name?: string | null;
+    surname?: string | null;
+    webSite?: string | null;
+    birthOfDate?: Date | null;
+    kepAddress?: string | null;
+    mersisNo?: string | null;
+    sicilNo?: string | null;
+}
+
 const prisma = new PrismaClient();
 
 const ProductType = z.enum(['BasitUrun', 'VaryasyonluUrun', 'DijitalUrun', 'Hizmet']);
@@ -434,7 +454,6 @@ export const importExcelService = async (file: File) => {
                                 description: currentMovementData.description,
                                 debtAmount: currentMovementData.debtAmount,
                                 creditAmount: currentMovementData.creditAmount,
-                                balanceAmount: currentMovementData.balanceAmount,
                                 priceListId: priceListId, // `priceListName` yerine `priceListId` kullanıyoruz
                                 movementType: currentMovementData.movementType,
                                 documentType: currentMovementData.documentType,
@@ -718,10 +737,8 @@ export const importExcelService = async (file: File) => {
             }
 
             // Current ana verisi
-            const current: Prisma.CurrentCreateInput = {
-                priceList: {
-                    connect: { id: priceList.id }, // priceListId yerine bulunan id ile bağlantı kuruyoruz
-                },
+            const current = {
+                priceListId: priceList.id, // Burada priceListId'yi doğrudan ekliyoruz
                 currentCode: currentData.currentCode,
                 currentName: currentData.currentName,
                 currentType: currentData.currentType,
@@ -737,8 +754,7 @@ export const importExcelService = async (file: File) => {
                 kepAddress: currentData.kepAddress,
                 mersisNo: currentData.mersisNo,
                 sicilNo: currentData.sicilNo,
-
-            };
+            } as CurrentData; // CurrentData tipine dönüştürüyoruz
 
             // İlişkili veriler
             const currentAddress = currentData.addressName ? {
@@ -774,7 +790,7 @@ export const importExcelService = async (file: File) => {
             } : undefined;
 
             const currentRisk = currentData.currency ? {
-                create: [{
+                create: {
                     currency: currentData.currency,
                     teminatYerelTutar: currentData.teminatYerelTutar,
                     acikHesapYerelLimit: currentData.acikHesapYerelLimit,
@@ -787,7 +803,7 @@ export const importExcelService = async (file: File) => {
                     limitKontrol: currentData.limitKontrol,
                     acikHesap: currentData.acikHesap,
                     posKullanim: currentData.posKullanim,
-                }]
+                }
             } : undefined;
 
             const currentOfficials = currentData.title ? {
@@ -812,14 +828,13 @@ export const importExcelService = async (file: File) => {
             // createCurrent fonksiyonunu kullanarak verileri ekliyoruz
             await currentsService.createCurrent({
                 current: current,
-                priceListName: currentData.priceListName,
                 currentAddress: currentAddress,
                 currentBranch: currentBranch,
                 currentFinancial: currentFinancial,
                 currentRisk: currentRisk,
                 currentOfficials: currentOfficials,
                 currentCategoryItem: currentCategoryItem
-            });
+            }, "system-import"); // Sistem tarafından yapılan bir import olduğunu belirtmek için token ekliyoruz
         }
 
         if (stockMovementsData.length > 0) {

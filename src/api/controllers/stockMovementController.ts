@@ -31,6 +31,11 @@ export const StockMovementController = {
             return ctx.error(401, "Authorization header is missing.");
         }
         const stockMovementData: Partial<StockMovement> = ctx.body as Partial<StockMovement>;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         try {
             const stockMovement = await stockMovementService.updateStockMovement(id, stockMovementData, bearerToken);
             ctx.set.status = 200;

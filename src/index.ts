@@ -46,6 +46,8 @@ import MarketPlaceRoutes from "./api/routes/v1/marketPlaceRoutes";
 import StoreRoutes from "./api/routes/v1/storeRoutes";
 import PrintQueueRoutes from "./api/routes/v1/printQueueRoutes";
 import { AuthenticationError, AuthorizationError } from "./utils/CustomError";
+import TrendyolRoutes from "./api/routes/v1/trendyolRoutes";
+import HepsiburadaRoutes from "./api/routes/v1/hepsiburadaRoutes";
 dotenv.config();
 
 if (!process.env.JWT_SECRET) {
@@ -89,6 +91,11 @@ app.onRequest(async (ctx) => {
     "/auth/register",
     "/auth/refresh-token",
     "/docs",
+    "/webhook/order-created",
+    "/webhook/order-update",
+    "/api/webhook-handler",
+    "/api/trendyol/webhook",
+    "/api/hepsiburada/webhook",
   ];
   const method = ctx.request.method;
 
@@ -291,6 +298,8 @@ wooCommerceRoutes(app);
 OrderInvoiceRoutes(app);
 // Health endpoint'ini izin senkronizasyonundan sonra tanımlıyoruz
 app.get("/health", () => ({ status: "ok" }));
+TrendyolRoutes(app);
+HepsiburadaRoutes(app);
 routes.forEach((route) => app.use(route));
 
 // Uygulama başlatıldığında izinleri senkronize et

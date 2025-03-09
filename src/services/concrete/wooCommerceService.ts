@@ -1038,8 +1038,8 @@ export class WooCommerceService {
             const wooSkuNormalized = p.sku?.trim().toLowerCase(); // WooCommerce SKU'yu normalize et
             return (
               wooSkuNormalized === normalizedStockCode || // Tam eşleşme
-              normalizedStockCode?.startsWith(wooSkuNormalized) || // ERP SKU, WooCommerce SKU ile başlıyorsa
-              wooSkuNormalized?.startsWith(normalizedStockCode) // WooCommerce SKU, ERP SKU ile başlıyorsa
+              (normalizedStockCode && normalizedStockCode.startsWith(wooSkuNormalized)) || // ERP SKU, WooCommerce SKU ile başlıyorsa
+              (wooSkuNormalized && wooSkuNormalized.startsWith(normalizedStockCode || "")) // WooCommerce SKU, ERP SKU ile başlıyorsa
             );
           });
 
@@ -1147,6 +1147,11 @@ export class WooCommerceService {
           country: wooBillingAddress?.country || "TR",
           fullName: `${wooBillingAddress?.first_name || ""} ${wooBillingAddress?.last_name || ""}`.trim(),
           email: wooBillingAddress?.email || "no-email@example.com",
+          order: {
+            connect: {
+              id: createdOrder.id
+            }
+          }
         },
       });
 
@@ -1159,6 +1164,11 @@ export class WooCommerceService {
           country: wooShippingAddress?.country || "Unknown",
           fullName: `${wooShippingAddress?.first_name || ""} ${wooShippingAddress?.last_name || ""}`.trim(),
           email: wooShippingAddress?.email || "no-email@example.com",
+          order: {
+            connect: {
+              id: createdOrder.id
+            }
+          }
         },
       });
 
@@ -1187,7 +1197,7 @@ export class WooCommerceService {
             // InvoiceDetail'deki productCode üzerinden StockCard'ı eşle
             const stockCard = await prisma.stockCard.findFirst({
               where: {
-                productCode: item.stockCode, // ProductCode üzerinden eşleşme
+                productCode: item.stockCode || "", // null ise boş string kullan
               },
               select: {
                 id: true, // Sadece id'yi al
@@ -1211,6 +1221,8 @@ export class WooCommerceService {
                 quantity: item.quantity,
                 unitPrice: parseFloat(item.unitPrice.toString()),
                 totalPrice: parseFloat(item.totalAmount.toString()),
+                productName: item.stockName || "Unknown Product",
+                productCode: parseInt(item.stockCode || "0") || 0  // String'i number'a çevir, null ise "0" kullan
               },
             });
           } catch (error) {

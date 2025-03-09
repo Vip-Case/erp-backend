@@ -76,8 +76,12 @@ export class ReceiptService {
                         connect: { branchCode: receipt.branchCode },
                     } : {},
 
-                    warehouse: receipt.warehouseCode ? {
-                        connect: { warehouseCode: receipt.warehouseCode },
+                    inReceiptWarehouse: receipt.inWarehouse ? {
+                        connect: { warehouseCode: receipt.inWarehouse },
+                    } : {},
+
+                    outReceiptWarehouse: receipt.outWarehouse ? {
+                        connect: { warehouseCode: receipt.outWarehouse },
                     } : {}
 
                 } as Prisma.ReceiptUpdateInput,

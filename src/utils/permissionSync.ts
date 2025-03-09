@@ -43,7 +43,35 @@ export async function syncPermissionsWithRoutes(app: any) {
             set: allPermissions.map((p) => ({ id: p.id })),
           },
         },
+        where: { permissionName },
+        update: {
+          description: `${route.method} ${route.path} için izin`,
+        },
         create: {
+          permissionName,
+          description: `${route.method} ${route.path} için izin`,
+        },
+      });
+
+      console.log(`İzin güncellendi/oluşturuldu: ${permissionName}`);
+    }
+
+    // Admin rolü için tüm izinleri otomatik ekle
+    try {
+      const allPermissions = await prisma.permission.findMany();
+      await prisma.role.upsert({
+        where: { roleName: "admin" },
+        update: {
+          permissions: {
+            set: allPermissions.map((p) => ({ id: p.id })),
+          },
+        },
+        create: {
+          roleName: "admin",
+          description: "Tüm yetkilere sahip yönetici rolü",
+          permissions: {
+            connect: allPermissions.map((p) => ({ id: p.id })),
+          },
           roleName: "admin",
           description: "Tüm yetkilere sahip yönetici rolü",
           permissions: {
@@ -52,9 +80,16 @@ export async function syncPermissionsWithRoutes(app: any) {
         },
       });
       console.log("Admin rolü ve izinleri güncellendi");
+      console.log("Admin rolü ve izinleri güncellendi");
     } catch (error) {
       console.error("Admin rolü güncellenirken hata:", error);
+      console.error("Admin rolü güncellenirken hata:", error);
     }
+
+    console.log("İzin senkronizasyonu tamamlandı");
+  } catch (error) {
+    console.error("İzin senkronizasyonu sırasında hata:", error);
+    throw error;
 
     console.log("İzin senkronizasyonu tamamlandı");
   } catch (error) {

@@ -64,6 +64,7 @@ const logger = pino(
         timestamp: pino.stdTimeFunctions.isoTime,
     },
     pino.multistream(streams)
+    pino.multistream(streams)
 );
 
 // Dosya ve satır numarası bilgisini eklemek için pinoCaller kullanın

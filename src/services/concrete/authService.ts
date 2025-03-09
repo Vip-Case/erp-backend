@@ -71,6 +71,7 @@ export const registerUser = async (
   const role = await prisma.role.findUnique({
     where: { roleName: userData.roleName },
     include: { permissions: true },
+    include: { permissions: true },
   });
 
   console.log("Role Name:", userData.roleName);
