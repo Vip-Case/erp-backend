@@ -25,7 +25,7 @@ export class BranchService {
         this.branchRepository = new BaseRepository<Branch>(prisma.branch);
     }
 
-    async createBranch(branch: Branch, bearerToken: string): Promise<Branch> {
+    async createBranch(branch: BranchData, bearerToken: string): Promise<Branch> {
         try {
             const username = extractUsernameFromToken(bearerToken);
             const createdBranch = await prisma.branch.create({

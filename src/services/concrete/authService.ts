@@ -19,7 +19,7 @@ export const registerUser = async (userData: any, createdByAdmin: boolean = fals
   // Rol kontrolü
   const role = await prisma.role.findUnique({
     where: { roleName: userData.roleName },
-    include: { permission: true },
+    include: { permissions: true },
   });
 
   console.log("Role Name:", userData.roleName);
@@ -84,7 +84,7 @@ export const loginUser = async (credentials: any) => {
   const user = await prisma.user.findUnique({
     where: { email: credentials.email },
     include: {
-      role: { include: { permission: true } },
+      role: { include: { permissions: true } },
       permission: true,
     },
   });
@@ -97,7 +97,7 @@ export const loginUser = async (credentials: any) => {
   // Admin rolü kontrolü
   const isAdmin = user.role?.some((role) => role.roleName === 'admin') || false;
 
-  const rolePermissions = user.role.flatMap((role) => role.permission.map((perm) => perm.permissionName));
+  const rolePermissions = user.role.flatMap((role) => role.permissions.map((perm) => perm.permissionName));
   const individualPermissions = user.permission.map((perm) => perm.permissionName);
   const aggregatedPermissions = [...new Set([...rolePermissions, ...individualPermissions])];
 

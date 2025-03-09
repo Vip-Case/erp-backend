@@ -727,9 +727,7 @@ export class WarehouseService {
                             totalPrice: new Prisma.Decimal(String(detail.total)),
                             vatRate: new Prisma.Decimal(String(detail.vatRate)),
                             discount: new Prisma.Decimal(String(detail.discount)),
-                            netPrice: new Prisma.Decimal(String(detail.netPrice)),
-                            createdBy: username,
-                            updatedBy: username
+                            netPrice: new Prisma.Decimal(String(detail.netPrice))
                         }
                     });
                 }
@@ -947,9 +945,7 @@ export class WarehouseService {
                             totalPrice: new Prisma.Decimal(String(detail.total)),
                             vatRate: new Prisma.Decimal(String(detail.vatRate)),
                             discount: new Prisma.Decimal(String(detail.discount)),
-                            netPrice: new Prisma.Decimal(String(detail.netPrice)),
-                            createdBy: username,
-                            updatedBy: username
+                            netPrice: new Prisma.Decimal(String(detail.netPrice))
                         }
                     });
                 }

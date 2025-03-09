@@ -1,6 +1,5 @@
 import prisma from "../../config/prisma";
-import { InvoicesService } from "../concrete/invoicesService";
-import { InvoiceInfo } from "../concrete/invoiceService";
+import { InvoicesService, InvoiceInfo, InvoiceItems, InvoicePayments } from "../concrete/invoicesService";
 
 export class OrderInvoiceService {
     private invoiceService: InvoicesService;
@@ -102,6 +101,14 @@ export class OrderInvoiceService {
 
             const customerCode = current.currentCode;
 
+            // Ödeme metodunu doğrula ve geçerli bir değere dönüştür
+            const validatePaymentMethod = (method: string | null | undefined): "cash" | "card" | "bank" | "openAccount" => {
+                if (method === "cash" || method === "card" || method === "bank" || method === "openAccount") {
+                    return method;
+                }
+                return "cash"; // Varsayılan değer
+            };
+
             const invoiceData: InvoiceInfo = {
                 invoiceNo: `INV-${order.platform}-${order.platformOrderId}`,
                 gibInvoiceNo: null,
@@ -110,8 +117,6 @@ export class OrderInvoiceService {
                 paymentDay: 30,
                 branchCode,
                 warehouseId,
-                id: "", // Add appropriate value for id
-                warehouseCode,
                 description: `Order from ${order.platform} (${order.platformOrderId})`,
                 currentCode: customerCode,
                 priceListId,
@@ -129,7 +134,6 @@ export class OrderInvoiceService {
                     return sum + price;
                 }, 0),
                 items: validItems.map((item) => {
-
                     if (!item.stockCard) {
                         throw new Error(`StockCard not found for item ID '${item.id}'. Ensure all items have valid StockCards.`);
                     }
@@ -145,18 +149,20 @@ export class OrderInvoiceService {
                         totalAmount: price,
                         priceListId: item.stockCard.stockCardPriceLists?.[0]?.priceListId || priceListId,
                         currency: item.stockCard.stockCardPriceLists?.[0]?.priceList?.currency || "TRY",
+                        costCode: null,
+                        costName: null
                     };
                 }),
                 payments: [
                     {
-                        method: order.billingAddress?.paymentMethod || "cash",
+                        method: validatePaymentMethod(order.billingAddress?.paymentMethod),
                         accountId: order.billingAddress?.transactionId || "DEFAULT_ACCOUNT",
                         amount: validItems.reduce((sum, item) => {
                             const price = item.stockCard?.stockCardPriceLists?.[0]?.price?.toNumber() || 0;
                             return sum + price;
                         }, 0),
                         currency: order.currency || "TRY",
-                        description: `Payment for Order ID: ${order.id}`,
+                        description: `Payment for Order ID: ${order.id}` || null,
                     },
                 ],
             };

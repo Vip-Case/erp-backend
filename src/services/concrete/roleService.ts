@@ -20,12 +20,12 @@ export class RoleService {
                     ...role,
                     createdBy: username,
                     updatedBy: username,
-                    permission: {
+                    permissions: {
                         connect: permissionIds.map((id) => ({ id })),
                     },
                 },
                 include: { 
-                    permission: true,
+                    permissions: true,
                     createdByUser: true,
                     updatedByUser: true 
                 },
@@ -46,13 +46,13 @@ export class RoleService {
                     ...roleData,
                     updatedBy: username,
                     ...(permissionIds && {
-                        permission: {
+                        permissions: {
                             set: permissionIds.map((id) => ({ id })), // Eski izinleri temizler, yenileri ekler
                         },
                     }),
                 },
                 include: { 
-                    permission: true,
+                    permissions: true,
                     createdByUser: true,
                     updatedByUser: true 
                 },
@@ -79,7 +79,7 @@ export class RoleService {
             return await prisma.role.findUnique({
                 where: { id },
                 include: { 
-                    permission: true,
+                    permissions: true,
                     createdByUser: true,
                     updatedByUser: true 
                 },
@@ -94,7 +94,7 @@ export class RoleService {
         try {
             return await prisma.role.findMany({ 
                 include: { 
-                    permission: true,
+                    permissions: true,
                     createdByUser: true,
                     updatedByUser: true 
                 } 
