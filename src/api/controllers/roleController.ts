@@ -1,134 +1,232 @@
-import RoleService from '../../services/concrete/roleService';
-import { Role } from '@prisma/client';
+import { Context } from "elysia";
+import RoleService from "../../services/concrete/roleService";
 
-interface RoleRequest {
-    roleName: string;
-    description?: string;
-    permissionIds?: string[];
-}
-
-interface CustomContext {
-    request: {
-        user?: {
-            isAdmin: boolean;
-            userId: string;
-            permissions: string[];
-        };
-        headers: {
-            authorization?: string;
-        };
-    };
-    body: RoleRequest;
-    params: { id?: string };
-    set: { status: number };
-    query: { [key: string]: any };
-    error: (code: number, message: string) => void;
-}
-
-// Service Initialization
 const roleService = new RoleService();
 
 export const RoleController = {
-    getAllRoles: async (ctx: CustomContext) => {
-        try {
-            const roles = await roleService.getAllRoles();
-            ctx.set.status = 200;
-            return roles;
-        } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error fetching roles", details: error.message };
-        }
-    },
+  // Rol İşlemleri
+  getAllRoles: async (ctx: Context) => {
+    try {
+      const roles = await roleService.getAllRoles();
+      return {
+        success: true,
+        data: roles,
+        message: "Roller başarıyla getirildi",
+      };
+    } catch (error: any) {
+      ctx.set.status = 500;
+      return {
+        success: false,
+        error: "Roller getirilirken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 
-    createRole: async (ctx: CustomContext) => {
-        const { roleName, description, permissionIds } = ctx.body;
-        const bearerToken = ctx.request.headers.authorization;
+  getRoleById: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const role = await roleService.getRoleById(id);
 
-        try {
-            if (!ctx.request.user?.isAdmin) {
-                ctx.set.status = 403;
-                return { error: "Yalnızca adminler yeni rol oluşturabilir." };
-            }
+      if (!role) {
+        ctx.set.status = 404;
+        return {
+          success: false,
+          error: "Rol bulunamadı",
+        };
+      }
 
-            if (!bearerToken) {
-                ctx.set.status = 401;
-                return { error: "Authorization token is required" };
-            }
+      return {
+        success: true,
+        data: role,
+        message: "Rol başarıyla getirildi",
+      };
+    } catch (error: any) {
+      ctx.set.status = 500;
+      return {
+        success: false,
+        error: "Rol getirilirken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 
-            const role = await roleService.createRole(
-                { roleName, description } as Role,
-                permissionIds || [],
-                bearerToken
-            );
-            ctx.set.status = 201;
-            return role;
-        } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error creating role", details: error.message };
-        }
-    },
+  createRole: async (ctx: Context) => {
+    try {
+      const data = ctx.body as {
+        roleName: string;
+        description: string;
+        permissionIds?: string[];
+      };
 
-    getRoleById: async (ctx: CustomContext) => {
-        const { id } = ctx.params;
-        try {
-            const role = await roleService.getRoleById(id || "");
-            if (!role) {
-                ctx.error(404, "Role not found");
-                return;
-            }
-            ctx.set.status = 200;
-            return role;
-        } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error fetching role", details: error.message };
-        }
-    },
+      const role = await roleService.createRole(data);
+      ctx.set.status = 201;
+      return {
+        success: true,
+        data: role,
+        message: "Rol başarıyla oluşturuldu",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "Rol oluşturulurken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 
-    updateRole: async (ctx: CustomContext) => {
-        const { id } = ctx.params;
-        const { roleName, description, permissionIds } = ctx.body;
-        const bearerToken = ctx.request.headers.authorization;
-        try {
-            if (!ctx.request.user?.isAdmin) {
-                ctx.set.status = 403;
-                return { error: "Yalnızca adminler rol güncelleyebilir." };
-            }
+  updateRole: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const data = ctx.body as {
+        roleName?: string;
+        description?: string;
+        permissionIds?: string[];
+      };
 
-            if (!bearerToken) {
-                ctx.set.status = 401;
-                return { error: "Authorization token is required" };
-            }
+      const role = await roleService.updateRole(id, data);
+      return {
+        success: true,
+        data: role,
+        message: "Rol başarıyla güncellendi",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "Rol güncellenirken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 
-            const role = await roleService.updateRole(
-                id || "",
-                { roleName, description },
-                bearerToken,
-                permissionIds
-            );
-            ctx.set.status = 200;
-            return role;
-        } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error updating role", details: error.message };
-        }
-    },
+  deleteRole: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const role = await roleService.deleteRole(id);
+      return {
+        success: true,
+        data: role,
+        message: "Rol başarıyla silindi",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "Rol silinirken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 
-    deleteRole: async (ctx: CustomContext) => {
-        const { id } = ctx.params;
-        try {
-            if (!ctx.request.user?.isAdmin) {
-                ctx.set.status = 403;
-                return { error: "Yalnızca adminler rol silebilir." };
-            }
+  // Rol-İzin İlişki İşlemleri
+  addPermissionsToRole: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const { permissionIds } = ctx.body as { permissionIds: string[] };
 
-            const result = await roleService.deleteRole(id || "");
-            ctx.set.status = 200;
-            return { message: "Rol başarıyla silindi", result };
-        } catch (error: any) {
-            ctx.set.status = 500;
-            return { error: "Error deleting role", details: error.message };
-        }
-    },
+      const role = await roleService.addPermissionsToRole(id, permissionIds);
+      return {
+        success: true,
+        data: role,
+        message: "İzinler role başarıyla eklendi",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "İzinler role eklenirken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
+
+  removePermissionsFromRole: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const { permissionIds } = ctx.body as { permissionIds: string[] };
+
+      const role = await roleService.removePermissionsFromRole(
+        id,
+        permissionIds
+      );
+      return {
+        success: true,
+        data: role,
+        message: "İzinler rolden başarıyla çıkarıldı",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "İzinler rolden çıkarılırken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
+
+  getRolePermissions: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const permissions = await roleService.getRolePermissions(id);
+      return {
+        success: true,
+        data: permissions,
+        message: "Rol izinleri başarıyla getirildi",
+      };
+    } catch (error: any) {
+      ctx.set.status = error.message === "Rol bulunamadı" ? 404 : 500;
+      return {
+        success: false,
+        error: "Rol izinleri getirilirken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
+
+  // Rol-Kullanıcı İlişki İşlemleri
+  assignRoleToUsers: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const { userIds } = ctx.body as { userIds: string[] };
+
+      const role = await roleService.assignRoleToUsers(id, userIds);
+      return {
+        success: true,
+        data: role,
+        message: "Rol kullanıcılara başarıyla atandı",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "Rol kullanıcılara atanırken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
+
+  removeRoleFromUsers: async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const { userIds } = ctx.body as { userIds: string[] };
+
+      const role = await roleService.removeRoleFromUsers(id, userIds);
+      return {
+        success: true,
+        data: role,
+        message: "Rol kullanıcılardan başarıyla kaldırıldı",
+      };
+    } catch (error: any) {
+      ctx.set.status = 400;
+      return {
+        success: false,
+        error: "Rol kullanıcılardan kaldırılırken bir hata oluştu",
+        details: error.message,
+      };
+    }
+  },
 };
 
 export default RoleController;

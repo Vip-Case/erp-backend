@@ -1,0 +1,89 @@
+{
+    "name": "novent-erp-api",
+    "location": "westeurope",
+    "resourceGroup": "novent-erp-rg",
+    "planName": "novent-erp-plan",
+    "planTier": "P1v2",
+    "planSize": "P1v2",
+    "planInstances": 1,
+    "containerRegistryServer": "noventacr.azurecr.io",
+    "containerImage": "noventacr.azurecr.io/erp-api:latest",
+    "appSettings": [
+        {
+            "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+            "value": "false"
+        },
+        {
+            "name": "WEBSITES_PORT",
+            "value": "1303"
+        },
+        {
+            "name": "NODE_ENV",
+            "value": "production"
+        },
+        {
+            "name": "PORT",
+            "value": "1303"
+        },
+        {
+            "name": "DB_HOST",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/DB-HOST/)"
+        },
+        {
+            "name": "DB_PORT",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/DB-PORT/)"
+        },
+        {
+            "name": "DB_USER",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/DB-USER/)"
+        },
+        {
+            "name": "DB_PASSWORD",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/DB-PASSWORD/)"
+        },
+        {
+            "name": "DB_NAME",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/DB-NAME/)"
+        },
+        {
+            "name": "DATABASE_URL",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/DATABASE-URL/)"
+        },
+        {
+            "name": "JWT_SECRET",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/JWT-SECRET/)"
+        },
+        {
+            "name": "REFRESH_TOKEN_SECRET",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/REFRESH-TOKEN-SECRET/)"
+        },
+        {
+            "name": "REDIS_HOST",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/REDIS-HOST/)"
+        },
+        {
+            "name": "REDIS_PORT",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/REDIS-PORT/)"
+        },
+        {
+            "name": "REDIS_PASSWORD",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/REDIS-PASSWORD/)"
+        },
+        {
+            "name": "CORS_URL",
+            "value": "https://erp.novent.com.tr"
+        },
+        {
+            "name": "CRITICAL_STOCK_LEVEL",
+            "value": "20"
+        },
+        {
+            "name": "WARNING_STOCK_LEVEL",
+            "value": "50"
+        },
+        {
+            "name": "RESEND_API_KEY",
+            "value": "@Microsoft.KeyVault(SecretUri=https://novent-kv.vault.azure.net/secrets/RESEND-API-KEY/)"
+        }
+    ]
+}

@@ -16,7 +16,7 @@ const SECRET_KEY = process.env.JWT_SECRET;
  */
 
 export function extractUsernameFromToken(bearerToken: string): string {
-    if (!bearerToken || !bearerToken.startsWith("Bearer ")) {
+    if (!bearerToken) {
         logger.error("Token formatı geçersiz:", { bearerToken });
         throw new Error("Token formatı geçersiz.");
     }

@@ -1,27 +1,47 @@
-FROM oven/bun:debian
+FROM ubuntu:22.04
 
-# Çalışma dizini ayarla
+# Temel paketleri yükle ve zaman dilimini ayarla
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    ca-certificates \
+    unzip \
+    git \
+    tzdata \
+    && ln -fs /usr/share/zoneinfo/Europe/Istanbul /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata
+
+# Node.js kurulumu
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Bun kurulumu
+RUN curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
+
+# Çalışma dizinini ayarla
 WORKDIR /app
 
-# Paket dosyalarını kopyala
-COPY package.json bun.lockb ./
+# Bağımlılık dosyalarını kopyala
+COPY package.json bun.lockb package-lock.json ./
 
-# Çevresel değişken dosyasını kopyala
-COPY .env .env
-
-# Bağımlılıkları kur
+# Bağımlılıkları yükle
 RUN bun install --frozen-lockfile
-RUN bun add prisma --global
 
-# Uygulama dosyalarını kopyala
+# Kaynak kodları kopyala
 COPY . .
 
-# wait-for-it.sh ve init.sh dosyalarını kopyala
-COPY wait-for-it.sh /wait-for-it.sh
-COPY init.sh /init.sh
+# Prisma client'ı NPX ile oluştur
+RUN npx prisma generate
 
-# Çalıştırma izinlerini ayarla
-RUN chmod +x /wait-for-it.sh /init.sh
+# Uygulama portunu belirt
+EXPOSE 1303
 
-# Uygulamayı başlatma komutu
-CMD ["/wait-for-it.sh", "postgres:5432", "--", "/init.sh"]
+# Timeout süresini artır
+ENV NODE_OPTIONS="--max-http-header-size=16384 --http-parser=legacy --max-http-request-timeout=300000"
+
+# Uygulamayı başlat
+CMD ["bun", "start"]

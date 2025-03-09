@@ -26,6 +26,10 @@ export const StockMovementController = {
 
     updateStockMovement: async (ctx: Context) => {
         const { id } = ctx.params;
+        const bearerToken = ctx.request.headers.get("Authorization");
+        if (!bearerToken) {
+            return ctx.error(401, "Authorization header is missing.");
+        }
         const stockMovementData: Partial<StockMovement> = ctx.body as Partial<StockMovement>;
         const bearerToken = ctx.request.headers.get("Authorization");
         
@@ -91,6 +95,18 @@ export const StockMovementController = {
         }
     },
 
+    getAllOrderStockMovementsByStockCardId: async (ctx: Context) => {
+        const { stockCardId } = ctx.params;
+        try {
+            const stockMovements = await stockMovementService.getAllOrderStockMovementsByStockCardId(stockCardId);
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
+    },
+
     getAllSalesStockMovements: async (ctx: Context) => {
         try {
             const stockMovements = await stockMovementService.getAllSalesStockMovements();
@@ -102,9 +118,33 @@ export const StockMovementController = {
         }
     },
 
+    getAllSalesStockMovementsByStockCardId: async (ctx: Context) => {
+        const { stockCardId } = ctx.params;
+        try {
+            const stockMovements = await stockMovementService.getAllSalesStockMovementsByStockCardId(stockCardId);
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
+    },
+
     getAllPurchaseStockMovements: async (ctx: Context) => {
         try {
             const stockMovements = await stockMovementService.getAllPurchaseStockMovements();
+            ctx.set.status = 200;
+            return stockMovements;
+        } catch (error: any) {
+            ctx.set.status = 500;
+            return { error: "Error fetching stockMovements", details: error.message };
+        }
+    },
+
+    getAllPurchaseStockMovementsByStockCardId: async (ctx: Context) => {
+        const { stockCardId } = ctx.params;
+        try {
+            const stockMovements = await stockMovementService.getAllPurchaseStockMovementsByStockCardId(stockCardId);
             ctx.set.status = 200;
             return stockMovements;
         } catch (error: any) {

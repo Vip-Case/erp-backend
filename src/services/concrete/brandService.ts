@@ -14,11 +14,25 @@ export class BrandService {
     async createBrand(brand: Brand, bearerToken: string): Promise<Brand> {
         try {
             const username = extractUsernameFromToken(bearerToken);
-            return await this.brandRepository.create({
-                ...brand,
-                createdBy: username,
-                updatedBy: username
+
+            // Kullanıcı kontrolü
+            const user = await prisma.user.findUnique({
+                where: { username: username }
             });
+
+            if (!user) {
+                throw new Error('Kullanıcı bulunamadı');
+            }
+
+            const createdBrand = await prisma.brand.create({
+                data: {
+                    brandName: brand.brandName,
+                    brandCode: brand.brandCode,
+                    createdBy: username,
+                    updatedBy: username
+                }
+            });
+            return createdBrand;
         } catch (error) {
             logger.error("Error creating brand", error);
             throw error;
@@ -28,10 +42,16 @@ export class BrandService {
     async updateBrand(id: string, brand: Partial<Brand>, bearerToken: string): Promise<Brand> {
         try {
             const username = extractUsernameFromToken(bearerToken);
-            return await this.brandRepository.update(id, {
-                ...brand,
-                updatedBy: username
+            const updatedBrand = await prisma.brand.update({
+                where: {
+                    id: id
+                },
+                data: {
+                    ...brand,
+                    updatedBy: username
+                }
             });
+            return updatedBrand;
         } catch (error) {
             logger.error(`Error updating brand with id ${id}`, error);
             throw error;

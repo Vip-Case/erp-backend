@@ -43,7 +43,6 @@ yarn-error.log*
 **/*.tar.gz
 **/*.tgz
 **/*.log
-package-lock.json
 **/*.bun
 
 # Ignore ide files
@@ -65,3 +64,5 @@ coverage
 prisma/prismabox
 prisma/docs
 responses
+prisma/seed.ts
+prisma/seed copy.ts

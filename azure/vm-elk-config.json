@@ -1,0 +1,59 @@
+{
+    "name": "novent-elk-vm",
+    "location": "westeurope",
+    "resourceGroup": "novent-erp-rg",
+    "size": "Standard_D2s_v3",
+    "osProfile": {
+        "computerName": "novent-elk",
+        "adminUsername": "noventadmin",
+        "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+                "publicKeys": [
+                    {
+                        "path": "/home/noventadmin/.ssh/authorized_keys",
+                        "keyData": "REPLACE_WITH_YOUR_SSH_PUBLIC_KEY"
+                    }
+                ]
+            }
+        }
+    },
+    "storageProfile": {
+        "imageReference": {
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "20.04-LTS",
+            "version": "latest"
+        },
+        "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+                "storageAccountType": "Premium_LRS"
+            },
+            "diskSizeGB": 64
+        },
+        "dataDisks": [
+            {
+                "lun": 0,
+                "createOption": "Empty",
+                "managedDisk": {
+                    "storageAccountType": "Premium_LRS"
+                },
+                "diskSizeGB": 256
+            }
+        ]
+    },
+    "networkProfile": {
+        "networkInterfaces": [
+            {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces', 'novent-elk-nic')]"
+            }
+        ]
+    },
+    "diagnosticsProfile": {
+        "bootDiagnostics": {
+            "enabled": true
+        }
+    },
+    "customData": "REPLACE_WITH_BASE64_ENCODED_CLOUD_INIT_SCRIPT"
+}

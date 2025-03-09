@@ -42,16 +42,15 @@ export const CurrentController = {
             currentBranch?: Prisma.CurrentBranchCreateNestedManyWithoutCurrentInput;
             currentCategoryItem?: Prisma.CurrentCategoryItemCreateNestedManyWithoutCurrentInput;
             currentFinancial?: Prisma.CurrentFinancialCreateNestedManyWithoutCurrentInput;
-            currentRisk?: Prisma.CurrentRiskCreateNestedOneWithoutCurrentInput;
             currentOfficials?: Prisma.CurrentOfficialsCreateNestedManyWithoutCurrentInput;
         };
 
         const bearerToken = ctx.request.headers.get("Authorization");
-            
+
         if (!bearerToken) {
             return ctx.error(401, "Authorization header is missing.");
         }
-        
+
         try {
             const createData = {
                 current: {
@@ -62,7 +61,6 @@ export const CurrentController = {
                 currentBranch: data.currentBranch,
                 currentCategoryItem: data.currentCategoryItem,
                 currentFinancial: data.currentFinancial,
-                currentRisk: data.currentRisk,
                 currentOfficials: data.currentOfficials,
             };
             const newCurrent = await currentService.createCurrent(createData, bearerToken);
@@ -82,7 +80,7 @@ export const CurrentController = {
                 return ctx.error(401, "Authorization header is missing.");
             }
             const updatedCurrent = await currentService.updateCurrent(id, ctx.body, bearerToken);
-                
+
             ctx.set.status = 200;
             return updatedCurrent;
         } catch (error: any) {

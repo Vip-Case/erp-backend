@@ -1,0 +1,25 @@
+{
+    "name": "novent-redis",
+    "location": "westeurope",
+    "resourceGroup": "novent-erp-rg",
+    "sku": {
+        "name": "Basic",
+        "family": "C",
+        "capacity": 1
+    },
+    "enableNonSslPort": false,
+    "minimumTlsVersion": "1.2",
+    "publicNetworkAccess": "Enabled",
+    "redisConfiguration": {
+        "maxmemory-policy": "volatile-lru",
+        "maxfragmentationmemory-reserved": "50",
+        "maxmemory-reserved": "50"
+    },
+    "firewallRules": [
+        {
+            "name": "AllowAppService",
+            "startIp": "REPLACE_WITH_APP_SERVICE_IP",
+            "endIp": "REPLACE_WITH_APP_SERVICE_IP"
+        }
+    ]
+}
