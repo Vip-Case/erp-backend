@@ -37,10 +37,7 @@ import RoleRoutes from "./api/routes/v1/roleRoutes";
 import PosRoutes from "./api/routes/v1/posRoutes";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
-import cron from "node-cron";
 import NotificationRoutes from "./api/routes/v1/notificationRoutes";
-import { NotificationService } from "./services/concrete/NotificationService";
-import logger from "./utils/logger";
 import OrderInvoiceRoutes from "./api/routes/v1/orderInvoiceRoutes";
 import MarketPlaceRoutes from "./api/routes/v1/marketPlaceRoutes";
 import StoreRoutes from "./api/routes/v1/storeRoutes";
@@ -53,8 +50,6 @@ dotenv.config();
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET ortam değişkeni tanımlanmamış.");
 }
-
-const prisma = new PrismaClient();
 
 const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
 
@@ -90,6 +85,7 @@ app.onRequest(async (ctx) => {
     "/auth/login",
     "/auth/register",
     "/auth/refresh-token",
+    "/health",
     "/docs",
     "/webhook/order-created",
     "/webhook/order-update",
@@ -145,42 +141,19 @@ app.onRequest(async (ctx) => {
   }
 });
 
-// Stok seviyesi kontrolü için cron job
-const notificationService = new NotificationService();
-cron.schedule("*/30 * * * *", async () => {
-  try {
-    console.log("Stok seviyesi kontrolü başlatılıyor...");
-    logger.info("Stok seviyesi kontrolü başlatılıyor...");
-
-    // Stok seviyelerini kontrol et
-    await notificationService.checkStockLevels();
-    console.log("Stok seviyesi kontrolü tamamlandı");
-    logger.info("Stok seviyesi kontrolü tamamlandı");
-  } catch (error) {
-    console.error("Stok seviyesi kontrolü sırasında hata:", error);
-    logger.error("Stok seviyesi kontrolü sırasında hata:", error);
-  }
-});
-console.log("Bildirimler kontrol ediliyor...");
-app
-  .get("/secure/data", () => {
-    return { message: "Secure data accessed." };
-  })
-  .use(
-    swagger({
-      path: "/docs", // Swagger UI'nin erişim yolu
-      provider: "scalar", // API provider'ı
-      documentation: {
-        info: {
-          title: "ERP API", // API başlığı
-          version: "1.0.0", // API versiyonu
-          description: "ERP API Documentation", // API açıklaması
-        },
+app.use(
+  swagger({
+    path: "/docs", // Swagger UI'nin erişim yolu
+    provider: "scalar", // API provider'ı
+    documentation: {
+      info: {
+        title: "ERP API", // API başlığı
+        version: "1.0.0", // API versiyonu
+        description: "ERP API Documentation", // API açıklaması
       },
-    })
-  );
-
-app.get("/", () => "Elysia is running!"); // Ana route tanımlanıyor
+    },
+  })
+);
 
 app.onError(async ({ error, set, request }) => {
   let statusCode = 500;
@@ -258,7 +231,6 @@ app.onError(async ({ error, set, request }) => {
     },
   };
 });
-
 const routes = [
   StockCardRoutes,
   PriceListRoutes,
@@ -291,25 +263,39 @@ const routes = [
   MarketPlaceRoutes,
   StoreRoutes,
   PrintQueueRoutes,
+  NotificationRoutes,
 ];
-
-app.use(NotificationRoutes(app));
 wooCommerceRoutes(app);
 OrderInvoiceRoutes(app);
-// Health endpoint'ini izin senkronizasyonundan sonra tanımlıyoruz
-app.get("/health", () => ({ status: "ok" }));
 TrendyolRoutes(app);
 HepsiburadaRoutes(app);
+// Health endpoint'ini izin senkronizasyonundan sonra tanımlıyoruz
+app.get("/health", () => ({ status: "ok" }));
 routes.forEach((route) => app.use(route));
 
 // Uygulama başlatıldığında izinleri senkronize et
 app.listen(process.env.PORT || 3000, async () => {
   try {
-    await syncPermissionsWithRoutes(app);
+    console.log("İzin senkronizasyonu başlatılıyor...");
+
+    // Timeout ile izin senkronizasyonu
+    const syncPromise = syncPermissionsWithRoutes(app);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(
+        () => reject(new Error("İzin senkronizasyonu zaman aşımına uğradı")),
+        30000
+      );
+    });
+
+    await Promise.race([syncPromise, timeoutPromise]);
+
     console.log(
       `🦊 Server is running at ${app.server?.hostname}:${app.server?.port}`
     );
   } catch (error) {
     console.error("İzin senkronizasyonu sırasında hata:", error);
+    console.log(
+      `⚠️ Server izin senkronizasyonu hatası ile başlatıldı: ${app.server?.hostname}:${app.server?.port}`
+    );
   }
 });
